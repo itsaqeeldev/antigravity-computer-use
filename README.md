@@ -8,7 +8,27 @@ Native Windows desktop tools for **Antigravity Agent Manager** and its existing 
 
 This is a fork/adaptation of the published MIT `ridelink0/claude-computer-use` native implementation, with attributed OpenAI recovery and Anthropic sizing/batching adaptations. See `UPSTREAM.json` and `THIRD_PARTY_NOTICES.md`. It is not the proprietary Codex/Claude product engine.
 
-## Status
+## See it before installing
+
+### Short walkthrough
+
+![Eight-second walkthrough of invocation, observation/action verification, and human takeover](docs/media/demo.gif)
+
+An eight-second **illustrated workflow**, using artwork exported by the actual native renderer. This is not a recording of an autonomous task; the [validation record](VALIDATION.md) describes the real desktop tests separately.
+
+### Minimal desktop interface
+
+![Native-rendered minimal control bar, ice-blue edge glow, and custom cursor on a clean demonstration desktop](docs/media/desktop-1.png)
+
+The controls stay compact while the screen edges show active control. These images use a fictional desktop, with no personal screenshots or documents.
+
+| Active control | Paused for the human |
+|---|---|
+| ![Active native controls](docs/media/hud-active.png) | ![Paused native controls](docs/media/hud-paused.png) |
+
+Use **Pause** to take over, **Resume** to continue with a fresh observation, and **Esc / Stop** to end control. Smart takeover pauses on deliberate physical input; Manual pause is the default.
+
+## Platform status
 
 Windows x64 beta. Tested in the real Antigravity Agent Manager across two consecutive desktop sessions, plus native fixtures and human Smart takeover/Resume. macOS and Linux are not supported release targets yet. See [validation](VALIDATION.md).
 
