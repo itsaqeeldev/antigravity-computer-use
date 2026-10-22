@@ -1,5 +1,7 @@
 # Antigravity Computer Use
 
+> **Experimental prototype — reliability rework in progress.** The owner has reported failures on ordinary tasks, unexpected stops, and an unsatisfactory desktop interface. The controlled demos and passing tests below do not establish everyday usability or parity with native product integrations. v0.2.0 remains available for investigation; a replacement is not yet validated.
+
 [![Windows checks](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml/badge.svg)](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml)
 
 [Download Windows beta](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.2.0) · [Installation guide](docs/INSTALLATION.md) · [Changelog](CHANGELOG.md)
