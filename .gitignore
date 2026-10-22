@@ -1,0 +1,7 @@
+bin/
+dist/
+local-evidence/
+node_modules/
+*.log
+
+.localdata/

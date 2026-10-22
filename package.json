@@ -1,0 +1,16 @@
+{
+  "name": "antigravity-native-computer-use",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Native Windows desktop tools and /computer-use for Antigravity",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "build": "node server/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "install:global": "node scripts/install.mjs"
+  }
+}

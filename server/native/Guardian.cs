@@ -1,0 +1,426 @@
+// Antigravity integration: local human consent and native input fence.
+// Recovery algorithm adapted from OpenAI openai-cua-sample-app (MIT),
+// desktop/release_inputs.py, revision 6dd34b40acc1d002696ccd41aaf0a1f2f2be290c.
+using System;
+using System.IO;
+using System.Text;
+using System.Diagnostics;
+using System.Threading;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Windows.Automation;
+using System.Web.Script.Serialization;
+
+namespace Axon {
+    internal static class ControlFence {
+        [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out int pid);
+        internal static Dictionary<string, object> Identity(long hwnd) {
+            int pid; GetWindowThreadProcessId(new IntPtr(hwnd), out pid);
+            if (pid <= 0) throw new AxonError("window_not_found", "Window closed.", null);
+            using (Process p=Process.GetProcessById(pid)) {
+                string exe=p.MainModule.FileName;
+                string started=p.StartTime.ToUniversalTime().Ticks.ToString();
+                Native.RECT r; Native.GetWindowRect(new IntPtr(hwnd),out r); Native.POINT cursor; Native.GetCursorPos(out cursor);
+                return new Dictionary<string, object> { {"cursor",new int[]{cursor.X,cursor.Y}},{"visible",Native.IsWindowVisible(new IntPtr(hwnd))},{"cloaked",Native.IsCloaked(new IntPtr(hwnd))},{"overlay",Overlay.IsAnyOverlayWindow(new IntPtr(hwnd))},{"rect",new int[]{r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top}}, {"hwnd",hwnd}, {"pid",pid}, {"path",exe},
+                    {"started",started}, {"key",pid+":"+started+":"+exe.ToLowerInvariant()} };
+            }
+        }
+        static object Canonical(object value) {
+            Dictionary<string, object> d=value as Dictionary<string, object>;
+            if (d!=null) {
+                SortedDictionary<string, object> sorted=new SortedDictionary<string, object>(StringComparer.Ordinal);
+                foreach(var pair in d) if (!pair.Key.StartsWith("__")) sorted[pair.Key]=Canonical(pair.Value);
+                return sorted;
+            }
+            object[] arr=value as object[];
+            if(arr!=null) { object[] copy=new object[arr.Length]; for(int i=0;i<arr.Length;i++) copy[i]=Canonical(arr[i]); return copy; }
+            return value;
+        }
+        internal static string Fingerprint(string op, Dictionary<string, object> a, string label) {
+            string s=op+"|"+label+"|"+new JavaScriptSerializer().Serialize(Canonical(a));
+            using(SHA256 sha=SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(s)));
+        }
+        internal static bool Sensitive(string op, Dictionary<string, object> a, string label) {
+            object risk;
+            if (!a.TryGetValue("__risk",out risk) || Convert.ToString(risk)!="routine") return true;
+            if (new List<string>{"launch","clipboard","close_window","paste","paste_files","open","file_dialog"}.Contains(op)) return true;
+            if(op=="key") {
+                string key=Convert.ToString(a["keys"]).ToLowerInvariant();
+                if(System.Text.RegularExpressions.Regex.IsMatch(key,"enter|return|delete|alt\\+|win|meta|super|ctrl\\+[svx]")) return true;
+            }
+            if(a.ContainsKey("hwnd")) {
+                string name=Path.GetFileNameWithoutExtension(Convert.ToString(ControlFence.Identity(Convert.ToInt64(a["hwnd"]))["path"])).ToLowerInvariant();
+                System.Text.StringBuilder cls=new System.Text.StringBuilder(256); Native.GetClassName(new IntPtr(Convert.ToInt64(a["hwnd"])),cls,cls.Capacity);
+                bool console=cls.ToString().Contains("Console")||cls.ToString().Contains("CASCADIA")||cls.ToString().Contains("mintty");
+                if((console||System.Text.RegularExpressions.Regex.IsMatch(name,"^(windowsterminal|regedit|systemsettings|control|code|idea64|rider64)$")) && op!="focus") return true;
+            }
+            if(System.Text.RegularExpressions.Regex.IsMatch(label??"","send|submit|pay|purchase|buy|delete|remove|install|upload|share|password|permission|transfer|sign.in",System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return true;
+            return false;
+        }
+        internal static string FileName { get { return Environment.GetEnvironmentVariable("AGCU_GUARD_FILE"); } }
+        internal static string Token;
+        static long keyboardTarget;
+        static bool focusing;
+        internal static void CheckKeyboard() {
+            Check();
+            if(!focusing && keyboardTarget!=0 && Native.GetForegroundWindow()!=new IntPtr(keyboardTarget))
+                throw new AxonError("focus_changed","Keyboard target lost foreground; no more text sent.",null);
+        }
+        internal static void Check() {
+            if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
+            string[] state;
+            try { state = File.ReadAllText(FileName).Split('|'); }
+            catch { throw new AxonError("control_stopped", "Permission process is unavailable.", null); }
+            long until;
+            if (state.Length < 3 || state[0] != "active" || state[1] != Token ||
+                !Int64.TryParse(state[2], out until) || DateTime.UtcNow.Ticks >= until)
+                throw new AxonError("control_stopped", "Control is paused, stopped or expired. Use the local controls.", null);
+        }
+        internal static void Before(string op, Dictionary<string, object> a, string label, bool readOnly=false) {
+            if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
+            object v;
+            Token = a.TryGetValue("__session", out v) ? Convert.ToString(v) : null;
+            keyboardTarget=a.ContainsKey("hwnd")?Convert.ToInt64(a["hwnd"]):0; focusing=op=="focus";
+            Check();
+            string[] state=File.ReadAllText(FileName).Split('|');
+            string appKey="";
+            if(a.ContainsKey("hwnd")) {
+                Dictionary<string,object> identity=Identity(Convert.ToInt64(a["hwnd"]));
+                appKey=Convert.ToString(identity["key"]);
+                string grants=state.Length>3?Encoding.UTF8.GetString(Convert.FromBase64String(state[3])):"";
+                if(!new List<string>(grants.Split('\n')).Contains(appKey))
+                    throw new AxonError("app_not_approved","This application instance has no native human grant.",null);
+            }
+            if (a.TryGetValue("__pid", out v)) {
+                int pid = Convert.ToInt32(v);
+                Process p = Process.GetProcessById(pid);
+                string expected = Convert.ToString(a["__started"]);
+                if (p.StartTime.ToUniversalTime().Ticks.ToString() != expected)
+                    throw new AxonError("identity_changed", "Approved process instance changed.", null);
+            }
+            if(!readOnly && Sensitive(op,a,label)) {
+                string permit=a.ContainsKey("__permit")?Convert.ToString(a["__permit"]):"";
+                Guid guid;
+                if(!Guid.TryParseExact(permit,"N",out guid)) throw new AxonError("confirmation_required","Native action-time approval required.",null);
+                string f=Path.Combine(FileName+".permits",permit);
+                string[] approval;
+                try { approval=File.ReadAllLines(f); File.Delete(f); }
+                catch { throw new AxonError("confirmation_required","Approval missing, expired or consumed.",null); }
+                long until;
+                if(approval.Length!=4 || approval[0]!=Token || approval[1]!=Fingerprint(op,a,label) || approval[2]!=appKey ||
+                    !Int64.TryParse(approval[3],out until) || DateTime.UtcNow.Ticks>=until)
+                    throw new AxonError("approval_changed","Approved target/action changed; observe again.",null);
+            }
+        }
+        internal static void WatchParent() {
+            int pid;
+            if (!Int32.TryParse(Environment.GetEnvironmentVariable("AGCU_PARENT_PID"), out pid)) return;
+            Thread t = new Thread(delegate() {
+                try { using (Process p = Process.GetProcessById(pid)) p.WaitForExit(); } catch { }
+                try { File.WriteAllText(FileName,"stopped||0|"); } catch { }
+                try { Recover(); } catch { }
+                Environment.Exit(0);
+            });
+            t.IsBackground = true; t.Start();
+        }
+        internal static void Recover() {
+            InputLedger.Recover();
+        }
+        internal static object Launch(Dictionary<string,object> a) {
+            string file=Path.GetFullPath(Convert.ToString(a["app"]));
+            if(!File.Exists(file)||!String.Equals(Path.GetExtension(file),".exe",StringComparison.OrdinalIgnoreCase))
+                throw new AxonError("invalid_application","Select an existing executable path.",null);
+            List<string> args=new List<string>();
+            object[] items=a.ContainsKey("args")?a["args"] as object[]:null;
+            if(items!=null)foreach(object value in items){
+                string text=Convert.ToString(value);
+                text=System.Text.RegularExpressions.Regex.Replace(text,@"(\\*)""","$1$1\\\"");
+                text=System.Text.RegularExpressions.Regex.Replace(text,@"(\\+)$","$1$1");
+                args.Add("\""+text+"\"");
+            }
+            ProcessStartInfo info=new ProcessStartInfo(file,String.Join(" ",args));info.UseShellExecute=false;
+            Process p=Process.Start(info);return new Dictionary<string,object>{{"pid",p.Id},{"path",file}};
+        }
+    }
+
+    internal sealed class Guardian : Form {
+        [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h,int how);
+        [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, uint modifiers, uint vk);
+        [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
+        [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int pid);
+        [DllImport("user32.dll")] static extern bool SetWindowDisplayAffinity(IntPtr h, uint affinity);
+        [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern bool SetPropW(IntPtr h, string key, IntPtr value);
+        readonly JavaScriptSerializer js = new JavaScriptSerializer();
+        readonly ToolTip tips = new ToolTip();
+        HudButton toggle, stopButton, modeButton;
+        readonly ContextMenuStrip modeMenu=new ContextMenuStrip();
+        readonly TakeoverPolicy takeover=new TakeoverPolicy(Environment.GetEnvironmentVariable("AGCU_TAKEOVER_MODE"));
+        float visualScale=1, phase;
+        int visualTick;
+        string activity="";DateTime activityAt;
+        readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        volatile string state = "idle"; string token = "";
+        readonly object stateLock=new object();
+        readonly HashSet<string> grants = new HashSet<string>();
+        Form activePrompt; bool captureHidden; bool captureExcluded;
+        readonly List<Process> workers=new List<Process>();
+        readonly object workerLock=new object();
+        readonly bool hostManaged=Environment.GetEnvironmentVariable("AGCU_PERMISSION_MODE")=="host-managed";
+        long deadline;
+        bool prompting, registered;
+        static readonly object outputLock = new object();
+        internal static void Emit(object data) { lock(outputLock) { Console.Out.WriteLine(new JavaScriptSerializer().Serialize(data)); Console.Out.Flush(); } }
+        internal static int Run() {
+            Console.InputEncoding = new UTF8Encoding(false); Console.OutputEncoding = new UTF8Encoding(false);
+            ControlFence.WatchParent();
+            Application.EnableVisualStyles();
+            Application.Run(new Guardian()); return 0;
+        }
+        Guardian() {
+            Text = "Antigravity Computer Use"; TopMost = true; FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar=false; StartPosition = FormStartPosition.Manual;
+            SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);
+            BackColor=Color.FromArgb(22,23,35);
+            visualScale=Overlay.ScreenScale(Screen.FromPoint(Cursor.Position));
+            ClientSize = new Size((int)(DesktopVisuals.HudWidth*visualScale),(int)(DesktopVisuals.HudHeight*visualScale));
+            Rectangle monitor=Screen.FromPoint(Cursor.Position).WorkingArea;
+            Location=new Point(monitor.Left+(monitor.Width-Width)/2,monitor.Top+(int)(18*visualScale));
+            using(GraphicsPath rounded=Overlay.RoundRect(new RectangleF(0,0,Width,Height),21*visualScale))Region=new Region(rounded);
+            toggle=ButtonAt(1,DesktopVisuals.ToggleRect); toggle.Click += delegate {
+                if(state=="active")SetState("paused");
+                else {SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});}
+            };
+            stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate { Emergency("button"); };
+            modeButton=ButtonAt(3,DesktopVisuals.ModeRect);modeButton.Click+=delegate {OpenModeMenu();};
+            LoadTakeoverMode();
+            tips.SetToolTip(stopButton,"Stop immediately · Esc or Ctrl+Alt+F12");
+            tips.SetToolTip(toggle,"Pause, resume, or re-arm control. Resuming requires a fresh observation.");
+            FormClosing += delegate(object sender, FormClosingEventArgs e) { SetState("stopped"); };
+            Shown += delegate {
+                ShowWindow(Handle,4); Mark(this); captureExcluded=SetWindowDisplayAffinity(Handle,0x11);
+                registered = RegisterHotKey(Handle, 1, 0x4003, 0x7B);
+                if (!registered) { Emit(new { ev="error", message="Ctrl+Alt+F12 is unavailable; refusing control" }); Close(); return; }
+                Presence.Start();
+                Presence.OnPanic = delegate { Emergency("escape"); };
+                if (!Presence.HooksOk) { Emit(new { ev="error", message="Physical-input monitoring unavailable" }); Close(); return; }
+                Overlay.Configure(1, "Antigravity", 0); Overlay.Start(true);
+                SetState("idle");
+                Emit(new {ev="settings",takeover_mode=takeover.Mode});
+                Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true });
+                Thread reader = new Thread(Read); reader.IsBackground = true; reader.Start();
+            };
+            timer.Interval = 70; timer.Tick += Tick; timer.Start();
+        }
+        protected override bool ShowWithoutActivation { get { return true; } }
+        protected override CreateParams CreateParams { get { CreateParams p=base.CreateParams;p.ExStyle|=0x08000080;return p; } }
+        protected override void OnPaint(PaintEventArgs e) {
+            e.Graphics.ScaleTransform(visualScale,visualScale);DesktopVisuals.Hud(e.Graphics,state,0,phase,activity);
+        }
+        HudButton ButtonAt(int index,Rectangle rect) {
+            HudButton b=new HudButton(this,index,rect);
+            b.SetBounds((int)(rect.X*visualScale),(int)(rect.Y*visualScale),(int)(rect.Width*visualScale),(int)(rect.Height*visualScale));
+            Controls.Add(b);return b;
+        }
+        sealed class HudButton : Button {
+            readonly Guardian owner;readonly int index;readonly Rectangle logical;bool hover;
+            internal HudButton(Guardian o,int i,Rectangle r) {owner=o;index=i;logical=r;FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;TabStop=false;Cursor=Cursors.Hand;}
+            protected override void OnPaint(PaintEventArgs e) {
+                e.Graphics.ScaleTransform(owner.visualScale,owner.visualScale);
+                e.Graphics.TranslateTransform(-logical.X,-logical.Y);
+                DesktopVisuals.Hud(e.Graphics,owner.state,hover?index:0,owner.phase,owner.activity);
+            }
+            protected override void OnMouseEnter(EventArgs e) {hover=true;Invalidate();base.OnMouseEnter(e);}
+            protected override void OnMouseLeave(EventArgs e) {hover=false;Invalidate();base.OnMouseLeave(e);}
+        }
+        void RefreshHud() {
+            toggle.AccessibleName=state=="active"?"Pause computer use":state=="paused"?"Resume computer use":"Re-arm computer use";
+            stopButton.AccessibleName="Stop computer use immediately";
+            modeButton.AccessibleName="Control settings. Takeover mode: "+takeover.Mode;
+            tips.SetToolTip(modeButton,takeover.Mode=="manual"?"Manual pause: mouse and keyboard do not interrupt. Click for control settings.":"Smart takeover: ignores jitter; deliberate input pauses. Click for control settings.");
+            AccessibleName="Antigravity computer use: "+state;
+            Invalidate();toggle.Invalidate();stopButton.Invalidate();modeButton.Invalidate();
+        }
+        string PreferenceFile {get {return Path.Combine(Path.GetDirectoryName(ControlFence.FileName),"control-preferences.json");}}
+        void LoadTakeoverMode() {
+            try {var prefs=js.DeserializeObject(File.ReadAllText(PreferenceFile)) as Dictionary<string,object>;
+                string mode=Convert.ToString(prefs["takeover_mode"]);if(mode=="manual"||mode=="smart")takeover.SetMode(mode,Presence.Capture());
+            }catch {}
+        }
+        void ChangeTakeoverMode(string mode) {
+            takeover.SetMode(mode,Presence.Capture());
+            try {string file=PreferenceFile,temp=file+".tmp";File.WriteAllText(temp,js.Serialize(new {takeover_mode=takeover.Mode}));if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);}catch {Emit(new {ev="visual_warning",message="Could not save control preference"});}
+            RefreshHud();Emit(new {ev="settings",takeover_mode=takeover.Mode});
+        }
+        void OpenModeMenu() {
+            modeMenu.Items.Clear();modeMenu.BackColor=Color.FromArgb(32,35,40);modeMenu.ForeColor=Color.FromArgb(234,237,239);
+            modeMenu.ShowImageMargin=true;modeMenu.ShowCheckMargin=false;modeMenu.Font=new Font(Overlay.UiFont,10);modeMenu.Padding=new Padding(6);
+            modeMenu.Renderer=new ToolStripProfessionalRenderer(new ControlMenuColors());
+            ToolStripMenuItem manual=new ToolStripMenuItem("Manual pause — use Pause or Esc");manual.Checked=takeover.Mode=="manual";manual.Click+=delegate {ChangeTakeoverMode("manual");};
+            ToolStripMenuItem smart=new ToolStripMenuItem("Smart takeover — deliberate input pauses");smart.Checked=takeover.Mode=="smart";smart.Click+=delegate {ChangeTakeoverMode("smart");};
+            modeMenu.Items.Add(manual);modeMenu.Items.Add(smart);modeMenu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem hint=new ToolStripMenuItem("Esc always stops immediately");hint.Enabled=false;modeMenu.Items.Add(hint);
+            modeMenu.Show(modeButton,new Point(0,modeButton.Height));
+            SetPropW(modeMenu.Handle,"ComputerUseOverlayWindow",new IntPtr(1));SetWindowDisplayAffinity(modeMenu.Handle,0x11);
+        }
+        sealed class ControlMenuColors:ProfessionalColorTable {
+            public override Color ToolStripDropDownBackground {get{return Color.FromArgb(32,35,40);}}
+            public override Color ImageMarginGradientBegin {get{return ToolStripDropDownBackground;}}
+            public override Color ImageMarginGradientMiddle {get{return ToolStripDropDownBackground;}}
+            public override Color ImageMarginGradientEnd {get{return ToolStripDropDownBackground;}}
+            public override Color MenuItemSelected {get{return Color.FromArgb(55,67,77);}}
+            public override Color MenuItemBorder {get{return Color.FromArgb(75,90,103);}}
+            public override Color MenuBorder {get{return Color.FromArgb(63,70,77);}}
+            public override Color CheckBackground {get{return MenuItemSelected;}}
+            public override Color CheckSelectedBackground {get{return MenuItemSelected;}}
+        }
+        internal static void Mark(Form f) {
+            SetPropW(f.Handle, "ComputerUseOverlayWindow", new IntPtr(1));
+            SetWindowDisplayAffinity(f.Handle, 0x11);
+        }
+        void WriteState() { lock(stateLock) {
+            string f = ControlFence.FileName;
+            if (String.IsNullOrEmpty(f)) return;
+            string temp = f + ".tmp";
+            File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants))));
+            if (File.Exists(f)) File.Replace(temp, f, null); else File.Move(temp,f);
+        } }
+        void SetState(string next) {
+            if (state == "stopped" && next == "active") return;
+            state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture()); WriteState();
+            RefreshHud();
+            if (state != "active") { CursorSafety.Restore(); StopWorkers(); ControlFence.Recover(); Overlay.HideAll(); }
+            else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
+            Emit(new { ev="state", state=state });
+        }
+        void Emergency(string reason="request") {
+            // Hook thread invalidates the native fence BEFORE waiting for the UI thread.
+            state="stopped"; try { WriteState(); } catch { }
+            StopWorkers(); ControlFence.Recover(); Emit(new { ev="state", state="stopped", reason=reason });
+            try { BeginInvoke((MethodInvoker)delegate { if(activePrompt!=null) activePrompt.Close(); grants.Clear(); SetState("stopped"); }); } catch { }
+        }
+        void StopWorkers() {
+            lock(workerLock) { foreach(Process p in workers) try { if(!p.HasExited)p.Kill(); } catch { } workers.Clear(); }
+        }
+        void WriteWorkers() {
+            List<string> live=new List<string>();
+            foreach(Process p in workers)try {if(!p.HasExited)live.Add(p.Id+":"+p.StartTime.ToUniversalTime().Ticks);}catch {}
+            string file=ControlFence.FileName+".workers",temp=file+".tmp";File.WriteAllLines(temp,live);
+            if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);
+        }
+        void Tick(object sender, EventArgs e) {
+            if (prompting || captureHidden) return;
+            if(activity!="" && (DateTime.UtcNow-activityAt).TotalMilliseconds>1200) {activity="";RefreshHud();}
+            if(++visualTick%3==0 && state=="active" && DesktopVisuals.MotionEnabled) {phase+=.14f;Invalidate();}
+            if (state == "active") {
+                if(!CursorSafety.CheckWatchdog()){Emergency("cursor_watchdog_failed");return;}
+                if (DateTime.UtcNow.Ticks >= deadline) { SetState("idle"); return; }
+                if(!modeMenu.Visible && takeover.ShouldPause(Presence.Capture(),TakeoverPolicy.NowMs,visualScale)) {SetState("paused");return;}
+                Overlay.MarkActive();
+                if (Overlay.ConsumeStop()) SetState("stopped");
+            }
+        }
+        void Read() {
+            try {
+                string line;
+                while ((line=Console.ReadLine()) != null) {
+                    Dictionary<string, object> msg = js.DeserializeObject(line) as Dictionary<string, object>;
+                    if (msg != null) BeginInvoke((MethodInvoker)delegate { Receive(msg); });
+                }
+            } catch { }
+            try { BeginInvoke((MethodInvoker)delegate { SetState("stopped"); Close(); }); } catch { }
+        }
+        void Receive(Dictionary<string, object> m) {
+            string op = Convert.ToString(m["op"]); object id=m.ContainsKey("id")?m["id"]:null;
+            if(op=="visual_status") {Emit(new {id=id,state=state,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode});return;}
+            if(op=="activity" && state=="active") {
+                string action=Convert.ToString(m["action"]);
+                switch(action) {case "move":activity="Moving";break;case "click":activity="Clicking";break;case "drag":activity="Dragging";break;case "scroll":activity="Scrolling";break;case "type":case "set_value":case "key":activity="Typing";break;default:activity="Checking";break;}
+                activityAt=DateTime.UtcNow;RefreshHud();
+                if(m.ContainsKey("click_feedback")&&Convert.ToBoolean(m["click_feedback"]))Overlay.ClickFeedback();
+                return;
+            }
+            if(op=="attach") {
+                try {
+                    Process p=Process.GetProcessById(Convert.ToInt32(m["pid"]));
+                    if(p.Id!=Process.GetCurrentProcess().Id && String.Equals(p.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))
+                        lock(workerLock) { if(!workers.Exists(v=>v.Id==p.Id))workers.Add(p);WriteWorkers(); }
+                } catch { }
+                return;
+            }
+            if (op == "pause") { SetState("paused"); return; }
+            if (op == "stop") { Emergency(); return; }
+            if (op == "end") { grants.Clear(); SetState(state=="stopped"||state=="paused"?state:"idle"); return; }
+            if (op == "capture") {
+                captureHidden=true;
+                if(!captureExcluded || !Overlay.CaptureExcluded) { Overlay.HideImmediate(); Hide(); }
+                Emit(new {id=id,allowed=true}); return;
+            }
+            if (op == "capture_end") { captureHidden=false; if(!Visible)Show(); return; }
+            if (op == "activate") {
+                if (state != "stopped" && state != "paused") {
+                    token=Convert.ToString(m["token"]); deadline=Convert.ToInt64(m["deadline"]); SetState("active");
+                }
+                Emit(new { id=id, allowed=state=="active", state=state }); return;
+            }
+            if (op != "prompt") return;
+            if (state == "stopped" || state == "paused") { Emit(new { id=id, allowed=false, state=state }); return; }
+            // In the installed App integration, Antigravity's trusted MCP
+            // permission engine already authorized this invocation before the
+            // stdio server receives it. Standard MCP carries no preset token.
+            // This is immutable startup configuration, never a tool argument.
+            bool allowed=hostManaged; bool timedOut=false;
+            if(!hostManaged) {
+            prompting=true; Overlay.HideAll();
+            using (Form dialog = new Form()) {
+                activePrompt=dialog;
+                dialog.Text="Computer Use — local permission"; dialog.TopMost=true;
+                dialog.ClientSize=new Size(700,440); dialog.StartPosition=FormStartPosition.CenterScreen;
+                TextBox body=new TextBox(); body.Multiline=true; body.ReadOnly=true; body.ScrollBars=ScrollBars.Vertical;
+                body.Font=new Font("Segoe UI",11); body.SetBounds(16,16,668,350);
+                body.Text=Convert.ToString(m["message"]); dialog.Controls.Add(body);
+                Button yes=new Button(); yes.Text="Allow"; yes.SetBounds(16,385,120,32); yes.DialogResult=DialogResult.Yes; dialog.Controls.Add(yes);
+                Button no=new Button(); no.Text="Deny"; no.SetBounds(152,385,120,32); no.DialogResult=DialogResult.No; dialog.Controls.Add(no);
+                dialog.CancelButton=no; dialog.AcceptButton=no;
+                System.Windows.Forms.Timer expiry=new System.Windows.Forms.Timer(); expiry.Interval=90000;
+                expiry.Tick += delegate { timedOut=true; dialog.DialogResult=DialogResult.No; dialog.Close(); }; expiry.Start();
+                dialog.Shown += delegate { Mark(dialog); };
+                allowed = dialog.ShowDialog(this) == DialogResult.Yes;
+                expiry.Dispose();
+                activePrompt=null;
+            }
+            prompting=false; takeover.Reset(Presence.Capture());
+            }
+            if (state == "stopped") allowed=false;
+            string permit=null;
+            if(allowed && Convert.ToString(m["kind"])=="app") {
+                grants.Add(Convert.ToString(ControlFence.Identity(Convert.ToInt64(m["hwnd"]))["key"])); WriteState();
+            }
+            if(allowed && Convert.ToString(m["kind"])=="action") {
+                permit=Guid.NewGuid().ToString("N");
+                Dictionary<string,object> a=m["args"] as Dictionary<string,object>;
+                string appKey=a.ContainsKey("hwnd")?Convert.ToString(ControlFence.Identity(Convert.ToInt64(a["hwnd"]))["key"]):"";
+                Directory.CreateDirectory(ControlFence.FileName+".permits");
+                File.WriteAllLines(Path.Combine(ControlFence.FileName+".permits",permit),new string[] { token,
+                    FingerprintFor(m,a),appKey,DateTime.UtcNow.AddSeconds(90).Ticks.ToString() });
+            }
+            int host;
+            if (allowed && m.ContainsKey("host_pid") && Int32.TryParse(Convert.ToString(m["host_pid"]),out host)) AllowSetForegroundWindow(host);
+            Emit(new { id=id, allowed=allowed, state=state, permit=permit, decision=allowed?(hostManaged?"host-authorized":"allowed"):(state=="stopped"?"stopped":(timedOut?"timeout":"denied")) });
+        }
+        string FingerprintFor(Dictionary<string,object> m, Dictionary<string,object> a) {
+            return ControlFence.Fingerprint(Convert.ToString(m["action_op"]),a,Convert.ToString(m["label"]));
+        }
+        protected override void WndProc(ref Message m) {
+            if (m.Msg==0x0312) Emergency("hotkey");
+            base.WndProc(ref m);
+        }
+        protected override void OnClosed(EventArgs e) {
+            if (registered) UnregisterHotKey(Handle,1);
+            CursorSafety.Close();Presence.Stop(); Overlay.Stop(); base.OnClosed(e);
+        }
+    }
+}

@@ -1,0 +1,11 @@
+# Reuse and provenance
+
+The native foundation is `ridelink0/claude-computer-use`, revision `70347e652ab19f017939653e1a112eb523695198`, published under MIT. Its license is retained in `LICENSE.upstream`; source inventory and original byte hashes are in `UPSTREAM.json`.
+
+Retained implementation: persistent C# `AxonHost.cs`, `Presence.cs`, `Overlay.cs`; Node driver/build, renderer, session input lease and classification utilities; selected original fixtures/tests. Modified files add Antigravity integration, native human grants/action approvals, native input fencing, independent stop/worker termination, real-cursor behavior, monitor-edge glow and prebuilt packaging. `upstream-index.mjs` is an unexecuted source reference and is excluded from runtime bundles. Its old model-asserted grants are not the new MCP entry point.
+
+OpenAI `openai/openai-cua-sample-app`, revision `6dd34b40acc1d002696ccd41aaf0a1f2f2be290c`, MIT: `python-app/app/desktop/release_inputs.py` is adapted into `ControlFence.Recover` (independent release attempts after failures; now restricted to inputs recorded in the original InputLedger ownership journal). Lifecycle concepts from `desktop/runtime.py` are adapted into driver abort/independent recovery. These are ports, not byte-identical copies. Copyright (c) 2025 OpenAI; full MIT license is in `licenses/OpenAI.txt`.
+
+Anthropic `anthropics/claude-quickstarts`, revision `9ec32b91df50b0d4906cae64b13c6298055ff40d`, MIT: `computer-use-best-practices/computer_use/image.py` sizing algorithm is ported into `upstream-utils.mjs`; `tools/batch.py` sequential first-failure algorithm is adapted into the MCP batch implementation. Our transport image budget is not a claim about Gemini's encoder. Copyright (c) 2023 Anthropic; full MIT license in `licenses/Anthropic.txt`.
+
+The Windows bundle includes the locally installed official Node executable, with its version/checksum recorded in `bundle-manifest.json` and upstream Node license under `licenses/`. No proprietary product bundles, extracted assets or leaked source maps are included. Product names identify compatibility; no affiliation or endorsement is claimed.

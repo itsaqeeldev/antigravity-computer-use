@@ -1,0 +1,237 @@
+{
+  "repository": "https://github.com/ridelink0/claude-computer-use",
+  "revision": "70347e652ab19f017939653e1a112eb523695198",
+  "files": [
+    {
+      "path": "server/build.mjs",
+      "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
+      "local_sha256": "4f320db3f5c8eecd0ecc938793fd1b3f2a1ad31eff5e7545b1bb4968773bcbc1",
+      "modified": true
+    },
+    {
+      "path": "server/driver.mjs",
+      "upstream_sha256": "31c16f2c7d97d7c69a796a537996d1da3b6637150571a19361e1ba86dda8b6df",
+      "local_sha256": "36f45702e64eb85478645186c0c843df8a2fe5c5cdf581a7886354a90030df71",
+      "modified": true
+    },
+    {
+      "path": "server/index.mjs",
+      "upstream_sha256": "24b1584fdbe820134d806d90d331437a97a63373cd6b142cb6d6392e599d6f7b",
+      "reference_path": "server/upstream-index.mjs",
+      "local_sha256": "592f24c63946b8375818233c4c0581e77d9781b25219a3e5b25e51e2f1c8dcd2",
+      "modified": true
+    },
+    {
+      "path": "server/journal.mjs",
+      "upstream_sha256": "b001a0e7838ef10d8e01d5bb2f64bb3d369b0f154fda797bed7f3a3c2bb092dd",
+      "local_sha256": "4eb4384a3d5667e3b16df11cef7e678680abc2de608f28e965691848be21030a",
+      "modified": true
+    },
+    {
+      "path": "server/policy.mjs",
+      "upstream_sha256": "673a749426c458b254d991d7f6fc75e7e5415f32b64e05011476a90803d7001b",
+      "local_sha256": "493efd224ed4547cbc9a281d5ef783f75dc41d4aa676cb1238c2e55a31314da1",
+      "modified": true
+    },
+    {
+      "path": "server/profiles.mjs",
+      "upstream_sha256": "df2ded86fe33cc2a98a19f607d32150f6fdcd55fc1787364ba7673fbcbd3bfe3",
+      "local_sha256": "87bebc54dae83605aad21348adfdd8b0b98ac01ece6ced263bf2c4ff20f896c7",
+      "modified": true
+    },
+    {
+      "path": "server/render.mjs",
+      "upstream_sha256": "5ff0044fd2becc4b2232f6c370a73ff8245aa258a5b82caadcf118cb46f1d3c4",
+      "local_sha256": "bf487bd686e7b820dbd7883d880bb805907a3c5d24f49fadb158ecc46dd9d890",
+      "modified": true
+    },
+    {
+      "path": "server/sessions.mjs",
+      "upstream_sha256": "09563923bcd19974f2882855c8b23883038e13942c6583c861b4e22cc274ebe0",
+      "local_sha256": "88004c676be561a46fabc2514a6d57998700657f1ba615b586908c4747f7170a",
+      "modified": true
+    },
+    {
+      "path": "server/tasks.mjs",
+      "upstream_sha256": "ca52317c529376167627e688d0b49d4902d533ad90ecaef589f238de120fe5bf",
+      "local_sha256": "14434ac21e75d2c759b5dae157b8277c65834e833252a4103c763ab85656e2d7",
+      "modified": true
+    },
+    {
+      "path": "server/native/AxonHost.cs",
+      "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
+      "local_sha256": "8b76c4c7d581d7f92fb0227dab434643ec669b0d99b307bcb7a5cca6a6d679a9",
+      "modified": true
+    },
+    {
+      "path": "server/native/AxonHost.swift",
+      "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
+      "local_sha256": "606c2e6638555041236a99d1874067fe3de79d3e14880352348c4eebdeef57b2",
+      "modified": true
+    },
+    {
+      "path": "server/native/Overlay.cs",
+      "upstream_sha256": "eaadd8bc72befd9f42aa214dbb1a3ba45f2e28d0c40ed3491ece4414280a4551",
+      "local_sha256": "d6eae93b938344125f89a4f6a706a7caba132319337ce4654ae4394a0d2a9856",
+      "modified": true
+    },
+    {
+      "path": "server/native/Presence.cs",
+      "upstream_sha256": "b8af4f75a36a1045c8eef0f8af52dd4142c4efb87797c094b913a3da8715fece",
+      "local_sha256": "2eeaeb7768663c4fffb277bbb66de5236ad7fc0554f60837b139b64ba43c3f9a",
+      "modified": true
+    },
+    {
+      "path": "tools/annotations-test.mjs",
+      "upstream_sha256": "70cb23fb4b77fe77306dabb3e1ba9bb7a6fff677c69ffcc2d461ad53ab2d8c00",
+      "local_sha256": "6d33d027c1d17cd9744b3540af09ea1c819f11054226664ac47abcecaf105871",
+      "modified": true
+    },
+    {
+      "path": "tools/astra-test.mjs",
+      "upstream_sha256": "f8d166c5a0474a90b22783e20ac01ef365853e64b0bfd56b3cc50101b895739a",
+      "local_sha256": "723e6ebb62fb2a7542cd3a3ea6972d8ff7c45b50349cbaaa4f18c3c409e40803",
+      "modified": true
+    },
+    {
+      "path": "tools/batch-test.mjs",
+      "upstream_sha256": "feabb9b50955944fad8d225cb59c5d3f66602fcf07e5e77246a424956f8e4242",
+      "local_sha256": "25b1000ea52468d0123e10be8e4be650f14395f4209318e969b22da5b447f1e4",
+      "modified": true
+    },
+    {
+      "path": "tools/build-test.mjs",
+      "upstream_sha256": "5d085f29ff595fa31c6ee0a2d558922864b8636b1f98641503f64f2b16b40cf1",
+      "local_sha256": "f2196554ac96274d5e70ad7697d2f69c7524f7b67fa0af6a94c1723c6f0c9230",
+      "modified": true
+    },
+    {
+      "path": "tools/cli.mjs",
+      "upstream_sha256": "6629e989318597b47fb1300eb2a7d12c03058eb92d8fe5ab0f516eb522c1ec1d",
+      "local_sha256": "2ab74211ab2c137b8e135ebd5b3240aa48e658b49ba16e58ecf93b3589997dd0",
+      "modified": true
+    },
+    {
+      "path": "tools/desktop-test.mjs",
+      "upstream_sha256": "8c4404fa50c5bd4a68a29275e996884b274e08277394a547b5f47945c2e9b819",
+      "local_sha256": "be0d26febc60d182689951218cc59c184bc943b442be11235c7b24c66b634890",
+      "modified": true
+    },
+    {
+      "path": "tools/driver-test.mjs",
+      "upstream_sha256": "6fba9cb7608ceb68fdc464b362cf0f9afa2bd6730e5d842b3a0348d9a31da1fc",
+      "local_sha256": "ce0a4f1bd7474e781166c890c3b6f17e30501565b8adba1949f4bc4ab2c9ba28",
+      "modified": true
+    },
+    {
+      "path": "tools/fg-probe.mjs",
+      "upstream_sha256": "d9eeb3d7d63e7e1c94c3665b349015e1d1e48f301b2d77ab4445b1a319eaf842",
+      "local_sha256": "906c2ebe8188e5efcf1e15f696ac3f115939966ad1c77693784e693a47244a57",
+      "modified": true
+    },
+    {
+      "path": "tools/fixes-test.mjs",
+      "upstream_sha256": "175c08a88d8792bf727a2cf0941eb6bc516aed6e62159edcae3ae0fe7c656c3f",
+      "local_sha256": "8f357e3f397bcd8b2fce3007df474be8718b36ca44c621e7d3c385b8617519ef",
+      "modified": true
+    },
+    {
+      "path": "tools/host-test.mjs",
+      "upstream_sha256": "dd5c7b98e01b979f7914debc6b53afaf6ecd96850b16542efc6eb43c6f3df8ab",
+      "local_sha256": "bbb4b7bc00ab05f14329f200ebb218808a7cf2bd17ad31dbd0cf32595e851756",
+      "modified": true
+    },
+    {
+      "path": "tools/make-target.ps1",
+      "upstream_sha256": "6f451cd16a180f397aad33e48ba34eaf153730365640ee6de4488d6530a28578",
+      "local_sha256": "4e9aeb1e9ef269929e6239557d602091ef3b9548dd6dbc428650509d242c97ec",
+      "modified": true
+    },
+    {
+      "path": "tools/mcp-test.mjs",
+      "upstream_sha256": "20d310439f18d6d674a70a48b33fc237ed6c881490d4efd1fff92d78424e6c58",
+      "local_sha256": "b99f1a41edfdb3c8ed2cfa7f238a4e496190861432d299881482e53b9848ab02",
+      "modified": true
+    },
+    {
+      "path": "tools/policy-test.mjs",
+      "upstream_sha256": "ab36fcd00a69cb08829f85258e0a410297ebd13d8411c85a1532de1718a833c7",
+      "local_sha256": "563480e2d6190bc3a1b6b2f3caeaa104880cead3351b671d70c372a8c907bab3",
+      "modified": true
+    },
+    {
+      "path": "tools/presence-test.mjs",
+      "upstream_sha256": "b37e27c0cc43514f152ac7a4a60040c24dc8206eb50168155cee68be808312c3",
+      "local_sha256": "c0d248cbe12b6b563649d9ca591d9e32b3286c2e3c88825120d74bc0118678a5",
+      "modified": true
+    },
+    {
+      "path": "tools/sessions-test.mjs",
+      "upstream_sha256": "ac6f98e2e4282aeda25a624a66fd4c619e7a13a4cc01804191c2bd7905578d08",
+      "local_sha256": "7eadbc159b05eff83666c79f45825a5970c6e8ad3f157549da1513c4f370725d",
+      "modified": true
+    },
+    {
+      "path": "tools/test-all.mjs",
+      "upstream_sha256": "11e36b19272a8ec37cd9cf2511486b7ae42b5c87a63586e5bd89848ca20a5549",
+      "local_sha256": "21d0e4d20c7ba558b418a580f38a264f0561a4d55b27fd0ad7c206440f10c5e9",
+      "modified": true
+    },
+    {
+      "path": "tools/verify.mjs",
+      "upstream_sha256": "c5737dc6551754ba1859431e72c153287ac2ac990075cb9e445fcf4ca2669748",
+      "local_sha256": "f212f1febbf92d1345a3fd8e48a1108950af431258acffbc6df8518fc99fdb87",
+      "modified": true
+    },
+    {
+      "path": "tools/web-test.mjs",
+      "upstream_sha256": "943bb94f8dcacc036c6433a680b5826f356ae2dcacec447313b66ea1aae36330",
+      "local_sha256": "d1c9206c2e909c93e91cf57dd43d40324997f7b6c360e2d1d81eda27a21e2a7f",
+      "modified": true
+    }
+  ],
+  "modification_notes": [
+    "Antigravity Agent Manager stdio adapter and host-managed permission integration; standalone human dialogs remain available.",
+    "Native identity/action fencing, independent cancellation and worker/input recovery.",
+    "Original continuous glow, compact native HUD, live pointer halo and temporary native arrow with independent crash watchdog.",
+    "Prebuilt Windows packaging and preserving installer/rollback."
+  ],
+  "authored_files": [
+    {
+      "path": "server/runtime.mjs",
+      "sha256": "63e67d39d08ac1088d561ccd532c789cc5d7cd80d6cb07af1180856a1a15c25b"
+    },
+    {
+      "path": "server/mcp.mjs",
+      "sha256": "a4ecde088b63bdf9b6dab651257eac13a9376a78402e67fadd8094b6fb3dc37e"
+    },
+    {
+      "path": "server/guardian.mjs",
+      "sha256": "09913d8b1511d7921d123c5586c510ffd7fc62ff620197317281f3f6943b91d4"
+    },
+    {
+      "path": "server/native/Guardian.cs",
+      "sha256": "bc168a4b96a49303719ba1044269d1f2b610252e51d6326b1da5b350c9ff5d1b"
+    },
+    {
+      "path": "server/native/CursorSafety.cs",
+      "sha256": "3841e1adecb34b07502cbf20448cdb7c0cc9d8618c27fb679e24b15a363241d1"
+    },
+    {
+      "path": "server/native/DesktopVisuals.cs",
+      "sha256": "4c9abef3db79a57576fcc70b8655b30b20273a72c0c28b3b3168e3cb0251955b"
+    },
+    {
+      "path": "server/native/InputLedger.cs",
+      "sha256": "287c017367d71c1bef47f68dd17c9976c7a7c3d34213cfdc2c53f6cd7d809397"
+    },
+    {
+      "path": "server/native/CursorMotion.cs",
+      "sha256": "dca4a5d368af1b9642cddfd27897fd1b2d4c0d4ba756cb7294212b9c1b744448"
+    },
+    {
+      "path": "server/native/TakeoverPolicy.cs",
+      "sha256": "ee5fdf95a03a587581c23ec77451fba02b271f9a7ad1b292d405b383e5332ae8"
+    }
+  ]
+}
