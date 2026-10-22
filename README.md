@@ -10,7 +10,17 @@ This is a fork/adaptation of the published MIT `ridelink0/claude-computer-use` n
 
 ## See it before installing
 
-### Short walkthrough
+### Real Antigravity recording
+
+![Real screen recording: Antigravity enters text, physically clicks twice, toggles a checkbox and selects Blue in a disposable Windows app, at 4× speed](docs/media/real-demo.gif)
+
+[Watch the 4× MP4](docs/media/real-demo-4x.mp4) · [Watch the real-time excerpt](docs/media/real-demo-realtime.mp4)
+
+Recorded from a fresh `/computer-use` task in Antigravity Agent Manager, using the published v0.2.0 runtime. It enters **Hello from Antigravity**, physically clicks **Press Me** twice (`pressed:2`), checks **I agree**, and selects **Blue**. Only the disposable app's client area is captured; the surrounding desktop and Antigravity conversation are excluded for privacy.
+
+The GIF/short MP4 plays at **4× speed**. Both versions use the same continuous 136-second excerpt with startup waiting and black capture padding removed. The app actions are real, with no recreated UI or substituted frames. This window-only capture does not show the screen-edge overlay or the later Esc stop. [Recording details](docs/media/REAL-DEMO.md).
+
+### Illustrated walkthrough
 
 ![Eight-second walkthrough of invocation, observation/action verification, and human takeover](docs/media/demo.gif)
 
