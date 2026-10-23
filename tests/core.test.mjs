@@ -24,7 +24,7 @@ test('nested observation options and coordinate arrays are validated',()=>{
  for(const observe of [null,[],false,{with_image:'false'},{max_nodes:-1},{max_nodes:501},{__permit:'forged'}])
   assert.throws(()=>validate('computer_click',{...common,observe}));
  for(const from of [['1',2],[NaN,2],[true,2]])assert.throws(()=>validate('computer_drag',{...common,from,to:[3,4]}));
- validate('computer_click',{...common,observe:{with_image:false,query:'Export',max_nodes:500}});
+ validate('computer_click',{...common,index:2,observe:{with_image:false,query:'Export',max_nodes:500}});
  validate('computer_snapshot',{hwnd:1,settle_ms:600});
  for(const settle_ms of [-1,2001,1.5,'600'])assert.throws(()=>validate('computer_snapshot',{hwnd:1,settle_ms}));
 });
@@ -43,7 +43,7 @@ test('unbounded clicks, wheel deltas and drag interpolation are rejected',()=>{
  for(const clicks of [0,4,1000000])assert.throws(()=>validate('computer_click',{...common,clicks}));
  assert.throws(()=>validate('computer_scroll',{...common,amount:1000000}));
  assert.throws(()=>validate('computer_drag',{...common,from:[0,0],to:[1,1],steps:121}));
- validate('computer_click',{...common,clicks:2});
+ validate('computer_click',{...common,index:2,clicks:2});
 });
 test('MCP returns native image block',()=>{const c=content({metadata:{hwnd:1},image:{data:'xyz',mime:'image/jpeg',width:1}});assert.equal(c[1].type,'image');assert(!c[0].text.includes('xyz'));});
 test('transport keeps image and indexed tree without duplicating controls or image metadata',()=>{
@@ -71,4 +71,26 @@ test('batch stops on failure and never runs later actions',async()=>{
  let n=0;const r={action:async()=>{if(++n===2)throw new Error('denied');return {metadata:{observation_id:'next'}};}};
  const result=await call(r,'computer_run',{hwnd:1,observation_id:'start',reason:'test',steps:[{kind:'type',text:'one'},{kind:'key',keys:'enter'},{kind:'type',text:'must not run'}]});
  assert.equal(n,2);assert.equal(result.completed.length,1);assert.equal(result.skipped,1);
+ assert.equal(result.ok,false);assert.equal(result.error.message,'denied');
+});
+
+test('batch preflight rejects invalid later steps and frame overrides before any input',async()=>{
+ let delivered=0;const r={async action(){delivered++;}};
+ for(const bad of [{kind:'launch',app:'x'},{kind:'click'},{kind:'click',index:2,x:3,y:4},{kind:'click',x:3},{kind:'type',text:'x'.repeat(401)},{kind:'key',keys:'enter',hwnd:2},{kind:'key',keys:'enter',observation_id:'other'}]){
+  await assert.rejects(call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},bad]}));
+ }
+ assert.equal(delivered,0);
+});
+
+test('batch returns final image by default and uses fresh internal observations without intermediate captures',async()=>{
+ const seen=[];const r={async action(_op,args){seen.push(args);return {metadata:{observation_id:'frame'+seen.length}};}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'initial',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
+ assert.equal(seen[0].observe.with_image,false);assert.equal(seen[1].observe.with_image,true);
+ assert.equal(seen[0].observation_id,'initial');assert.equal(seen[1].observation_id,'frame1');assert.equal(result.batch.completed.length,2);
+});
+
+test('post-input verification failure stops the batch with delivery evidence intact',async()=>{
+ let delivered=0;const r={async action(){delivered++;return {input_completed:true,verification_error:{code:'capture_failed'}};}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
+ assert.equal(delivered,1);assert.equal(result.input_completed,true);assert.equal(result.batch.phase,'verification');assert.equal(result.batch.skipped,1);
 });

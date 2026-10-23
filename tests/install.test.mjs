@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {mergeConfig,install} from '../scripts/install.mjs';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
 const root=path.resolve('.localdata/test-install');fs.mkdirSync(root,{recursive:true});
 function seal(bundle,version='9.1.2-test'){
  const files={};for(const file of ['node.exe','bin/AxonHost.exe','skills/computer-use/SKILL.md'])files[file]=createHash('sha256').update(fs.readFileSync(path.join(bundle,file))).digest('hex');
@@ -17,9 +18,11 @@ test('direct installation removes only its legacy MCP entry and pins the script 
  const result=install({bundle,target,workspace,permissionMode:'host-managed'});const current=JSON.parse(fs.readFileSync(cfg));
  assert.equal(current.custom,8);assert.equal(current.mcpServers.keep.command,'keep');assert(!current.mcpServers['antigravity-computer-use']);
  assert.equal(JSON.parse(fs.readFileSync(path.join(result.release,'desktop-policy.json'))).permission_mode,'host-managed');
- assert(fs.readFileSync(path.join(result.skills[0],'SKILL.md'),'utf8').includes(path.join(result.release,'scripts','desktop.mjs')));
+ assert(fs.readFileSync(path.join(result.skills[0],'SKILL.md'),'utf8').includes(result.launcher));
+ assert(fs.readFileSync(result.launcher,'utf8').includes(pathToFileURL(path.join(result.release,'scripts','desktop.mjs')).href));
  const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(result.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);
  assert.equal(JSON.parse(fs.readFileSync(cfg)).mcpServers['antigravity-computer-use'].command,'old');
+ assert(!fs.existsSync(result.launcher));
 });
 test('configuration merge preserves unrelated servers/settings',()=>{
  const f=path.join(root,'merge.json');fs.writeFileSync(f,JSON.stringify({custom:7,mcpServers:{keep:{command:'keep'}}}));
@@ -31,10 +34,12 @@ test('project-local installation and update rollback preserve later unrelated ch
  fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills','computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin','AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'v1');
  seal(bundle);
  const first=install({bundle,target,workspace,integration:'mcp'});const cfg=first.configs[0];assert.equal(cfg,path.join(workspace,'.agents/mcp_config.json'));assert.equal(first.skills[0],path.join(workspace,'.agents/skills/computer-use'));
+ const oldLauncher=fs.readFileSync(first.launcher,'utf8');
  fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'v2');seal(bundle);const second=install({bundle,target,workspace,integration:'mcp'});assert.notEqual(first.release,second.release);
  const state=JSON.parse(fs.readFileSync(cfg));state.mcpServers.unrelated={command:'keep'};fs.writeFileSync(cfg,JSON.stringify(state));
  const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(second.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);
  const restored=JSON.parse(fs.readFileSync(cfg));assert.equal(restored.mcpServers.unrelated.command,'keep');assert.equal(restored.mcpServers['antigravity-computer-use'].command,path.join(first.release,'node.exe'));assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),'v1');
+ assert.equal(fs.readFileSync(first.launcher,'utf8'),oldLauncher);
 });
 test('installer copies prebuilt runtime, backs up exact config and registers global skill',()=>{
  const dir=fs.mkdtempSync(path.join(root,'case-'));const bundle=path.join(dir,'bundle'),home=path.join(dir,'home'),target=path.join(dir,'installed');
@@ -59,4 +64,34 @@ test('corrupt portable executable is refused before configuration or installatio
  const cfg=path.join(home,'.gemini/config/mcp_config.json');fs.mkdirSync(path.dirname(cfg),{recursive:true});const original='{"custom":true}';fs.writeFileSync(cfg,original);
  fs.writeFileSync(path.join(bundle,'node.exe'),'changed');
  assert.throws(()=>install({bundle,target,home}),/integrity check failed/);assert.equal(fs.readFileSync(cfg,'utf8'),original);assert(!fs.existsSync(target));
+});
+
+test('project-local launcher update does not redirect the global skill runtime',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'scopes-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home'),workspace=path.join(dir,'project');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});
+ fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ const global=install({bundle,target,home});const globalLauncher=fs.readFileSync(global.launcher,'utf8'),globalSkill=fs.readFileSync(path.join(global.skills[0],'SKILL.md'),'utf8');
+ fs.writeFileSync(path.join(bundle,'node.exe'),'different project runtime');seal(bundle,'9.1.3-test');
+ const project=install({bundle,target,home,workspace});assert.notEqual(project.launcher,global.launcher);
+ assert.equal(fs.readFileSync(global.launcher,'utf8'),globalLauncher);assert.equal(fs.readFileSync(path.join(global.skills[0],'SKILL.md'),'utf8'),globalSkill);
+ assert(fs.readFileSync(project.launcher,'utf8').includes(pathToFileURL(path.join(project.release,'scripts','desktop.mjs')).href));
+});
+
+test('short launcher forwards literal argv without a command shell or character expansion',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'argv-')),bundle=path.join(dir,'bundle'),target=path.join(dir,"installed space & 100% ' اردو");
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.mkdirSync(path.join(bundle,'scripts'),{recursive:true});
+ fs.copyFileSync(process.execPath,path.join(bundle,'node.exe'));fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'{{DESKTOP_COMMAND}}');
+ // This module is only an argv oracle: it has no desktop/native dependencies.
+ fs.writeFileSync(path.join(bundle,'scripts/desktop.mjs'),'export const encodeReply=JSON.stringify;export async function main(){console.log(JSON.stringify(process.argv.slice(2)));}');seal(bundle);
+ const result=install({bundle,target,home:path.join(dir,'home')});
+ const words=['paste','--text','اردو 😀 %PATH% & x|y > z ^ !', '--reason','literal "quotes" and \\slashes'];
+ const run=spawnSync(result.launcher_node,[result.launcher,...words],{windowsHide:true,encoding:'utf8'});assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),words);
+});
+
+test('a live desktop service blocks update before backups, executable or configuration writes',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'live-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});
+ fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);
+ fs.mkdirSync(path.join(target,'data'),{recursive:true});const session=JSON.stringify({pid:process.pid,secret:'must not be printed or consumed'});fs.writeFileSync(path.join(target,'data/desktop-session.json'),session);
+ assert.throws(()=>install({bundle,target,home}),/still running/);assert(!fs.existsSync(path.join(target,'backups')));assert(!fs.existsSync(path.join(target,'releases')));assert(!fs.existsSync(home));assert.equal(fs.readFileSync(path.join(target,'data/desktop-session.json'),'utf8'),session);
 });

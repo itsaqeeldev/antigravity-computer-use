@@ -205,12 +205,14 @@
     "dev7 capture hardening: replace five sampled visibility points with bounded full Z-order rectangle intersection checks; forbid covered-screen fallback after failed window rendering; discard a screen frame if coverage changes; Node rejects legacy screen_occluded replies. Native helper rebuilt from changed source; live old/new qualification remains recorded separately.",
     "0.3.0-beta.1: separable glow falloff cache, stronger soft edge field, smaller halo, distinct original text insertion cursor and role hotspot; installer manifest preflight before writes; protocol test isolation preserves real Stop state; canonical LF provenance checked in CI.",
     "Beta real Notepad reproduction: UIA SetFocus activated RichEditD2DPT child53480184 under approved root11536664. Compare GA_ROOT parents on every key, never GA_ROOTOWNER or same-PID alone; retain indexed focus validation and refuse other roots. Add native class/root/owner diagnostics and boundary regression.",
-    "Beta final real Notepad fixes: short paced native typing capped400 units; avoid redundant field focus; explicit paste reuses upstream clipboard-preserving implementation with stricter unknown-format refusal and exceptional-cleanup sequence recheck; Save As uses committed keyboard filename and refuses mismatched path. Real saved94-unit native and1209-unit full paste comparisons pass."
+    "Beta final real Notepad fixes: short paced native typing capped400 units; avoid redundant field focus; explicit paste reuses upstream clipboard-preserving implementation with stricter unknown-format refusal and exceptional-cleanup sequence recheck; Save As uses committed keyboard filename and refuses mismatched path. Real saved94-unit native and1209-unit full paste comparisons pass.",
+    "Speed candidate: strict named CLI flags and brief output, automatic bounded private timing receipts, exact-process launch/observe, short installer launcher with rollback, batch preflight and final-checkpoint capture. Actual Agent Manager latency rerun is pending.",
+    "Speed hardening: direct Node entrypoint preserves literal argv instead of a CMD forwarding wrapper; scoped project launchers cannot repoint global, live-service install refuses before writes, and ambiguous/incomplete batch target shapes refuse before input. Exact1319-unit real Notepad save and Upscaly batched import witnessed on speed1; actual App comparison awaits human window restoration."
   ],
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "777493d834675d2abe6f8a384e2ce61cf3f40bdbc4323cf2f1f252d0fa4ac14f"
+      "sha256": "69b406463bebb9ff40db48e67d25bb5016344a976e1bbed52fd2cf8e225c67b0"
     },
     {
       "path": "server/mcp.mjs",
@@ -246,15 +248,15 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "f120676c43d643e064b3f3bb11c0d437c16c12575273b85d3db516747d33631d"
+      "sha256": "6f3951980388b5b156a4441d294e8888353f1abac5932dc3d68730ff176ad57f"
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "7a8ce1e2b8236f0a709ba723cf702f2973ffd1900bd4efb87eb68b4e8e2cfdbe"
+      "sha256": "fe223b237d3f91370e1bb5ccacc048c2b653294c13f2eb001eef6c05719ca940"
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "f5d7b41e88c9626564cbb4035c3a9d1dc754a6ac178598984d6593ce3128f8f9"
+      "sha256": "740d8fa29390f0757e727990d24471a1ae7eeb1ab5c7cb52ce3bd3208c73d72a"
     },
     {
       "path": "server/version.mjs",
@@ -262,11 +264,11 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "0a029aea9fa4a91109cd6c904f7c26335f93504b4917cc66d00ac93548c42029"
+      "sha256": "9856e5a1a73168d1ffebf8d59e243259541da78fadce84ab4614705ddbac3ff5"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
-      "sha256": "4cbb69f4de80a6e01e9dda68f1f0d40f522013a510e741b22fcf7f561f45d623"
+      "sha256": "c681e917281d236ed24b1fb919bd87c1059c37f6b1d046482d5c9a24620ff253"
     },
     {
       "path": "server/native/SnapshotText.cs",
@@ -279,6 +281,50 @@
     {
       "path": "server/native/KeyboardTargetPolicy.cs",
       "sha256": "0e79bc6e4fc6c53f034568df39e826fe2173571151b13cbabaf0650700df4ecb"
+    },
+    {
+      "path": "scripts/arguments.mjs",
+      "sha256": "2792527fd3f12eaef139024253e4d9ca0401f8775f42b6e652314c0931921dc6"
+    },
+    {
+      "path": "server/receipts.mjs",
+      "sha256": "f7483fe7c1cc1a1ba723e0c7c5a447928b89d1a05ced1037fc14c90e71fda5be"
+    },
+    {
+      "path": "tests/arguments.test.mjs",
+      "sha256": "da05970811f5f3d596b3b9788b8345f8185809c86314662e91bbae2499239a64"
+    },
+    {
+      "path": "tests/receipts.test.mjs",
+      "sha256": "be671948d96e3729f3fdff4377a359fc8b119ec5a1d98a989a83f0fc228d357c"
+    },
+    {
+      "path": "tests/launch-observe.test.mjs",
+      "sha256": "0e1a9ffc44636448203ec8979cab0aaf73be70674f2f0bf98c2824f9d1b0d455"
+    },
+    {
+      "path": "scripts/install.mjs",
+      "sha256": "00e77b69b058bf4cee18e568164d146b646981a548edc7a100f92051f1adeef4"
+    },
+    {
+      "path": "scripts/rollback.mjs",
+      "sha256": "99ebcea467ca16249b3bbeed87a345c205eebfd78f8c6e32065a9fae78ec53db"
+    },
+    {
+      "path": "scripts/verify-install.mjs",
+      "sha256": "6e48608f87d636138111ed8fe8f8cb8891ac0ae94cc6317eac5da42a9409ff8b"
+    },
+    {
+      "path": "scripts/bundle.mjs",
+      "sha256": "0bea1a65ec54eac5fc870f72b35ec930cd480b75a6e6b74b83405cd826e4ee94"
+    },
+    {
+      "path": "tests/install.test.mjs",
+      "sha256": "3cc397293266bf7e04def84671a26208b85b7c4e4d8d0b74ac270a685bef742f"
+    },
+    {
+      "path": "tests/core.test.mjs",
+      "sha256": "2f2e19f92973826d015cf01ce0c6e165ea415a60972c0e2b0009f58a7deb75de"
     }
   ]
 }

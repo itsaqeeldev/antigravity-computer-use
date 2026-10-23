@@ -1,6 +1,6 @@
 # Antigravity Computer Use
 
-**Windows beta 0.3.0-beta.1.** Direct native integration, tested against real applications. Broader reliability and hardware qualification remain open; see the precise [validation boundary](VALIDATION.md). The historical v0.2.0 uses the older MCP integration.
+**Windows beta candidate 0.3.0-beta.1 is under qualification, not published yet.** Direct native integration has real-app witnesses, but the latest Agent Manager acceptance run exposed excessive orchestration latency and was cancelled. Speed changes are being tested before release; see the [validation boundary](VALIDATION.md). The historical published v0.2.0 uses the older MCP integration.
 
 [![Windows checks](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml/badge.svg)](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml)
 
@@ -10,7 +10,7 @@ The agent observes screenshots and accessibility controls, acts, then verifies t
 
 ## Install
 
-Download the [Windows portable bundle](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1) and extract it completely. Normal installation needs neither a compiler nor Python. SHA256 checksums are included with the release.
+The new direct Windows bundle is still a draft; it is not available for public download yet. When qualified, the complete portable bundle and SHA256 checksums will appear on the [releases page](https://github.com/shayann07/antigravity-computer-use/releases). Normal bundle installation needs neither a compiler nor Python. The older published v0.2.0 does not include this rework.
 
 To build from source instead, use Windows x64, Node 24.20.0 and the Windows .NET Framework compiler:
 
@@ -48,17 +48,20 @@ Native identity, geometry, observation, budget and watchdog checks remain active
 
 ## Direct command workflow
 
-The installed skill contains the exact bundled Node/script command. The development entry is:
+The installer creates a short `cu.mjs` entrypoint with bundled `cu-node.exe`, pinned to the exact installed release, and puts that command in the skill. Arguments reach Node directly without a command-shell forwarding wrapper. The development entry is:
 
 ```text
 node scripts/desktop.mjs --help
 node scripts/desktop.mjs start
 node scripts/desktop.mjs apps
-node scripts/desktop.mjs snapshot --request request.json
+node scripts/desktop.mjs snapshot --hwnd 123
+node scripts/desktop.mjs click --hwnd 123 --observation-id FRAME --index 7 --risk routine --reason "Open settings"
 node scripts/desktop.mjs end
 ```
 
-A snapshot returns an indexed accessibility tree and a local `image.path`. **Open the actual image in the host viewer** (`read_file` in the tested Agent Manager App). Subsequent actions need the fresh, one-use `observation_id`. Coordinates are returned-image pixels, mapped centrally to physical screen pixels. Prefer accessible controls; use coordinates for custom canvases. `settle_ms` optionally delays observation of an animation by at most 2 seconds. It does not repeat input or guarantee an animation has finished. Use `describe <command>` or `<command> --help` for exact argument schemas; write request files as UTF-8.
+A snapshot returns an indexed accessibility tree and a local `image.path`. **Open the actual image in the host viewer** (`read_file` in the tested Agent Manager App). Subsequent actions need the fresh, one-use `observation_id`. Coordinates are returned-image pixels, mapped centrally to physical pixels. Prefer accessible controls; use screenshot coordinates for custom canvases. Named action flags return a fresh tree without an image by default; add `--image` at visual checkpoints. `--settle-ms` delays observation by at most 2seconds without repeating input. Fetch unfamiliar schemas together with `describe click drag scroll`; avoid a catalogue interrogation loop. Legacy JSON/UTF-8 request files remain supported; `--text-file` avoids shell interpolation for bulk text.
+
+The service writes bounded timing/outcome receipts automatically, without request text, clipboard contents, raw UI trees or credentials. The agent need not create result files or copy screenshots for logging. `launch --observe` can return the exact launched process's first unambiguous window. Small `run --steps-file` batches validate all steps before input, take fresh observations between steps, capture the final image and stop on failure. These are source-tested speed changes; actual Agent Manager wall-time improvement is still pending. See [performance work](docs/PERFORMANCE.md).
 
 Available commands include `apps`, `snapshot`, `move`, `click`, `type`, `set_value`, `key`, `scroll`, `drag`, `focus`, `file_dialog`, `launch`, `open`, `clipboard`, `run`, `wait`, `pause`, `resume`, `stop`, `status`, `end`, `shutdown`. Use `apps` with `include_hidden:true` to find minimized/other-desktop windows. Focus the intended window before requesting its pixels; never confuse it with a closed app or act on the wrong visible desktop.
 
@@ -74,7 +77,7 @@ A second session is testing the same controller in a real rich-text editor/emula
 
 The final dev7 peer-editor run also exercised Copy after Open/New, rich transfer with an image, Undo/Redo, rotation, larger-font control access and real keyboard emoji input. The emulator's clipboard-sharing bridge reduced content to plain text when enabled; disabling it allowed rich transfer. The original setting was restored. One expired observation was correctly refused; two completed Close actions reported the expected missing-window verification result. No new controller defect was found in this bounded run.
 
-There are 69 passing automated controller checks. Exact build identities, evidence boundaries and remaining work are in [PROJECT-STATUS.md](PROJECT-STATUS.md), [VALIDATION.md](VALIDATION.md) and [IMPLEMENTATION_PROGRESS.md](IMPLEMENTATION_PROGRESS.md). Broader failure recovery, mixed-DPI/multiple-monitor hardware and owner visual acceptance remain open. macOS/Linux are not release targets yet; platform-specific code remains separate.
+There are 88 passing automated controller checks on the speed candidate; the earlier69-check baseline also passed GitHub CI. Exact build identities, evidence boundaries and remaining work are in [PROJECT-STATUS.md](PROJECT-STATUS.md), [VALIDATION.md](VALIDATION.md) and [IMPLEMENTATION_PROGRESS.md](IMPLEMENTATION_PROGRESS.md). Broader failure recovery, mixed-DPI/multiple-monitor hardware and owner visual acceptance remain open. macOS/Linux are not release targets yet; platform-specific code remains separate.
 
 ## Historical recording and interface
 

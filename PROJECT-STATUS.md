@@ -2,6 +2,8 @@
 
 Updated 24 October 2026 (Asia/Karachi). This is a Windows beta, not a claim of vendor parity or complete application qualification.
 
+**Release remains draft.** The latest exact-build Agent Manager run was cancelled after about8minutes near import: excessive orchestration latency, not an acceptance pass. The source speed candidate passes 88 tests. Installed speed1 build8d9d8082 completed real Upscaly batched import and exact1319-unit Notepad save with pause/resume/stale-frame refusal. Later source hardening replaces the temporary command-shell launcher with a literal-argv Node entrypoint, isolates project launchers and refuses live-service installation. Its refreshed packaging and actual Agent Manager comparison remain pending; the stock host-control API could not restore minimized Antigravity, so human restoration is deferred. See [performance qualification](docs/PERFORMANCE.md).
+
 ## Implemented
 
 - Direct global/project /computer-use skill using Antigravity's existing model, a local Node service and prebuilt C# helper. MCP is optional compatibility only.

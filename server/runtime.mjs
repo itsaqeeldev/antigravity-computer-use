@@ -202,7 +202,29 @@ export class Runtime {
     await this.driver.start();
     const a=await this.guardian.prompt({kind:'action',host_pid:this.driver.info.pid,action_op:'launch',args:payload,label:'',message:`Launch this application?\r\n\r\n${args.reason}\r\n\r\n${JSON.stringify({app,args:payload.args},null,2)}\r\n\r\nThis starts software with your account's privileges. No shell is used. Approve only if intended.`});
     if(!a.allowed)fail('permission_denied','Human denied application launch.');
-    this.check();return (await this.driver.call('launch',{...payload,__permit:a.permit})).result;
+    this.check();const result=(await this.driver.call('launch',{...payload,__permit:a.permit})).result;
+    if(!args.observe)return result;
+    // Launch already happened. An unavailable/ambiguous window is never an
+    // invitation to launch a duplicate. Observe still performs its normal app
+    // identity grant and native capture checks; this is only discovery sugar.
+    const generation=this.generation;
+    try {
+      if(!Number.isSafeInteger(result.pid)||result.pid<=0)throw Object.assign(Error('Launcher returned no PID. Discover apps without relaunching.'),{code:'launch_pid_unavailable'});
+      const until=Date.now()+8000;
+      do {
+        this.check();if(generation!==this.generation)fail('control_changed','Control changed after launch.');
+        const windows=(await this.driver.call('list_apps',{})).result.windows;
+        const matches=windows.filter(w=>w.pid===result.pid&&path.resolve(w.path||'').toLowerCase()===app.toLowerCase()&&!w.minimized&&!w.other_desktop&&w.rect?.[2]>0&&w.rect?.[3]>0);
+        if(matches.length>1)return {...result,input_completed:true,observe_pending:true,observation_hint:'Several matching windows opened. Discover apps and select the intended window; do not relaunch.'};
+        if(matches.length===1){
+          const observed=await this.observe({hwnd:Number(matches[0].hwnd),reason:args.reason});
+          return {...observed,result,input_completed:true};
+        }
+        await new Promise(resolve=>setTimeout(resolve,200));
+      }while(Date.now()<until);
+      this.check();
+      return {...result,input_completed:true,observe_pending:true,observation_hint:'No unambiguous visible window matched the launched PID and executable within8seconds. Discover apps; do not relaunch.'};
+    }catch(error){return {...result,input_completed:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message}};}
   }
   async pause(){this.generation++;this.frames.clear();this.state='paused';this.lastControlReason='requested_pause';this.guardian.send({op:'pause'});await this.driver.abort?.();return {paused:true,human_resume_required:true};}
   async resume(){

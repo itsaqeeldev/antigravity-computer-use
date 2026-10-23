@@ -1,5 +1,11 @@
 # Implementation progress
 
+## 24 October 2026 - speed repair in progress
+
+The actual final Agent Manager run was cancelled after roughly8minutes near import. It is not acceptance; v0.3.0-beta.1 remains draft. Repeated schema calls, request/result artifact management and inter-action deliberation dominated the trace. Strict named flags, brief replies, automatic bounded private timing receipts, exact-process launch/observation and batch preflight reduce unnecessary orchestration. Batches skip intermediate captures by default and retain partial failure evidence. Installed speed1 build8d9d8082 passed real Upscaly import and Notepad1319-unit save with pause/resume/stale-frame checks. The actual Agent Manager comparison is pending human restoration after a stock window-activation failure.
+
+Later source hardening uses a direct Node entrypoint instead of command-shell forwarding, preserving literal argv and isolating project launchers from global. Installation refuses a live service before writes. 88 source tests pass, including an executable metacharacter/Unicode argv regression, complete batch preflight and launcher-scope/rollback checks. The refreshed package and GitHub checks remain pending. See [performance qualification](docs/PERFORMANCE.md).
+
 ## 24 October 2026 - reviewed Windows beta preparation
 
 - Replaced the default MCP route with direct skill scripts and a capability-authenticated persistent native service. Antigravity remains the model/agent.

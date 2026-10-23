@@ -8,24 +8,38 @@ description: Operate and visually verify real desktop applications, including de
 Antigravity is the agent. The local Windows runtime supplies observation and input. Use the direct local command below through the host terminal tool. No MCP server is required. Cua Driver and Open Computer Use have different protocols; do not mix controllers.
 
 ```powershell
-{{DESKTOP_COMMAND}} --help
-{{DESKTOP_COMMAND}} describe snapshot
 {{DESKTOP_COMMAND}} start
 {{DESKTOP_COMMAND}} apps
 ```
 
-Replace each `computer_NAME` below with the command `NAME`. Write arguments to a short UTF-8 JSON request file with your normal file tool, then invoke the command with `snapshot --request <absolute-request.json>` (or `click`, `key`, etc.). Replies contain a compact indexed tree and an `image.path`. **Open that actual image using the host image viewer before choosing a pixel target.** In the tested Antigravity Agent Manager App, `read_file` on the JPEG delivers the image. Use only tools actually available in your host; if image viewing is unavailable, report that limitation and do not claim visual verification. The native service persists across commands; keep the same session and fresh observations. `end` releases control; `shutdown` closes the helper service.
+Use the command below directly; replace sample handles, frames, indexes and paths with observed values. **Do not create request/result files or copy screenshots for each step.** Automatic bounded local receipts include timings and delivery outcomes; their path/id are returned inline. Read receipts only for diagnosis or the final audit. Keep progress messages short.
 
-Before using an unfamiliar command, run `describe <command>` (or `--help <command>`) for its exact JSON schema, required fields, enums and limits. This does not start or observe the desktop. Treat the scripts as black boxes; routine operation does not require reading their implementation. `describe` alone lists command descriptions. `query` is a case-insensitive literal substring, not a regular expression.
+```powershell
+{{DESKTOP_COMMAND}} launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'
+{{DESKTOP_COMMAND}} snapshot --hwnd 123
+{{DESKTOP_COMMAND}} click --hwnd 123 --observation-id FRAME --index 7 --risk routine --reason 'Open settings'
+{{DESKTOP_COMMAND}} set_value --hwnd 123 --observation-id FRAME --index 8 --text 'PNG' --risk routine --reason 'Choose PNG'
+{{DESKTOP_COMMAND}} key --hwnd 123 --observation-id FRAME --keys ctrl+a --reason 'Select test text'
+{{DESKTOP_COMMAND}} file_dialog --hwnd 123 --observation-id FRAME --path 'D:\Samples\cat.jpg' --action open --reason 'Import the test image'
+{{DESKTOP_COMMAND}} paste --hwnd 123 --observation-id FRAME --index 9 --text-file 'D:\Tests\sample.txt' --reason 'Paste generated test text'
+{{DESKTOP_COMMAND}} wait --hwnd 123 --until Completed --timeout-ms 30000 --reason 'Wait for the export'
+{{DESKTOP_COMMAND}} end
+```
+
+Replies contain the current `observation_id`, compact indexed `tree` and, when requested, `image.path`. **Open that actual image with the host image viewer before choosing a pixel target or claiming visual verification.** In the tested Agent Manager App, `read_file` on the JPEG delivers the image. Do not substitute reading its JSON or drawing a reconstruction. If the host cannot view images, report that limitation. `snapshot` and launch `--observe` return images; ordinary named action calls return a fresh tree without an image by default. Add `--image` at a visual checkpoint, and `--query Output` to filter the tree. Each action consumes its frame; use the returned frame for the next action. A tree-only frame cannot authorize a pixel action: take and view a fresh screenshot first.
+
+For unfamiliar commands fetch only the needed schemas in **one call**, e.g. `describe move drag scroll run`. `describe --all` is available if needed; do not interrogate the catalogue one command at a time before operating the app. `--help` supplies a short reference. JSON inline and `--request FILE` remain compatible fallbacks, and `--json` returns full metadata. Use UTF-8 `--text-file` for long text/quotes rather than shell interpolation. `query` is a case-insensitive literal substring, not a regex. Treat runtime scripts and historical artifacts as black boxes during normal operation; do not read implementation or old test scripts to operate the app.
+
+The native service persists across commands. Keep one session; `end` releases control normally, and `shutdown` closes the helper service. The installer pins the short launcher to the installed build. A version mismatch requires orderly end/shutdown of the old session; never silently mix versions.
 
 
 ## Work toward the actual result
 
-1. Identify the requested app with `computer_apps`; choose a returned handle. If the user supplied an existing executable and it is not running, use `computer_launch`, then discover its main window and observe it. Treat a prebuilt app as a black box: do not inspect source, guess its development-server requirements, or start extra services before an actual launch/observation demonstrates a missing prerequisite. `computer_snapshot` automatically binds it to the session. Do not spend calls granting it again unless a new app instance needs binding.
+1. Identify the requested app with `apps`; choose a returned handle. If an exact existing executable is supplied and it is not running, `launch --observe` combines launch, discovery and first screenshot. It selects only an unambiguous visible window of that exact launched PID/executable. `observe_pending` or `input_completed:true` means the process already started: discover apps, never relaunch blindly (Store/stub launchers can hand off to another process). Treat a prebuilt app as a black box; start extra services only when an actual launch/observation demonstrates a missing prerequisite. `snapshot` binds the app automatically. Do not spend calls granting it again.
 2. Inspect its screenshot and indexed accessibility tree. A missing dev server, startup screen or error page is an application prerequisite, not a successful inspection. Use ordinary development tools to start/build the app when authorized, then inspect again.
 3. Act using a current `observation_id`. Prefer accessible indexes. For canvases, sliders or inaccessible controls use fresh screenshot coordinates. Coordinates refer to the returned image. Never invent a control or repeat a possibly completed submission.
-4. Each action returns a fresh observation. For a large app use `observe: {query: "Output", with_image: false}` on an action to limit the returned tree. Take a full screenshot at visual checkpoints. For animated dialogs or emulators, request `observe: {settle_ms:600}` on the action or take a later snapshot with `settle_ms:600`; a successful click does not guarantee its first image has settled. This waits for observation only and never repeats the input. A query filters returned rows, not the granted window or underlying accessibility snapshot.
-5. For processing, call `computer_wait` with expected visible text, e.g. `until: "Completed"`, `timeout_ms: 30000`. A timeout means inspect the state, not click Start again. If a spinner or custom canvas needs visual interpretation, take a screenshot instead. Do not declare success from the tool returning without an error.
+4. Each action returns a fresh observation. Use `--query Output` to limit a large tree, and `--image` at visual checkpoints. For animated dialogs or emulators use `--settle-ms 600`; a successful click does not guarantee the first image has settled. This waits only before observation and never repeats input. Query filters rows, not window authority. For predictable steps without intervening decisions, use one `run --steps-file <UTF-8-plan.json>` of1–8 steps. Example plan: `[{"kind":"click","index":7,"risk":"routine"},{"kind":"file_dialog","path":"D:/Samples/cat.jpg","action":"open"}]`. The batch validates all steps before input, observes freshly between steps and returns its final image by default. It stops on first action/verification failure and reports completed/skipped steps. Never replay the entire batch. Do not batch pixel coordinates across a changing layout or guess new indexes.
+5. For processing use `wait --until Completed --timeout-ms 30000` with expected visible text. A timeout means inspect the state, not click Start again. If a spinner/canvas needs visual interpretation, take a screenshot. Do not declare success merely because a tool returned without an error.
 6. Verify the requested postcondition in the actual app. For a coding/QA task also inspect the produced artifact using ordinary file/media tools. A mounted control, an accessible label, a unit test or an opened drawer does not prove the feature works.
 7. Call `computer_end` after the task. A later task can begin without restarting Antigravity.
 

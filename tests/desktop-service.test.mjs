@@ -4,7 +4,7 @@ import {serveDesktop,compact} from '../server/desktop-service.mjs';
 import {request,describeCommand,encodeReply} from '../scripts/desktop.mjs';
 import net from 'node:net';
 import {BUILD_ID} from '../server/version.mjs';
-import {spawn} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
@@ -14,6 +14,17 @@ test('direct command discovery exposes action schemas without source or session 
  for(const command of ['start','shutdown','describe'])assert.equal(describeCommand(command).inputSchema.additionalProperties,false);
  assert.deepEqual(describeCommand('start').inputSchema.required,[]);
  assert.throws(()=>describeCommand('invented'),error=>error.code==='unknown_command');
+});
+
+test('one offline discovery call exposes multiple schemas and never creates a desktop session',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-describe-'));
+ try {
+  for(const args of [['describe','click','paste','run'],['describe','--all']]){
+   const result=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/desktop.mjs',import.meta.url)),...args],{windowsHide:true,encoding:'utf8',env:{...process.env,AGCU_DATA_DIR:dir}});
+   assert.equal(result.status,0,result.stderr);const value=JSON.parse(result.stdout);assert(value.commands.length>=3);assert(value.commands.every(c=>c.inputSchema));
+  }
+  assert.deepEqual(fs.readdirSync(dir),[]);
+ }finally{fs.rmdirSync(dir);}
 });
 
 test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Unicode',()=>{

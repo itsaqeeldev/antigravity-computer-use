@@ -7,18 +7,25 @@ import {Runtime} from './runtime.mjs';
 import {call} from './desktop-tools.mjs';
 import {dataDir} from './build.mjs';
 import {BUILD_ID} from './version.mjs';
+import {Receipts} from './receipts.mjs';
 
 export function compact(result,dir){
   const value={...result};
-  if(value.metadata){value.metadata={...value.metadata};delete value.metadata.elements;}
+  if(value.metadata){value.metadata={...value.metadata};delete value.metadata.elements;delete value.metadata.image;}
   if(result.image?.data){
+   try {
     const folder=path.join(dir,'observations');fs.mkdirSync(folder,{recursive:true});
     const file=path.join(folder,result.metadata.observation_id+'.jpg');
     fs.writeFileSync(file,Buffer.from(result.image.data,'base64'),{mode:0o600});
-    value.image={path:file,width:result.image.width,height:result.image.height,source:result.image.source};
+    value.image={path:file,width:result.image.width,height:result.image.height,source:result.image.source,capture:result.image.capture};
     // Observations are short-lived local data, not an unbounded screen archive.
     const files=fs.readdirSync(folder).map(name=>({name,at:fs.statSync(path.join(folder,name)).mtimeMs})).sort((a,b)=>b.at-a.at);
     for(const old of files.slice(50))fs.unlinkSync(path.join(folder,old.name));
+   }catch{
+    delete value.image;value.image_error={code:'image_delivery_failed',message:'The image could not be stored. Observe again; completed input must not be repeated.'};
+    value.observation_valid=false;value.observe_before_continuing=true;
+    if(value.input_completed&&!value.verification_error)value.verification_error=value.image_error;
+   }
   }
   return value;
 }
@@ -31,6 +38,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
   const file=path.join(directory,'desktop-session.json');
   let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending;
   const sockets=new Set();
+  const receipts=new Receipts(directory);
   const shutdown=()=>{
     if(shutdownPending)return shutdownPending;
     shutdownPending=(async()=>{closing=true;
@@ -43,7 +51,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
   };
   const server=net.createServer(socket=>{
     socket.setEncoding('utf8');
-    sockets.add(socket);let buffer='',received=false,executing=false,finished=false;
+    sockets.add(socket);let buffer='',received=false,executing=false,finished=false,ticket;
     socket.setTimeout(105000,()=>socket.destroy());
     socket.on('error',()=>{});
     socket.on('close',()=>{sockets.delete(socket);if(executing&&!finished)runtime.stop().catch(()=>{});});
@@ -57,6 +65,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
         if(given.length!==expected.length||!timingSafeEqual(given,expected))throw Error('Unauthorized local client');
         lastCall=Date.now();
         const name=request.command?.startsWith('computer_')?request.command:'computer_'+request.command;
+        ticket=receipts.begin(name,request.args);
         if(closing&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Error('Desktop service is shutting down; no more actions are accepted.');
         if(request.expected_build_id!==BUILD_ID&&!['computer_status','computer_stop','computer_pause','computer_end','computer_shutdown'].includes(name))
           throw Object.assign(Error('This command belongs to a different build. Use the running release; do not silently mix runtime versions.'),{code:'version_mismatch'});
@@ -66,14 +75,16 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
           // Do not acknowledge a closed service before native cleanup succeeds.
           // Keep this reply socket alive while retiring all other clients.
           sockets.delete(socket);await shutdown();finished=true;
-          socket.end(JSON.stringify({ok:true,closed:true})+'\n');return;
+          const result={ok:true,closed:true};result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');return;
         }
         if(!control){busy=true;executing=true;}
         try{
           const result=compact(await call(runtime,name,request.args||{}),directory);
-          finished=true;socket.end(JSON.stringify({ok:true,...result})+'\n');
+          if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
+          const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
+          finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;socket.end(JSON.stringify({ok:false,error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}})+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

@@ -1,10 +1,10 @@
 # Installation, update and removal
 
-Version 0.3.0-beta.1 is a direct `/computer-use` skill with bundled native helpers. The historical v0.2.0 uses the older MCP route; do not confuse its recording or download with this rework.
+Version 0.3.0-beta.1 is a direct `/computer-use` candidate with bundled native helpers. Its release is still draft while real Agent Manager latency is repaired; public download is pending. The historical v0.2.0 uses the older MCP route; do not confuse its recording or download with this rework.
 
 ## Windows portable bundle
 
-1. Download the Windows ZIP and SHA256 checksums from the [0.3.0-beta.1 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
+1. Once qualified, download the complete Windows ZIP and SHA256 checksums from [releases](https://github.com/shayann07/antigravity-computer-use/releases). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
 2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
 3. Run `install.cmd`. Direct integration is the default. The installer prints the release and exact backup paths.
 4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
@@ -16,7 +16,7 @@ Version 0.3.0-beta.1 is a direct `/computer-use` skill with bundled native helpe
 
 Default target: `D:\Tools\AntigravityComputerUse` when available, otherwise the current user's LocalAppData. App skill location: `~/.gemini/config/skills/computer-use`. Project location: `.agents/skills/computer-use`. These match [the official App documentation](https://antigravity.google/docs/skills).
 
-The installer verifies manifest file hashes before making changes. Only this project's old MCP entry is removed during direct migration. Other servers, host security preferences and unrelated configuration survive. Configuration and skill backups are kept under `backups/<timestamp>`. `--legacy-profiles` is optional and never enabled implicitly.
+The installer verifies manifest file hashes before making changes and refuses to update a live service. A short `cu.mjs` entrypoint with bundled `cu-node.exe` calls the exact installed script without command-shell forwarding. Node uses a hard link to the immutable payload where supported, otherwise a copy. Project-local launchers have separate names so they cannot redirect an existing global skill. Updates and rollback preserve both launcher files alongside the skill and installation pointer. `verify-install.mjs` checks the launcher pin and Node bytes as well as the payload. Only this project's old MCP entry is removed during direct migration. Other servers, host security preferences and unrelated configuration survive. Backups are kept under `backups/<timestamp>`. `--legacy-profiles` is optional and never enabled implicitly.
 
 ## Permission policy
 

@@ -14,7 +14,7 @@ if(outputIndex>=0&&fs.existsSync(out)&&fs.readdirSync(out).length)throw new Erro
 const host=ensureHost();fs.mkdirSync(path.join(out,'bin'),{recursive:true});
 fs.copyFileSync(host.exe,path.join(out,'bin','AxonHost.exe'));
 fs.copyFileSync(process.execPath,path.join(out,'node.exe'));
-const modules=['index.mjs','desktop-service.mjs','desktop-tools.mjs','mcp.mjs','runtime.mjs','guardian.mjs','driver.mjs','build.mjs','sessions.mjs','policy.mjs','render.mjs','upstream-utils.mjs','version.mjs'];
+const modules=['index.mjs','desktop-service.mjs','desktop-tools.mjs','receipts.mjs','mcp.mjs','runtime.mjs','guardian.mjs','driver.mjs','build.mjs','sessions.mjs','policy.mjs','render.mjs','upstream-utils.mjs','version.mjs'];
 fs.mkdirSync(path.join(out,'server'),{recursive:true});for(const f of modules)fs.copyFileSync(path.join(root,'server',f),path.join(out,'server',f));
 for(const folder of ['skills','scripts','licenses'])fs.cpSync(path.join(root,folder),path.join(out,folder),{recursive:true});
 for(const f of ['README.md','CONTRIBUTING.md','SECURITY.md','LICENSE','LICENSE.upstream','THIRD_PARTY_NOTICES.md','UPSTREAM.json','VALIDATION.md','PROJECT-STATUS.md','IMPLEMENTATION_PROGRESS.md'])if(fs.existsSync(path.join(root,f)))fs.copyFileSync(path.join(root,f),path.join(out,f));

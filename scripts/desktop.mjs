@@ -6,7 +6,8 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {dataDir} from '../server/build.mjs';
 import {VERSION,BUILD_ID} from '../server/version.mjs';
-import {TOOLS} from '../server/desktop-tools.mjs';
+import {TOOLS,validate} from '../server/desktop-tools.mjs';
+import {parseArguments} from './arguments.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
@@ -26,7 +27,15 @@ export function describeCommand(name){
 // before piping it to UTF-8. ASCII JSON preserves every Unicode code unit even
 // through that boundary; JSON.parse restores the original text exactly.
 export function encodeReply(value){return JSON.stringify(value).replace(/[^\x00-\x7f]/g,char=>'\\u'+char.charCodeAt(0).toString(16).padStart(4,'0'));}
-const printReply=value=>console.log(encodeReply(value));
+export function briefReply(value){
+ const out={...value};
+ if(out.metadata){const m=out.metadata;delete out.metadata;out.observation_id=m.observation_id;out.hwnd=m.hwnd;out.tree=m.tree;}
+ if(out.image){out.image={path:out.image.path,width:out.image.width,height:out.image.height};}
+ if(out.windows)out.windows=out.windows.map(({hwnd,title,process,minimized,foreground})=>({hwnd,title,process,minimized,foreground}));
+ return out;
+}
+let replyMode='json';
+const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
 
 export function request(session,command,args={},timeout=100000){
   return new Promise((resolve,reject)=>{
@@ -42,15 +51,22 @@ export function request(session,command,args={},timeout=100000){
   });
 }
 
-async function main(){
-  const [command,...rest]=process.argv.slice(2);
+export async function main(){
+  const [rawCommand,...rest]=process.argv.slice(2);const command=rawCommand?.replace(/^computer_/,'');
   if(rest[0]==='--help'){printReply(describeCommand(command));return;}
   if(command==='describe'||(command==='--help'&&rest[0])){
-    printReply(rest[0]?describeCommand(rest[0]):{commands:[...LIFECYCLE,...TOOLS.map(tool=>({command:tool.name.replace(/^computer_/,''),description:tool.description}))].map(({command,description})=>({command,description}))});return;
+    if(rest[0]==='--all')printReply({commands:[...LIFECYCLE,...TOOLS.map(tool=>describeCommand(tool.name))]});
+    else if(rest.length>1)printReply({commands:rest.map(describeCommand)});
+    else printReply(rest[0]?describeCommand(rest[0]):{commands:[...LIFECYCLE,...TOOLS.map(tool=>({command:tool.name.replace(/^computer_/,''),description:tool.description}))].map(({command,description})=>({command,description}))});return;
   }
   if(!command||command==='--help'){
-    console.log('Native desktop skill (no MCP)\nstart | shutdown | describe [COMMAND] | '+TOOLS.map(tool=>tool.name.replace(/^computer_/,'' )).join(' | ')+'\nRun describe COMMAND (or --help COMMAND) for its exact JSON argument schema; no source inspection or desktop access is needed. Pass JSON inline or --request FILE. Every targeted action requires a fresh observation_id. Open image.path with your host image viewer. Esc stops; only the human can re-arm.');return;
+    console.log('Native desktop skill (no MCP)\nstart | shutdown | describe [COMMAND...] | describe --all | '+TOOLS.map(tool=>tool.name.replace(/^computer_/,'' )).join(' | ')+'\nFast path: snapshot --hwnd 123; click --hwnd 123 --observation-id FRAME --index 7 --reason "Open settings". Named action flags return a compact tree without a new image unless --image is requested. Open actual image.path at visual checkpoints. Use --text-file for generated bulk text and --steps for predictable batches. No per-action request/result files or JPEG copies are needed. One describe call can fetch multiple schemas; do not interrogate every command at startup. JSON inline and --request FILE remain supported; --json retains full output. Esc stops; only the human can re-arm.');return;
   }
+  const jsonMode=rest[0]==='--json';if(jsonMode)rest.shift();
+  replyMode=jsonMode||(rest.length&&(!rest[0].startsWith('--')||rest[0]==='--request'))?'json':'brief';
+  const args=parseArguments(describeCommand(command).inputSchema,rest);
+  if(TOOLS.some(tool=>tool.name==='computer_'+command))validate('computer_'+command,args);
+  else if(Object.keys(args).length)throw Object.assign(Error('This lifecycle command takes no arguments.'),{code:'bad_arguments'});
   const policyFile=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','desktop-policy.json');
   const policy=fs.existsSync(policyFile)?JSON.parse(fs.readFileSync(policyFile)):{permission_mode:'standalone'};
   if(policy.data_dir&&!process.env.AGCU_DATA_DIR)process.env.AGCU_DATA_DIR=policy.data_dir;
@@ -78,7 +94,6 @@ async function main(){
     }
     throw Error('Native session did not start; run the service in foreground for diagnostics.');
   }
-  const args=rest[0]==='--request'?JSON.parse(fs.readFileSync(rest[1],'utf8').replace(/^\uFEFF/,'')):rest[0]?JSON.parse(rest[0]):{};
   if(!fs.existsSync(file)){
     if(command==='status'){printReply({ok:true,state:fs.existsSync(path.join(dataDir(),'emergency.stop'))?'stopped':'not_running',build_version:VERSION,build_id:BUILD_ID,reconnect_required:true});return;}
     throw Object.assign(Error('No desktop session is running (it may have expired after15 idle minutes). Run start, then discover apps and take a fresh observation. Antigravity does not need to restart; emergency Stop remains latched.'),{code:'no_session'});

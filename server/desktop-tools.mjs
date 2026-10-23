@@ -10,7 +10,7 @@ export const TOOLS=[
  tool('computer_snapshot','Observe accessibility controls and screenshot. Returns one-use observation_id. Optional settle_ms waits up to2seconds before reading an animating UI; never repeats input.',{hwnd:num,with_image:bool,max_width:{...num,minimum:100,maximum:1400},max_nodes:nodeCount,query:str,settle_ms:settle,reason:str},['hwnd']),
  tool('computer_move','Move the real pointer to screenshot pixels without clicking; use to hover and inspect.',{...target},['hwnd','observation_id','x','y','reason']),
  tool('computer_click','Click accessibility index or screenshot pixel x,y. Pixel clicks move the REAL cursor.',{...target,button:{type:'string',enum:['left','right','middle']},clicks:{...num,minimum:1,maximum:3},physical:bool},['hwnd','observation_id','reason']),
- tool('computer_type','Type up to 400 UTF-16 units into the observed focus/element. For larger text use explicit clipboard access and verified Ctrl+V.',{...target,text:{...str,maxLength:400}},['hwnd','observation_id','text','reason']),
+ tool('computer_type','Type up to 400 UTF-16 units into the observed focus/element. For larger text use explicit paste and verify the result.',{...target,text:{...str,maxLength:400}},['hwnd','observation_id','text','reason']),
  tool('computer_paste','Explicit clipboard operation: paste text into the observed editor, then restore saved clipboard formats unless another app changed it. Verify actual contents afterward.',{...target,text:{...str,maxLength:20000}},['hwnd','observation_id','text','reason']),
  tool('computer_set_value','Set an indexed accessible field. Supply exactly one of text (editable text) or value (numeric slider/range). Inspect the returned value.',{...target,text:str,value:{type:'number'}},['hwnd','observation_id','index','reason']),
  tool('computer_key','Press a chord: ctrl+a, enter, tab, etc. Optional index focuses and verifies that control first; otherwise uses current focus. Native sensitive checks apply.',{...target,keys:str},['hwnd','observation_id','keys','reason']),
@@ -19,7 +19,7 @@ export const TOOLS=[
  tool('computer_focus','Activate an approved app.',{hwnd:num,reason:str,risk:{type:'string',enum:['routine','sensitive']}},['hwnd','reason']),
  tool('computer_close_window','Ask window to close under the host permission policy. Can discard unsaved work.',{hwnd:num,reason:str},['hwnd','reason']),
  tool('computer_clipboard','Explicit clipboard read/write. Explain the data and effect under the host permission policy.',{text:str,reason:str},['reason']),
- tool('computer_launch','Launch an existing GUI executable with exact path/arguments under the host permission policy.',{app:str,args:{type:'array',items:str},reason:str},['app','reason']),
+ tool('computer_launch','Launch an existing GUI executable under the host permission policy. Optional observe returns the first unambiguous visible window of that exact launched PID and executable; never relaunch on observe_pending or verification_error.',{app:str,args:{type:'array',items:str},observe:bool,reason:str},['app','reason']),
  tool('computer_open','Open document/folder with its handler; separate confirmation.',{...target,path:str},['hwnd','observation_id','path','reason']),
  tool('computer_file_dialog','Fill and confirm an ALREADY OPEN native file picker. First click Choose files/Browse in the app. Use the owner app hwnd and the post-click observation_id, exact path, action open/save. Does not open a picker.',{...target,path:str,action:{type:'string',enum:['open','save']}},['hwnd','observation_id','path','reason']),
  tool('computer_run','Run 1-8 predictable steps sequentially. Stop on first failure; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:8,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
@@ -53,6 +53,11 @@ export function validate(name,args){
  };
  visit(s,args,'arguments');
  if(name==='computer_set_value'&&(Object.hasOwn(args,'text')===Object.hasOwn(args,'value')))throw new Error('Supply exactly one of text or value');
+ const pixel=Object.hasOwn(args,'x')||Object.hasOwn(args,'y');
+ if(pixel&&(!Object.hasOwn(args,'x')||!Object.hasOwn(args,'y')))throw new Error('Supply both x and y for a pixel target');
+ if(pixel&&Object.hasOwn(args,'index'))throw new Error('Supply an accessibility index or screenshot coordinates, not both');
+ if(['computer_click','computer_scroll'].includes(name)&&!pixel&&!Object.hasOwn(args,'index'))throw new Error('Supply an observed accessibility index or screenshot x,y');
+ if(name==='computer_drag'&&(pixel||Object.hasOwn(args,'index')))throw new Error('Drag uses only from/to screenshot coordinates');
 }
 export async function call(r,name,a){
  validate(name,a);
@@ -67,12 +72,19 @@ export async function call(r,name,a){
  if(name==='computer_resume')return r.resume();
  if(name==='computer_launch')return r.launch(a);
  if(name==='computer_run'){
+  // Validate the whole plan before sending the first input. A typo in step8
+  // must not execute steps1-7 and then throw away their delivery evidence.
+  const plan=a.steps.map(({kind,...rest},i)=>{
+   const n='computer_'+kind;if(!OPS[n])throw new Error('Unsupported batch step '+kind);
+   if(Object.hasOwn(rest,'hwnd')||Object.hasOwn(rest,'observation_id'))throw new Error('Batch steps cannot replace the owner window or frame.');
+   const args={hwnd:a.hwnd,observation_id:a.observation_id,reason:a.reason,...rest,observe:{with_image:i===a.steps.length-1,...rest.observe}};
+   validate(n,args);return {kind,n,args};
+  });
   const completed=[];let last=null;let observation=a.observation_id;
-  for(let i=0;i<a.steps.length;i++){
-   const {kind,...rest}=a.steps[i];const n='computer_'+kind;
-   if(!OPS[n])throw new Error('Unsupported batch step '+kind);
-   try{last=await call(r,n,{hwnd:a.hwnd,observation_id:observation,reason:a.reason,...rest});completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:a.steps.length-i-1,phase:'verification'}};observation=last.metadata?.observation_id;}
-   catch(e){return {completed,failed_index:i,skipped:a.steps.length-i-1,error:e.message,observe_before_continuing:true};}
+  for(let i=0;i<plan.length;i++){
+   const {kind,n,args}=plan[i];
+   try{last=await call(r,n,{...args,observation_id:observation});completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};observation=last.metadata?.observation_id;}
+   catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,error:{code:e.code||'batch_step_failed',message:e.message},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
  }

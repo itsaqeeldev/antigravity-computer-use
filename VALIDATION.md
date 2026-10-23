@@ -4,7 +4,7 @@
 
 | Check | Evidence | Boundary |
 |---|---|---|
-| Automated source | 69 passing checks | Schemas, direct IPC, cancellation, stale/worker epochs, Unicode, permission flags, install/update/rollback and corrupt-bundle refusal |
+| Automated source | 88 passing checks on speed candidate; previous69-check baseline passed GitHub CI | Includes strict named arguments, bounded receipts/privacy, post-launch failure evidence, batch preflight/captures, literal argv, isolated launchers and live-update refusal; new CI/App speed qualification pending |
 | Native helper | 12 passing checks | Real input/UIA/capture, identity and permission refusal, hung worker termination |
 | Host-managed component workflow | 13 passing checks | Two disposable app processes, owned dialog, real wheel/drag/Unicode and second session; not the host permission engine |
 | Cursor/glow recovery | 8 passing checks | Actual cursor-role pixels change, distinct text insertion artwork, live breathing, restoration after Pause and hard UI/watchdog crashes |
@@ -14,6 +14,7 @@
 | Real Upscaly | Original and feature build AI PNG/JPEG, in-flight cancel, retry, chosen GPU/tile, actual decoded headers and retained previous outputs | Native NCNN execution and decoded outputs distinguish AI from silent software resize. Broader app features are unqualified |
 | Real editor/emulator | Dev7 Copy after Open/New, rich image transfer with clipboard sharing Off, Undo/Redo, rotation/font layout and Gboard emoji | Sharing On downgraded rich clipboard; original settings restored. Direct emoji commit is not composing-text/IME qualification |
 | Physical Stop/re-arm | Owner performed both re-arms and physical Esc on dev7; fresh observation afterward | Held drag interrupted and seven queued actions skipped; service replacement did not clear Stop |
+| Speed1 native candidate | Exact build8d9d8082 real Upscaly batched import, no leftover picker; actual Notepad pause/refusal/resume/stale frame and exact1319-unit saved Unicode | Direct timings are not host wall-time improvement. Windows Notepad's launcher returned observe_pending; apps/snapshot recovered without duplicate launch. Later source launcher hardening still needs refreshed packaging |
 
 ## Retained failures and recovery
 
