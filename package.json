@@ -1,11 +1,13 @@
 {
   "name": "antigravity-native-computer-use",
-  "version": "0.2.0",
+  "version": "0.3.0-beta.1",
   "private": true,
   "type": "module",
   "description": "Native Windows desktop tools and /computer-use for Antigravity",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node server/index.mjs",
     "build": "node server/build.mjs",

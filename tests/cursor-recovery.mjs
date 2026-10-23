@@ -21,6 +21,7 @@ try {
  assert(Math.max(...levels)-Math.min(...levels)>.03,'Live glow opacity must breathe');checks.push('Cached native glow actually animates over time');
  assert(!probe('active').equals(baseline),'System arrow pixels must differ while active');checks.push('Actual Windows system arrow replaced, with independent watchdog armed');
  for(const role of roles)assert(!probe('active-'+role,role).equals(baselines.get(role)),'Native role '+role+' must have custom artwork');checks.push('Arrow, link, text and background-work cursor roles all have actual native artwork');
+ assert(!probe('text-role',32513).equals(probe('arrow-role',32512)),'Text fields must retain a distinct insertion cursor');checks.push('Text cursor retains its distinct insertion affordance');
  current.g.send({op:'pause'});await waitFor(()=>current.g.state==='paused');await delay(250);
  assert(probe('paused').equals(baseline));checks.push('Pause restores configured Windows arrow');await close(current);current=null;
  for(const role of roles)assert(probe('restored-'+role,role).equals(baselines.get(role)),'Native role '+role+' must restore');checks.push('All modified cursor roles restore after pause');

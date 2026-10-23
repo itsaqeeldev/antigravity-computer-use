@@ -5,13 +5,13 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "4f320db3f5c8eecd0ecc938793fd1b3f2a1ad31eff5e7545b1bb4968773bcbc1",
+      "local_sha256": "3ce71ce9b900deed9acacbde60c8d836a3c903f8598a8e754adf10f05cf16bfe",
       "modified": true
     },
     {
       "path": "server/driver.mjs",
       "upstream_sha256": "31c16f2c7d97d7c69a796a537996d1da3b6637150571a19361e1ba86dda8b6df",
-      "local_sha256": "36f45702e64eb85478645186c0c843df8a2fe5c5cdf581a7886354a90030df71",
+      "local_sha256": "b5a330606c9379c5b34a229537d0fa4008f7273b1e74e4e4266543b128bf55ab",
       "modified": true
     },
     {
@@ -60,7 +60,7 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "8b76c4c7d581d7f92fb0227dab434643ec669b0d99b307bcb7a5cca6a6d679a9",
+      "local_sha256": "774d51bb73d86be89c089e8c044f63e4b5c206dad520e5af23b36931459cff81",
       "modified": true
     },
     {
@@ -194,36 +194,47 @@
     "Antigravity Agent Manager stdio adapter and host-managed permission integration; standalone human dialogs remain available.",
     "Native identity/action fencing, independent cancellation and worker/input recovery.",
     "Original continuous glow, compact native HUD, live pointer halo and temporary native arrow with independent crash watchdog.",
-    "Prebuilt Windows packaging and preserving installer/rollback."
+    "Prebuilt Windows packaging and preserving installer/rollback.",
+    "2026-10-24: direct skill-script IPC replaces the default MCP transport; the native runtime and optional compatibility adapter share the same validated action catalogue.",
+    "2026-10-24: added build-bound requests, streaming UTF-8 decoding, bounded observation settling from real editor feedback, control-generation fencing, persistent native emergency Stop and normal idle-shutdown distinction; visual edge field and cursor contrast refined.",
+    "2026-10-24 dev4: native-worker epoch fencing, explicit input-delivery evidence when verification fails, foreground diagnostics, Unicode joiner/bidi preservation and fail-closed held-input cleanup; fixes driven by real Upscaly and ComposeDoc use.",
+    "dev4 shutdown correction: acknowledge closure only after native cleanup succeeds, serialize concurrent shutdowns and keep failed cleanup reachable for recovery.",
+    "dev5: explicit unavailable-service diagnostics and refusal to replace a live unresponsive service after timeout. Native helper remains byte-identical to dev4.",
+    "dev6: actual Antigravity feedback added per-command schema discovery and ASCII-safe JSON across legacy PowerShell stdout. Skill explicitly launches/observes prebuilt apps before inferring missing development services. Native helper unchanged.",
+    "dev7: complete schema discovery for intrinsic start/shutdown/describe commands and conventional COMMAND --help. Native helper unchanged; actual Antigravity dev6 image/semantic/Unicode path witnessed. The actual Agent Manager JPEG-viewing tool is read_file, distinguished from IDE view_file documentation.",
+    "dev7 capture hardening: replace five sampled visibility points with bounded full Z-order rectangle intersection checks; forbid covered-screen fallback after failed window rendering; discard a screen frame if coverage changes; Node rejects legacy screen_occluded replies. Native helper rebuilt from changed source; live old/new qualification remains recorded separately.",
+    "0.3.0-beta.1: separable glow falloff cache, stronger soft edge field, smaller halo, distinct original text insertion cursor and role hotspot; installer manifest preflight before writes; protocol test isolation preserves real Stop state; canonical LF provenance checked in CI.",
+    "Beta real Notepad reproduction: UIA SetFocus activated RichEditD2DPT child53480184 under approved root11536664. Compare GA_ROOT parents on every key, never GA_ROOTOWNER or same-PID alone; retain indexed focus validation and refuse other roots. Add native class/root/owner diagnostics and boundary regression.",
+    "Beta final real Notepad fixes: short paced native typing capped400 units; avoid redundant field focus; explicit paste reuses upstream clipboard-preserving implementation with stricter unknown-format refusal and exceptional-cleanup sequence recheck; Save As uses committed keyboard filename and refuses mismatched path. Real saved94-unit native and1209-unit full paste comparisons pass."
   ],
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "63e67d39d08ac1088d561ccd532c789cc5d7cd80d6cb07af1180856a1a15c25b"
+      "sha256": "777493d834675d2abe6f8a384e2ce61cf3f40bdbc4323cf2f1f252d0fa4ac14f"
     },
     {
       "path": "server/mcp.mjs",
-      "sha256": "a4ecde088b63bdf9b6dab651257eac13a9376a78402e67fadd8094b6fb3dc37e"
+      "sha256": "ed43f25dffe8f6df4ecf8ddf2da14adcff0e637402fdb134dfd1adc0ffc03cef"
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "09913d8b1511d7921d123c5586c510ffd7fc62ff620197317281f3f6943b91d4"
+      "sha256": "e4f401948d6bfaa30668100084c22b5b9ad565f25688045e172b2156cdc6c8d5"
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "bc168a4b96a49303719ba1044269d1f2b610252e51d6326b1da5b350c9ff5d1b"
+      "sha256": "0883aa4d98044f61a196aa9e03cafb2ff3c4489ac26b1e604c75d564e6b386fa"
     },
     {
       "path": "server/native/CursorSafety.cs",
-      "sha256": "3841e1adecb34b07502cbf20448cdb7c0cc9d8618c27fb679e24b15a363241d1"
+      "sha256": "a4d824f6a1f267642b6bf824e891a339086ecc8c0e5cd6c38b1e41f43dcf3ab2"
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "4c9abef3db79a57576fcc70b8655b30b20273a72c0c28b3b3168e3cb0251955b"
+      "sha256": "48bca6697a8e55e35cb38014d13a7c191cb92e0036a9f747ef2e6780d47f62ef"
     },
     {
       "path": "server/native/InputLedger.cs",
-      "sha256": "287c017367d71c1bef47f68dd17c9976c7a7c3d34213cfdc2c53f6cd7d809397"
+      "sha256": "c5e513c23ad8dc97f3789b294bab2ebbd8a8eec0f2efbd1b54986ef4469ceab6"
     },
     {
       "path": "server/native/CursorMotion.cs",
@@ -232,6 +243,42 @@
     {
       "path": "server/native/TakeoverPolicy.cs",
       "sha256": "ee5fdf95a03a587581c23ec77451fba02b271f9a7ad1b292d405b383e5332ae8"
+    },
+    {
+      "path": "server/desktop-service.mjs",
+      "sha256": "f120676c43d643e064b3f3bb11c0d437c16c12575273b85d3db516747d33631d"
+    },
+    {
+      "path": "server/desktop-tools.mjs",
+      "sha256": "7a8ce1e2b8236f0a709ba723cf702f2973ffd1900bd4efb87eb68b4e8e2cfdbe"
+    },
+    {
+      "path": "scripts/desktop.mjs",
+      "sha256": "f5d7b41e88c9626564cbb4035c3a9d1dc754a6ac178598984d6593ce3128f8f9"
+    },
+    {
+      "path": "server/version.mjs",
+      "sha256": "7111d8f03711e0c806142879435506578f7372b7e25d45c513699d2dadeb6a41"
+    },
+    {
+      "path": "tests/desktop-service.test.mjs",
+      "sha256": "0a029aea9fa4a91109cd6c904f7c26335f93504b4917cc66d00ac93548c42029"
+    },
+    {
+      "path": "tests/installed-direct-smoke.mjs",
+      "sha256": "4cbb69f4de80a6e01e9dda68f1f0d40f522013a510e741b22fcf7f561f45d623"
+    },
+    {
+      "path": "server/native/SnapshotText.cs",
+      "sha256": "3b1226eabfec8ac82bafb84713722483f5351904efccd9d09893b212194a953d"
+    },
+    {
+      "path": "scripts/check-provenance.mjs",
+      "sha256": "b3003740e3b7424484f279aadb32a598fd8ad5c21465040ec9eb96a5fa767885"
+    },
+    {
+      "path": "server/native/KeyboardTargetPolicy.cs",
+      "sha256": "0e79bc6e4fc6c53f034568df39e826fe2173571151b13cbabaf0650700df4ecb"
     }
   ]
 }

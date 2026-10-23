@@ -14,7 +14,7 @@ namespace Axon {
         static bool motion=true;static DateTime motionChecked;
         internal static bool MotionEnabled { get { if((DateTime.UtcNow-motionChecked).TotalSeconds>2){bool enabled;motion=SystemParametersInfo(0x1042,0,out enabled,0)&&enabled;motionChecked=DateTime.UtcNow;}return motion; } }
         static readonly double origin=System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency;
-        internal static float BreathLevel {get {return MotionEnabled?.89f+.11f*(float)Math.Sin((System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency-origin)*Math.PI*2/5.2):.94f;}}
+        internal static float BreathLevel {get {return MotionEnabled?.86f+.14f*(float)Math.Sin((System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency-origin)*Math.PI*2/5.2):.94f;}}
         internal static readonly Color Violet = Color.FromArgb(155, 205, 235);
         internal static readonly Color Blue = Color.FromArgb(128, 171, 207);
         internal static readonly Color Mint = Color.FromArgb(186, 222, 232);
@@ -22,17 +22,20 @@ namespace Axon {
             return state=="paused" ? Color.FromArgb(248,199,119) : state=="stopped" ? Color.FromArgb(255,139,159) : Violet;
         }
         internal static void Edge(Graphics g, Rectangle screen, float scale) {
-            // A continuous signed-distance field gives every pixel a soft
-            // falloff, including corners. No nested strokes or visible seams.
-            int w=screen.Width,h=screen.Height;float radius=24*scale,sigma=21*scale,depth=65*scale;
+            // Union four Gaussian edge fields. This has no artificial rounded
+            // rectangle, clipped corner wedge, nested stroke or hard inner rim.
+            int w=screen.Width,h=screen.Height;float sigma=27*scale,depth=82*scale;
+            // The field is separable. Evaluate the expensive falloff once per
+            // row/column instead of twice for every edge pixel at startup.
+            double[] horizontal=new double[w],vertical=new double[h],coreX=new double[w],coreY=new double[h];
+            double core=5*scale;
+            for(int x=0;x<w;x++){double d=Math.Min(x,w-1-x);horizontal[x]=Math.Exp(-d*d/(2*sigma*sigma));coreX[x]=Math.Exp(-d*d/(2*core*core));}
+            for(int y=0;y<h;y++){double d=Math.Min(y,h-1-y);vertical[y]=Math.Exp(-d*d/(2*sigma*sigma));coreY[y]=Math.Exp(-d*d/(2*core*core));}
             using(Bitmap glow=new Bitmap(w,h,PixelFormat.Format32bppArgb)) {
                 byte[] pixels=new byte[w*h*4];
                 for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
                     if(x>depth && x<w-depth && y>depth && y<h-depth)continue;
-                    double qx=Math.Abs(x-w*.5)-(w*.5-radius),qy=Math.Abs(y-h*.5)-(h*.5-radius);
-                    double signed=Math.Sqrt(Math.Pow(Math.Max(qx,0),2)+Math.Pow(Math.Max(qy,0),2))+Math.Min(Math.Max(qx,qy),0)-radius;
-                    double d=-signed,spread=d<0?8*scale:sigma;
-                    int alpha=(int)(112*Math.Exp(-Math.Pow((d-4*scale)/spread,2)/2));
+                    int alpha=(int)(154*(1-(1-horizontal[x])*(1-vertical[y]))+20*(1-(1-coreX[x])*(1-coreY[y])));
                     float t=(float)(x/(double)w*.55+y/(double)h*.45);
                     Color start=t<.55f?Violet:Blue,end=t<.55f?Blue:Color.FromArgb(165,192,218);
                     float f=t<.55f?t/.55f:(t-.55f)/.45f;
@@ -47,10 +50,10 @@ namespace Axon {
             // The hotspot is (48,48). Windows draws the temporary native arrow
             // above us. Four common roles share the dart; app-owned cursors and resize shapes remain application-controlled.
             using(GraphicsPath circle=new GraphicsPath()) {
-                circle.AddEllipse(14,14,68,68);
+                circle.AddEllipse(29,29,38,38);
                 using(PathGradientBrush halo=new PathGradientBrush(circle)) {
-                    halo.CenterColor=Color.FromArgb(88,Violet);halo.SurroundColors=new Color[]{Color.Transparent};
-                    g.FillEllipse(halo,14,14,68,68);
+                    halo.CenterColor=Color.FromArgb(52,Violet);halo.SurroundColors=new Color[]{Color.Transparent};
+                    g.FillEllipse(halo,29,29,38,38);
                 }
             }
         }
@@ -62,12 +65,26 @@ namespace Axon {
                 dart.AddLine(27.8f,18.2f,17.3f,19.6f);dart.AddLine(17.3f,19.6f,11.8f,28.5f);
                 dart.AddBezier(11.8f,28.5f,11,29.8f,9.9f,29.3f,9.6f,27.8f);dart.AddLine(9.6f,27.8f,4,2);dart.CloseFigure();
                 var original=g.Save();g.TranslateTransform(.4f,1.1f);
-                using(SolidBrush shadow=new SolidBrush(Color.FromArgb(145,24,13,48)))g.FillPath(shadow,dart);g.Restore(original);
+                using(SolidBrush shadow=new SolidBrush(Color.FromArgb(125,19,30,42)))g.FillPath(shadow,dart);g.Restore(original);
                 using(LinearGradientBrush face=new LinearGradientBrush(new Point(4,2),new Point(23,29),Color.FromArgb(250,251,252),Color.FromArgb(130,175,201)))g.FillPath(face,dart);
                 using(SolidBrush facet=new SolidBrush(Color.FromArgb(100,60,113,148)))g.FillPolygon(facet,new PointF[]{new PointF(5,4),new PointF(17.3f,19.6f),new PointF(10.8f,27.4f)});
-                using(Pen outline=new Pen(Color.FromArgb(250,244,255),1.25f)){outline.LineJoin=LineJoin.Round;g.DrawPath(outline,dart);}
+                using(Pen outline=new Pen(Color.FromArgb(240,27,39,53),1.25f)){outline.LineJoin=LineJoin.Round;g.DrawPath(outline,dart);}
                 using(Pen crease=new Pen(Color.FromArgb(95,46,80,106),.8f))g.DrawLine(crease,5,4,17.3f,19.6f);
-                using(SolidBrush signal=new SolidBrush(Color.FromArgb(218,209,255,255)))g.FillEllipse(signal,16.1f,16.4f,2.4f,2.4f);
+            }
+        }
+        internal static void NativeCursor(Graphics g,uint role) {
+            if(role!=32513){Arrow(g);return;}
+            // Keep the familiar text affordance and a centered insertion
+            // hotspot. A pointer over every text field obscures where typing
+            // will land; the same ice/ink palette still identifies control.
+            using(GraphicsPath beam=new GraphicsPath()) {
+                beam.AddLine(16,5,16,27);beam.StartFigure();
+                beam.AddBezier(11,4,14,4,16,5,16,7);
+                beam.AddBezier(16,7,16,5,18,4,21,4);beam.StartFigure();
+                beam.AddBezier(11,28,14,28,16,27,16,25);
+                beam.AddBezier(16,25,16,27,18,28,21,28);
+                using(Pen outline=new Pen(Color.FromArgb(245,27,39,53),4)){outline.StartCap=outline.EndCap=LineCap.Round;g.DrawPath(outline,beam);}
+                using(Pen face=new Pen(Color.FromArgb(242,215,238,250),1.8f)){face.StartCap=face.EndCap=LineCap.Round;g.DrawPath(face,beam);}
             }
         }
         internal const int HudWidth=384,HudHeight=44;
@@ -126,6 +143,11 @@ namespace Axon {
             using(Bitmap image=new Bitmap(HudWidth*2,HudHeight*2,PixelFormat.Format32bppArgb)) {
                 using(Graphics g=Graphics.FromImage(image)){g.ScaleTransform(2,2);Hud(g,state,state=="paused"?1:0,0);}
                 image.Save(Path.Combine(directory,"hud-"+state+".png"),ImageFormat.Png);
+            }
+            foreach(uint role in new uint[]{32512,32513,32649,32650})
+            using(Bitmap image=new Bitmap(96,96,PixelFormat.Format32bppArgb)) {
+                using(Graphics g=Graphics.FromImage(image)){g.SmoothingMode=SmoothingMode.AntiAlias;g.ScaleTransform(3,3);NativeCursor(g,role);}
+                image.Save(Path.Combine(directory,"cursor-"+role+".png"),ImageFormat.Png);
             }
             using(Bitmap image=new Bitmap(800,600,PixelFormat.Format32bppArgb)) {
                 using(Graphics g=Graphics.FromImage(image)){g.SmoothingMode=SmoothingMode.AntiAlias;Edge(g,new Rectangle(0,0,800,600),1);}

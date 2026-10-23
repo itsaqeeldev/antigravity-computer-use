@@ -25,7 +25,8 @@ namespace Axon {
                 string exe=p.MainModule.FileName;
                 string started=p.StartTime.ToUniversalTime().Ticks.ToString();
                 Native.RECT r; Native.GetWindowRect(new IntPtr(hwnd),out r); Native.POINT cursor; Native.GetCursorPos(out cursor);
-                return new Dictionary<string, object> { {"cursor",new int[]{cursor.X,cursor.Y}},{"visible",Native.IsWindowVisible(new IntPtr(hwnd))},{"cloaked",Native.IsCloaked(new IntPtr(hwnd))},{"overlay",Overlay.IsAnyOverlayWindow(new IntPtr(hwnd))},{"rect",new int[]{r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top}}, {"hwnd",hwnd}, {"pid",pid}, {"path",exe},
+                StringBuilder windowClass=new StringBuilder(256);Native.GetClassName(new IntPtr(hwnd),windowClass,windowClass.Capacity);
+                return new Dictionary<string, object> { {"class",windowClass.ToString()},{"root",Native.GetAncestor(new IntPtr(hwnd),2).ToInt64()},{"owner",Native.GetWindowRel(new IntPtr(hwnd),4).ToInt64()},{"cursor",new int[]{cursor.X,cursor.Y}},{"visible",Native.IsWindowVisible(new IntPtr(hwnd))},{"cloaked",Native.IsCloaked(new IntPtr(hwnd))},{"overlay",Overlay.IsAnyOverlayWindow(new IntPtr(hwnd))},{"rect",new int[]{r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top}}, {"hwnd",hwnd}, {"pid",pid}, {"path",exe},
                     {"started",started}, {"key",pid+":"+started+":"+exe.ToLowerInvariant()} };
             }
         }
@@ -45,6 +46,7 @@ namespace Axon {
             using(SHA256 sha=SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(s)));
         }
         internal static bool Sensitive(string op, Dictionary<string, object> a, string label) {
+            label=SnapshotText.RiskLabel(label);
             object risk;
             if (!a.TryGetValue("__risk",out risk) || Convert.ToString(risk)!="routine") return true;
             if (new List<string>{"launch","clipboard","close_window","paste","paste_files","open","file_dialog"}.Contains(op)) return true;
@@ -64,14 +66,55 @@ namespace Axon {
         internal static string FileName { get { return Environment.GetEnvironmentVariable("AGCU_GUARD_FILE"); } }
         internal static string Token;
         static long keyboardTarget;
+        static long keyboardOwner;
+        static string keyboardOwnerKey, keyboardDialogKey;
         static bool focusing;
-        internal static void CheckKeyboard() {
+        internal static void CheckOwnedDialog() {
             Check();
-            if(!focusing && keyboardTarget!=0 && Native.GetForegroundWindow()!=new IntPtr(keyboardTarget))
-                throw new AxonError("focus_changed","Keyboard target lost foreground; no more text sent.",null);
+            if(keyboardOwner==0)return;
+            IntPtr dialog=new IntPtr(keyboardTarget),owner=new IntPtr(keyboardOwner);
+            IntPtr direct=Native.GetWindowRel(dialog,4);
+            if((direct!=owner && (direct==IntPtr.Zero||Native.GetWindowRel(direct,4)!=owner)) ||
+                Convert.ToString(Identity(keyboardOwner)["key"])!=keyboardOwnerKey ||
+                Convert.ToString(Identity(keyboardTarget)["key"])!=keyboardDialogKey)
+                throw new AxonError("identity_changed","Approved file dialog ownership changed; no more input sent.",null);
+        }
+        sealed class DialogKeyboardScope : IDisposable {
+            readonly long previous;
+            internal DialogKeyboardScope(long owner,long dialog) {
+                previous=keyboardTarget;
+                keyboardOwner=owner;keyboardTarget=dialog;
+                try {
+                    keyboardOwnerKey=Convert.ToString(Identity(owner)["key"]);
+                    keyboardDialogKey=Convert.ToString(Identity(dialog)["key"]);
+                    CheckOwnedDialog();
+                }
+                catch { Dispose(); throw; }
+            }
+            public void Dispose() { keyboardTarget=previous;keyboardOwner=0;keyboardOwnerKey=null;keyboardDialogKey=null; }
+        }
+        internal static IDisposable ForOwnedDialog(IntPtr owner,IntPtr dialog) {
+            if(owner==IntPtr.Zero||dialog==IntPtr.Zero||keyboardTarget!=owner.ToInt64())
+                throw new AxonError("invalid_dialog_owner","File picker requires the approved owner window.",null);
+            return new DialogKeyboardScope(owner.ToInt64(),dialog.ToInt64());
+        }
+        internal static bool SameKeyboardWindow(IntPtr expected,IntPtr actual) {
+            return KeyboardTargetPolicy.Same(expected.ToInt64(),actual.ToInt64(),
+                Native.GetAncestor(expected,2).ToInt64(),Native.GetAncestor(actual,2).ToInt64());
+        }
+        internal static void CheckKeyboard() {
+            CheckOwnedDialog();
+            IntPtr actual=Native.GetForegroundWindow();
+            if(!focusing && keyboardTarget!=0 && !SameKeyboardWindow(new IntPtr(keyboardTarget),actual)) {
+                StringBuilder cls=new StringBuilder(256);Native.GetClassName(actual,cls,cls.Capacity);int pid;GetWindowThreadProcessId(actual,out pid);
+                throw new AxonError("focus_changed","Keyboard target lost foreground; no more text sent.",
+                    "expected_hwnd="+keyboardTarget+" actual_hwnd="+actual.ToInt64()+" expected_root="+Native.GetAncestor(new IntPtr(keyboardTarget),2).ToInt64()+" actual_root="+Native.GetAncestor(actual,2).ToInt64()+" actual_class="+cls+" actual_pid="+pid+". Observe again; do not repeat a partially delivered chord.");
+            }
         }
         internal static void Check() {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
+            string latch=Environment.GetEnvironmentVariable("AGCU_STOP_LATCH");
+            if(!String.IsNullOrEmpty(latch)&&File.Exists(latch))throw new AxonError("control_stopped","Emergency Stop remains latched. Local human re-arm is required.",null);
             string[] state;
             try { state = File.ReadAllText(FileName).Split('|'); }
             catch { throw new AxonError("control_stopped", "Permission process is unavailable.", null); }
@@ -84,7 +127,7 @@ namespace Axon {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
             object v;
             Token = a.TryGetValue("__session", out v) ? Convert.ToString(v) : null;
-            keyboardTarget=a.ContainsKey("hwnd")?Convert.ToInt64(a["hwnd"]):0; focusing=op=="focus";
+            keyboardTarget=a.ContainsKey("hwnd")?Convert.ToInt64(a["hwnd"]):0; keyboardOwner=0; focusing=op=="focus";
             Check();
             string[] state=File.ReadAllText(FileName).Split('|');
             string appKey="";
@@ -116,12 +159,18 @@ namespace Axon {
                     throw new AxonError("approval_changed","Approved target/action changed; observe again.",null);
             }
         }
+        internal static void LatchStop() {
+            string file=Environment.GetEnvironmentVariable("AGCU_STOP_LATCH");
+            if(!String.IsNullOrEmpty(file))try {File.WriteAllText(file,"stopped");}catch {}
+        }
         internal static void WatchParent() {
             int pid;
             if (!Int32.TryParse(Environment.GetEnvironmentVariable("AGCU_PARENT_PID"), out pid)) return;
             Thread t = new Thread(delegate() {
                 try { using (Process p = Process.GetProcessById(pid)) p.WaitForExit(); } catch { }
+                bool wasIdle=false;try {wasIdle=File.ReadAllText(FileName).StartsWith("idle|");}catch {}
                 try { File.WriteAllText(FileName,"stopped||0|"); } catch { }
+                if(!wasIdle)LatchStop();
                 try { Recover(); } catch { }
                 Environment.Exit(0);
             });
@@ -171,7 +220,8 @@ namespace Axon {
         readonly object workerLock=new object();
         readonly bool hostManaged=Environment.GetEnvironmentVariable("AGCU_PERMISSION_MODE")=="host-managed";
         long deadline;
-        bool prompting, registered;
+        bool prompting, registered, normalClose;
+        string StopLatch {get {return Environment.GetEnvironmentVariable("AGCU_STOP_LATCH");}}
         static readonly object outputLock = new object();
         internal static void Emit(object data) { lock(outputLock) { Console.Out.WriteLine(new JavaScriptSerializer().Serialize(data)); Console.Out.Flush(); } }
         internal static int Run() {
@@ -192,23 +242,28 @@ namespace Axon {
             using(GraphicsPath rounded=Overlay.RoundRect(new RectangleF(0,0,Width,Height),21*visualScale))Region=new Region(rounded);
             toggle=ButtonAt(1,DesktopVisuals.ToggleRect); toggle.Click += delegate {
                 if(state=="active")SetState("paused");
-                else {SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});}
+                else {
+                    try {ControlFence.Recover();}catch {}
+                    if(InputLedger.HasHeld()){Emit(new {ev="visual_warning",message="Held-input cleanup is incomplete; control stays paused/stopped"});return;}
+                    if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch))try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
+                    deadline=DateTime.UtcNow.AddMinutes(10).Ticks;SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
+                }
             };
             stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate { Emergency("button"); };
             modeButton=ButtonAt(3,DesktopVisuals.ModeRect);modeButton.Click+=delegate {OpenModeMenu();};
             LoadTakeoverMode();
             tips.SetToolTip(stopButton,"Stop immediately · Esc or Ctrl+Alt+F12");
             tips.SetToolTip(toggle,"Pause, resume, or re-arm control. Resuming requires a fresh observation.");
-            FormClosing += delegate(object sender, FormClosingEventArgs e) { SetState("stopped"); };
+            FormClosing += delegate(object sender, FormClosingEventArgs e) { if(!normalClose&&state!="idle")SetState("stopped"); };
             Shown += delegate {
                 ShowWindow(Handle,4); Mark(this); captureExcluded=SetWindowDisplayAffinity(Handle,0x11);
                 registered = RegisterHotKey(Handle, 1, 0x4003, 0x7B);
                 if (!registered) { Emit(new { ev="error", message="Ctrl+Alt+F12 is unavailable; refusing control" }); Close(); return; }
                 Presence.Start();
-                Presence.OnPanic = delegate { Emergency("escape"); };
+                Presence.OnPanic = delegate { if(state=="active"||state=="paused"||prompting)Emergency("escape"); };
                 if (!Presence.HooksOk) { Emit(new { ev="error", message="Physical-input monitoring unavailable" }); Close(); return; }
                 Overlay.Configure(1, "Antigravity", 0); Overlay.Start(true);
-                SetState("idle");
+                SetState(!String.IsNullOrEmpty(StopLatch)&&File.Exists(StopLatch)?"stopped":"idle");
                 Emit(new {ev="settings",takeover_mode=takeover.Mode});
                 Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true });
                 Thread reader = new Thread(Read); reader.IsBackground = true; reader.Start();
@@ -259,8 +314,8 @@ namespace Axon {
             modeMenu.Items.Clear();modeMenu.BackColor=Color.FromArgb(32,35,40);modeMenu.ForeColor=Color.FromArgb(234,237,239);
             modeMenu.ShowImageMargin=true;modeMenu.ShowCheckMargin=false;modeMenu.Font=new Font(Overlay.UiFont,10);modeMenu.Padding=new Padding(6);
             modeMenu.Renderer=new ToolStripProfessionalRenderer(new ControlMenuColors());
-            ToolStripMenuItem manual=new ToolStripMenuItem("Manual pause — use Pause or Esc");manual.Checked=takeover.Mode=="manual";manual.Click+=delegate {ChangeTakeoverMode("manual");};
-            ToolStripMenuItem smart=new ToolStripMenuItem("Smart takeover — deliberate input pauses");smart.Checked=takeover.Mode=="smart";smart.Click+=delegate {ChangeTakeoverMode("smart");};
+            ToolStripMenuItem manual=new ToolStripMenuItem("Keep working — Pause or Esc to interrupt");manual.Checked=takeover.Mode=="manual";manual.Click+=delegate {ChangeTakeoverMode("manual");};
+            ToolStripMenuItem smart=new ToolStripMenuItem("Yield on input — deliberate input pauses");smart.Checked=takeover.Mode=="smart";smart.Click+=delegate {ChangeTakeoverMode("smart");};
             modeMenu.Items.Add(manual);modeMenu.Items.Add(smart);modeMenu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem hint=new ToolStripMenuItem("Esc always stops immediately");hint.Enabled=false;modeMenu.Items.Add(hint);
             modeMenu.Show(modeButton,new Point(0,modeButton.Height));
@@ -288,17 +343,18 @@ namespace Axon {
             File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants))));
             if (File.Exists(f)) File.Replace(temp, f, null); else File.Move(temp,f);
         } }
-        void SetState(string next) {
+        void SetState(string next,string reason=null) {
             if (state == "stopped" && next == "active") return;
+            if(next=="stopped")ControlFence.LatchStop();
             state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture()); WriteState();
             RefreshHud();
             if (state != "active") { CursorSafety.Restore(); StopWorkers(); ControlFence.Recover(); Overlay.HideAll(); }
             else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
-            Emit(new { ev="state", state=state });
+            Emit(new { ev="state", state=state, reason=reason, custom_cursor=CursorSafety.Applied });
         }
         void Emergency(string reason="request") {
             // Hook thread invalidates the native fence BEFORE waiting for the UI thread.
-            state="stopped"; try { WriteState(); } catch { }
+            state="stopped"; ControlFence.LatchStop(); try { WriteState(); } catch { }
             StopWorkers(); ControlFence.Recover(); Emit(new { ev="state", state="stopped", reason=reason });
             try { BeginInvoke((MethodInvoker)delegate { if(activePrompt!=null) activePrompt.Close(); grants.Clear(); SetState("stopped"); }); } catch { }
         }
@@ -318,7 +374,7 @@ namespace Axon {
             if (state == "active") {
                 if(!CursorSafety.CheckWatchdog()){Emergency("cursor_watchdog_failed");return;}
                 if (DateTime.UtcNow.Ticks >= deadline) { SetState("idle"); return; }
-                if(!modeMenu.Visible && takeover.ShouldPause(Presence.Capture(),TakeoverPolicy.NowMs,visualScale)) {SetState("paused");return;}
+                if(!modeMenu.Visible && takeover.ShouldPause(Presence.Capture(),TakeoverPolicy.NowMs,visualScale)) {SetState("paused","human_takeover");return;}
                 Overlay.MarkActive();
                 if (Overlay.ConsumeStop()) SetState("stopped");
             }
@@ -331,7 +387,7 @@ namespace Axon {
                     if (msg != null) BeginInvoke((MethodInvoker)delegate { Receive(msg); });
                 }
             } catch { }
-            try { BeginInvoke((MethodInvoker)delegate { SetState("stopped"); Close(); }); } catch { }
+            try { BeginInvoke((MethodInvoker)delegate {normalClose=state=="idle";if(!normalClose)SetState("stopped"); Close(); }); } catch { }
         }
         void Receive(Dictionary<string, object> m) {
             string op = Convert.ToString(m["op"]); object id=m.ContainsKey("id")?m["id"]:null;
@@ -351,8 +407,17 @@ namespace Axon {
                 } catch { }
                 return;
             }
-            if (op == "pause") { SetState("paused"); return; }
+            if (op == "resume") {
+                // Soft takeover only. The host permission policy must authorize
+                // a chat-directed Resume. Emergency Stop remains human-only.
+                try {ControlFence.Recover();}catch {}
+                bool resumeAllowed=hostManaged && state=="paused" && !InputLedger.HasHeld();
+                if(resumeAllowed) {deadline=DateTime.UtcNow.AddMinutes(10).Ticks;SetState("active","host_authorized_resume");Emit(new {ev="host_resume",state=state});}
+                Emit(new {id=id,allowed=resumeAllowed,state=state});return;
+            }
+            if (op == "pause") { SetState("paused","requested_pause"); return; }
             if (op == "stop") { Emergency(); return; }
+            if (op == "shutdown") { normalClose=state=="idle";Close();return; }
             if (op == "end") { grants.Clear(); SetState(state=="stopped"||state=="paused"?state:"idle"); return; }
             if (op == "capture") {
                 captureHidden=true;
@@ -361,7 +426,7 @@ namespace Axon {
             }
             if (op == "capture_end") { captureHidden=false; if(!Visible)Show(); return; }
             if (op == "activate") {
-                if (state != "stopped" && state != "paused") {
+                if (state != "stopped" && state != "paused" && !InputLedger.HasHeld()) {
                     token=Convert.ToString(m["token"]); deadline=Convert.ToInt64(m["deadline"]); SetState("active");
                 }
                 Emit(new { id=id, allowed=state=="active", state=state }); return;

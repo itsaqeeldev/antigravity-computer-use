@@ -18,13 +18,13 @@ export class Guardian extends EventEmitter {
       let m;try{m=JSON.parse(line);}catch{return;}
       if(m.ev==='ready'){clearTimeout(this.bootTimer);this.pid=m.pid;this.ready();}
       if(m.ev==='error'){clearTimeout(this.bootTimer);this.bootReject(new Error(m.message));}
-      if(m.ev==='state'){this.state=m.state;this.emit('state',m.state,m.reason);}
-      if(m.ev==='human_resume')this.emit('resume',m.state);
+      if(m.ev==='state'){this.state=m.state;this.customCursor=m.custom_cursor;this.emit('state',m.state,m.reason);}
+      if(m.ev==='human_resume'||m.ev==='host_resume')this.emit('resume',m.state,m.ev);
       if(m.ev==='settings'){this.takeoverMode=m.takeover_mode;this.emit('settings',m);}
       const p=this.pending.get(m.id);if(p){this.pending.delete(m.id);clearTimeout(p.timer);p.resolve(m);}
     });
-    this.proc.on('exit',()=>{
-      this.proc=null;this.state='stopped';this.emit('state','stopped');
+    this.proc.on('close',()=>{
+      this.proc=null;this.state=this.expectedIdleExit?'idle':'stopped';this.emit('state',this.state,this.expectedIdleExit?'normal_shutdown':'guardian_exited');
       for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('Permission UI closed'));}this.pending.clear();
     });
     this.proc.on('error',e=>this.bootReject(e));
@@ -40,5 +40,10 @@ export class Guardian extends EventEmitter {
     });
   }
   async prompt(m){return this.request({op:'prompt',...m});}
-  close(){if(this.proc){this.send({op:'stop'});this.proc.stdin.end();}}
+  async close({normal=false}={}){
+    const proc=this.proc;if(!proc)return;
+    this.expectedIdleExit=normal;
+    this.send({op:'shutdown'});proc.stdin.end();
+    await new Promise(resolve=>{const timer=setTimeout(()=>{try{proc.kill();}catch{}resolve();},3000);proc.once('exit',()=>{clearTimeout(timer);resolve();});});
+  }
 }

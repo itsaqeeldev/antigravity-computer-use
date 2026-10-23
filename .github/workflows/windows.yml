@@ -13,5 +13,6 @@ jobs:
           node-version: 24.20.0
           package-manager-cache: false
       - run: node --test tests/*.test.mjs
+      - run: node scripts/check-provenance.mjs
       - run: node server/build.mjs --force
       # Desktop/input acceptance requires an interactive Windows session.

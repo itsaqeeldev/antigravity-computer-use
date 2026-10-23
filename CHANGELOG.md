@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.3.0-beta.1 - direct native Windows skill
+
+- Direct skill scripts and persistent authenticated native service replace the default MCP route. No extra model or credentials.
+- Real-app fixes: numeric ranges, indexed keyboard focus, owned pickers, Unicode transport, bounded observation settling, worker epochs and explicit input-delivery evidence.
+- Persistent emergency Stop across replacement, independent input/cursor cleanup and Keep working by default.
+- Stronger soft breathing ice-blue edges, smaller halo, original pointer and distinct text insertion cursor with correct hotspot.
+- Manifest integrity preflight before installer writes; configuration-preserving upgrade/rollback, source provenance CI and fresh-folder release packaging.
+- Qualification includes real Upscaly and editor workflows; see VALIDATION.md for exact build boundaries and unavailable hardware. Earlier checkpoints below are historical.
+
+## 2026-10-24 - dev7 installed qualification
+
+- Actual Agent Manager confirmed the exact dev7 pin and lifecycle schemas after the dev5 real AI workflow and dev6 actual JPEG-viewing/Unicode regression.
+- Native hotkey interrupted a held real-app drag, released the owned button and skipped seven queued actions. Stop survived service replacement. Both human re-arms and physical Esc were observed.
+- The Stop harness's unsupported final close argument was corrected separately after preserving its failed receipt; all prior safety assertions passed. This is not reported as a clean whole-script pass.
+- Covered-target capture passed without pixels from an unapproved cover. An older-helper leak did not reproduce; no failing-before claim. 66 automated checks pass. Native helper changed to SHA256 98793c75fa416cdf3a7233b0e400b831268a454c2ab5bf94f8bc12e7c7705d02.
+- No new public release. Older dev7 source/lifecycle entries below precede native hardening and do not describe the final installed bytes.
+
+### Dev7 native capture hardening
+
+- Check all higher windows intersecting the target rectangle instead of sampling five points.
+- Fail clearly if a covered window cannot render itself; never return a covering-window screenshot as the app. Discard screen pixels if coverage changes during capture.
+- Reject legacy screen_occluded replies before delivering an image to the agent. 66 automated checks pass; native helper rebuilt. The installed capture and Stop witnesses are recorded above.
+
+## 2026-10-24 - dev7 lifecycle discovery
+
+- Complete describe/start/shutdown schemas, including conventional COMMAND --help, after actual Antigravity tried describe start.
+- Make the real JPEG-viewing step explicit with the Agent Manager App's actually tested read_file tool and require UTF-8 requests.
+- 65 checks pass. Actual Agent Manager dev5 AI/pause-resume/second-session and dev6 JPEG/semantic/Unicode witnesses are recorded privately; final installed emergency Stop/human re-arm checks remain pending. Native helper bytes unchanged.
+
+## 2026-10-24 - dev6 actual Antigravity integration feedback
+
+- Add describe COMMAND / --help COMMAND with exact argument schemas. Ordinary skill operation no longer needs source inspection.
+- Emit ASCII-escaped JSON at the CLI boundary to prevent legacy PowerShell OEM decoding from corrupting Unicode labels and values. Actual Windows PowerShell437 pipeline round-trip passes Urdu, joiners and emoji.
+- Require launch/observation of a prebuilt app before inferring or starting development-server prerequisites.
+- 65 source checks pass, including preventing a queued input-lease action from running after Stop. Native helper bytes unchanged; dev6 live acceptance is pending.
+
+## 2026-10-24 - dev5 connection recovery
+
+- Give a clear recovery error when a saved service pipe is unreachable. Distinguish connection loss after possible input delivery; do not replay it.
+- Refuse to launch a competing controller when an existing live service fails to answer.
+- 62 automated checks pass, including both regressions. Native helper bytes unchanged from dev4. Fresh Antigravity/native stop-resume qualification remains pending.
+
+## 2026-10-24 - dev4 reliability work
+
+- Real peer editor feedback: preserve Unicode joiners and bidi marks; add foreground HWND hints, clear idle-service recovery, and bounded screenshot settling.
+- Bind observations to native-worker epoch. Refuse stale element indexes after helper replacement before input delivery.
+- Report input_completed with verification_error when input succeeded but its subsequent observation failed; stop batches without replay.
+- Treat failed held-input recovery as a control Stop; native Resume/Re-arm/activation stay blocked while the owned-input journal is uncleared.
+- 59 automated controller checks pass; full native helper compiles. This entry is source evidence, not new Antigravity or hardware qualification.
+
+# Changelog
+
+## 0.3.0-dev.1 — unpublished reliability rework
+
+- Numeric slider values, indexed keyboard focus and verified owned-dialog input fencing.
+- Compact observations, deeper bounded queries, expected-state waits and actionable native errors.
+- Matching-request cancellation, retained stop reasons and renewed human-resume deadline.
+- Skill protocol conflict correction, real app/output verification guidance and recursive reference installation.
+- Explicit runtime version/build identity, correct completion diagnostics and saved takeover-mode reporting before native startup.
+- Packaging preserves the source-addressed native binary; repeated packaging verifies its identity instead of forcing a new compiler artifact.
+
+Actual Upscaly 1x/zero-enhancement PNG/JPEG exports and indexed-key regressions passed in Agent Manager. This does not qualify AI inference, all workflows or visual parity. The app's import/status/publication defects were repaired separately. See VALIDATION.md for remaining limits.
+
 ## 0.2.0 — Windows beta
 
 First public release of the native Antigravity Agent Manager integration.

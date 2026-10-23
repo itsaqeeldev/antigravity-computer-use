@@ -8,6 +8,36 @@ test('MCP contains discovery, native actions, lifecycle and clip tools',()=>{
 });
 for(const extra of ['confirmed','preapprove','__permit','__session','mode','takeover_mode'])test('model cannot provide '+extra,()=>assert.throws(()=>validate('computer_click',{hwnd:1,observation_id:'x',reason:'test',[extra]:true})));
 test('booleans/fractions cannot act as handles',()=>{for(const hwnd of [true,1.5])assert.throws(()=>validate('computer_snapshot',{hwnd}));});
+
+test('native typing budget rejects oversized text before dispatch while explicit clipboard remains available',async()=>{
+ const args={hwnd:1,observation_id:'fresh',reason:'Bounded typing'};
+ validate('computer_type',{...args,text:'a'.repeat(400)});
+ assert.throws(()=>validate('computer_type',{...args,text:'a'.repeat(401)}),/length/);
+ validate('computer_clipboard',{text:'a'.repeat(1209),reason:'Explicit bulk clipboard'});
+ validate('computer_paste',{...args,text:'a'.repeat(1209)});
+ assert.throws(()=>validate('computer_paste',{...args,text:'a'.repeat(20001)}),/length/);
+ let called=false;await assert.rejects(call({action(){called=true;}},'computer_type',{...args,text:'a'.repeat(401)}));assert.equal(called,false);
+});
+
+test('nested observation options and coordinate arrays are validated',()=>{
+ const common={hwnd:1,observation_id:'fresh',reason:'Inspect app'};
+ for(const observe of [null,[],false,{with_image:'false'},{max_nodes:-1},{max_nodes:501},{__permit:'forged'}])
+  assert.throws(()=>validate('computer_click',{...common,observe}));
+ for(const from of [['1',2],[NaN,2],[true,2]])assert.throws(()=>validate('computer_drag',{...common,from,to:[3,4]}));
+ validate('computer_click',{...common,observe:{with_image:false,query:'Export',max_nodes:500}});
+ validate('computer_snapshot',{hwnd:1,settle_ms:600});
+ for(const settle_ms of [-1,2001,1.5,'600'])assert.throws(()=>validate('computer_snapshot',{hwnd:1,settle_ms}));
+});
+
+test('set_value requires an explicit indexed text or numeric value, including zero',async()=>{
+ const common={hwnd:1,observation_id:'fresh',index:3,reason:'Set enhancement'};
+ assert.throws(()=>validate('computer_set_value',common));
+ assert.throws(()=>validate('computer_set_value',{...common,text:'',value:0}));
+ let received;
+ await call({async action(op,args){received={op,args};return {}; }},'computer_set_value',{...common,value:0});
+ assert.equal(received.op,'set_value');assert.equal(received.args.value,0);assert(!('text' in received.args));
+ validate('computer_set_value',{...common,text:''});
+});
 test('unbounded clicks, wheel deltas and drag interpolation are rejected',()=>{
  const common={hwnd:1,observation_id:'x',reason:'fixture'};
  for(const clicks of [0,4,1000000])assert.throws(()=>validate('computer_click',{...common,clicks}));
@@ -16,6 +46,10 @@ test('unbounded clicks, wheel deltas and drag interpolation are rejected',()=>{
  validate('computer_click',{...common,clicks:2});
 });
 test('MCP returns native image block',()=>{const c=content({metadata:{hwnd:1},image:{data:'xyz',mime:'image/jpeg',width:1}});assert.equal(c[1].type,'image');assert(!c[0].text.includes('xyz'));});
+test('transport keeps image and indexed tree without duplicating controls or image metadata',()=>{
+ const c=content({metadata:{observation_id:'fresh',tree:'[3] Edit Name',elements:[{i:3,text:'duplicate'}],image:{width:100}},image:{data:'pixels',mime:'image/jpeg',width:100,height:50,source:[0,0,100,50]}});
+ const v=JSON.parse(c[0].text);assert.equal(v.metadata.observation_id,'fresh');assert.match(v.metadata.tree,/\[3\]/);assert(!('elements' in v.metadata));assert(!('image' in v.metadata));assert.equal(c[1].data,'pixels');assert.deepEqual(v.image.source,[0,0,100,50]);
+});
 test('process restart and same-name apps have different identity',()=>{
  assert.notEqual(appKey({pid:1,started:'10',path:'x.exe'}),appKey({pid:1,started:'11',path:'x.exe'}));
  assert.notEqual(appKey({pid:1,started:'10',path:'x.exe'}),appKey({pid:2,started:'10',path:'x.exe'}));

@@ -74,5 +74,12 @@ namespace Axon {
                 }finally{mutex.ReleaseMutex();}
             }
         }
+        internal static bool HasHeld() {
+            if(String.IsNullOrEmpty(ControlFence.FileName))return false;
+            try {using(Mutex mutex=OpenMutex()) {
+                if(!Enter(mutex))return true;
+                try {return Read().Count!=0;}finally {mutex.ReleaseMutex();}
+            }}catch {return true;}
+        }
     }
 }

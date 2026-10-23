@@ -23,6 +23,12 @@ try {
  assert(s.metadata.elements.some(n=>n.name==='pressed:2'));checks.push('Screenshot coordinates move the real pointer and click');
  n=node(s,'Name field');s=await r.action('set_value',{hwnd:a.hwnd,observation_id:s.metadata.observation_id,index:n.i,text:'Hello دنیا 😀',risk:'routine',reason:'Unicode fixture text'});
  assert(s.metadata.elements.some(n=>n.text==='Hello دنیا 😀'));checks.push('Unicode and emoji round trip');
+ n=node(s,'Name field');s=await r.action('type',{hwnd:a.hwnd,observation_id:s.metadata.observation_id,index:n.i,text:' می\u200cخواهم',risk:'routine',reason:'Verify native Unicode packet typing into the actual focused edit'});
+ assert(s.metadata.elements.some(n=>n.text?.includes('می\u200cخواهم')));checks.push('Native keyboard packets preserve joiners and complex-script text');
+ const clipBefore=await r.action('clipboard',{risk:'sensitive',reason:'Remember clipboard text only in memory for restoration verification'});
+ n=node(s,'Name field');s=await r.action('paste',{hwnd:a.hwnd,observation_id:s.metadata.observation_id,index:n.i,text:' explicit paste 😀',risk:'sensitive',reason:'Verify the reused clipboard-preserving native paste'});
+ assert(s.result.clipboard_restored);assert(s.metadata.elements.some(n=>n.text?.includes('explicit paste 😀')));checks.push('Explicit native paste restores the clipboard and verifies actual text');
+ const clipAfter=await r.action('clipboard',{risk:'sensitive',reason:'Verify original clipboard text was restored'});assert.equal(clipBefore.result.text===clipAfter.result.text,true,'Original clipboard text must survive paste');
  n=node(s,'Pixel canvas');s=await r.action('drag',{hwnd:a.hwnd,observation_id:s.metadata.observation_id,from:pixel(s,n,.15,.5),to:pixel(s,n,.85,.5),steps:12,risk:'routine',reason:'Drag on fixture pixel canvas'});
  assert(s.metadata.elements.some(n=>/^drag:[2-9]\d*$|^drag:1[0-9]+$/.test(n.name||'')));checks.push('Pixel canvas receives multiple drag events');
  n=node(s,'Notes');const pt=pixel(s,n);s=await r.action('scroll',{hwnd:a.hwnd,observation_id:s.metadata.observation_id,x:pt[0],y:pt[1],amount:-3,risk:'routine',reason:'Scroll fixture notes'});

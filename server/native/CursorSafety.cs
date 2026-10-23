@@ -56,22 +56,19 @@ namespace Axon {
                     if(!acknowledgement.Wait(2000)||acknowledgement.Result!="armed")throw new InvalidOperationException("Cursor watchdog did not arm");
                     if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|")){Restore();return false;}
                     int size=Math.Max(32,GetSystemMetrics(13));
+                    foreach(uint role in new uint[]{32512,32649,32513,32650})
                     using(Bitmap bitmap=new Bitmap(size,size,PixelFormat.Format32bppArgb)) {
                         using(Graphics g=Graphics.FromImage(bitmap)) {
                             g.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                            g.ScaleTransform(size/32f,size/32f);DesktopVisuals.Arrow(g);
+                            g.ScaleTransform(size/32f,size/32f);DesktopVisuals.NativeCursor(g,role);
                         }
                         IntPtr color=bitmap.GetHbitmap(Color.Transparent),mask=CreateBitmap(size,size,1,1,IntPtr.Zero),cursor=IntPtr.Zero;
                         try {
-                            IconInfo icon=new IconInfo();icon.icon=false;icon.x=(uint)Math.Round(4*size/32f);icon.y=(uint)Math.Round(2*size/32f);icon.color=color;icon.mask=mask;
-                            // A button or editable field often switches away
-                            // from OCR_NORMAL. Style those ordinary roles too.
-                            foreach(uint role in new uint[]{32512,32649,32513,32650}) {
-                                if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|"))throw new InvalidOperationException("Control ended during cursor setup");
-                                cursor=CreateIconIndirect(ref icon);
-                                if(cursor==IntPtr.Zero || !SetSystemCursor(cursor,role))throw new InvalidOperationException("Windows refused custom cursor role");
-                                cursor=IntPtr.Zero;applied=true;
-                            }
+                            IconInfo icon=new IconInfo();icon.icon=false;icon.x=(uint)Math.Round((role==32513?16:4)*size/32f);icon.y=(uint)Math.Round((role==32513?16:2)*size/32f);icon.color=color;icon.mask=mask;
+                            if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|"))throw new InvalidOperationException("Control ended during cursor setup");
+                            cursor=CreateIconIndirect(ref icon);
+                            if(cursor==IntPtr.Zero || !SetSystemCursor(cursor,role))throw new InvalidOperationException("Windows refused custom cursor role");
+                            cursor=IntPtr.Zero;applied=true;
                         } finally {if(cursor!=IntPtr.Zero)DestroyCursor(cursor);DeleteObject(color);DeleteObject(mask);}
                     }
                     if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|")){Restore();return false;}
@@ -103,6 +100,7 @@ namespace Axon {
             // This process outlives a hard-killed UI, and does not depend on the
             // Node event loop to revoke input or release keys/buttons.
             string file=ControlFence.FileName;
+            ControlFence.LatchStop();
             try {File.WriteAllText(file,"stopped||0|");}catch {}
             try {
                 foreach(string line in File.ReadAllLines(file+".workers")) {

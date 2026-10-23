@@ -24,6 +24,8 @@ const WIN_SOURCES = [
   path.join(HERE, 'native', 'TakeoverPolicy.cs'),
   path.join(HERE, 'native', 'CursorMotion.cs'),
   path.join(HERE, 'native', 'InputLedger.cs'),
+  path.join(HERE, 'native', 'SnapshotText.cs'),
+  path.join(HERE, 'native', 'KeyboardTargetPolicy.cs'),
 ];
 const MAC_SOURCES = [path.join(HERE, 'native', 'AxonHost.swift')];
 
@@ -116,7 +118,7 @@ export class BuildError extends Error {
 export function ensureHost({ force = false, log = () => {} } = {}) {
   if (process.platform !== 'win32') throw new BuildError('This build enables Windows only.', 'macOS/Linux adapters are not yet validated.');
   const prebuilt = path.join(HERE, '..', 'bin', 'AxonHost.exe');
-  if (!force && fs.existsSync(prebuilt)) return { exe: prebuilt, rebuilt: false };
+  if (!force && fs.existsSync(prebuilt) && !SOURCES.some(f => fs.existsSync(f))) return { exe: prebuilt, rebuilt: false };
   if (process.platform === 'darwin') return ensureMacHost({ force, log });
   if (process.platform !== 'win32') {
     throw new BuildError(
@@ -217,8 +219,8 @@ export function ensureHost({ force = false, log = () => {} } = {}) {
   try {
     fs.renameSync(temp, exe);
   } catch (err) {
-    // Losing the race is fine: the winner's binary has identical contents,
-    // because the name is a hash of exactly what went into it.
+    // Keep the winner for these source inputs. Legacy csc emits varying PE
+    // metadata, so separate compilations need not have identical byte hashes.
     try { fs.unlinkSync(temp); } catch {}
     if (!fs.existsSync(exe)) {
       throw new BuildError('Could not place the compiled host: ' + err.message, null);
@@ -267,7 +269,7 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
 
   const h = createHash('sha256');
   for (const f of SOURCES) h.update(fs.readFileSync(f));
-  h.update(' ' + swiftc + ' mac-v1');
+  h.update('\0' + swiftc + '\0mac-v1');
   const stamp = h.digest('hex');
   const exe = exeFor(stamp);
 

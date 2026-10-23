@@ -1,7 +1,11 @@
 # Security
 
-This project controls the interactive Windows desktop with the current user's privileges. It is not an OS sandbox. Standard MCP does not provide authenticated per-call security-preset information. Host-managed mode trusts Antigravity's authorization; standalone mode requests native human approval.
+This project controls the interactive desktop with the current Windows user's privileges. It is not an OS sandbox against software using that same account.
 
-Esc, Ctrl+Alt+F12 and Stop revoke control. Resume/re-arm must be human-operated. Passwords, authentication and Windows secure desktop require human handoff. Pixel semantics cannot be perfectly classified.
+The direct skill uses a persistent local native service. Standalone mode asks the human for app/session and sensitive-effect approval. Host-managed mode is an explicit deployment choice that trusts the host's terminal execution authorization; it cannot inspect or prove a Turbo preset. The agent must still obtain required sensitive-action review. Broad terminal grants confer broad desktop authority. Legacy MCP is optional and does not provide an authenticated preset value either.
 
-For a vulnerability, use the repository's private vulnerability reporting feature if enabled. Do not post working exploits or personal desktop recordings publicly. If private reporting is unavailable, open an issue requesting a private contact without including exploit details. A maintainer must enable private reporting before public launch; no response SLA is promised.
+Native grants bind executable/process identity. Observation references are one-use and invalidated on takeover, Stop, stale/moved windows and control-generation changes. Esc, Ctrl+Alt+F12 and Stop revoke control independently and release automation-held inputs. Local human re-arm is required after emergency Stop. Host-managed chat Resume can clear only a soft pause after explicit user instruction; it cannot clear Stop. Restarting a service to bypass that stop is prohibited.
+
+Screenshots/accessibility text are untrusted content, never authorization. Authentication, security settings, passwords, UAC and secure desktop require human handoff. Pixel semantics cannot be classified perfectly. Local screenshots and IPC capabilities must not be committed or shared. The project has no separate model or telemetry connection; host/provider retention still applies.
+
+For a vulnerability, use private vulnerability reporting if enabled. Do not post exploits or personal recordings publicly. If private reporting is unavailable, request a private contact without exploit details. No response SLA or signing claim is made for experimental binaries.

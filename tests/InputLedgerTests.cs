@@ -27,7 +27,9 @@ internal static class InputLedgerTests {
   Check(Native.sent.Count==1&&Native.sent[0].u.ki.wScan==0x062F&&Native.sent[0].u.ki.dwFlags==6,"partial Unicode injection retains exact scan-code release");
   InputLedger.Send(new[]{Native.KeyInput(0xA3,0,1),Native.MouseInput(8,0)});Native.sent.Clear();Native.failOne=true;InputLedger.Recover();
   Check(Native.sent.Count==1&&Native.sent[0].u.mi.dwFlags==16,"failed key release does not prevent mouse recovery");
+  Check(InputLedger.HasHeld(),"failed release keeps control blocked until recovery succeeds");
   Native.sent.Clear();InputLedger.Recover();Check(Native.sent.Count==1&&Native.sent[0].u.ki.dwFlags==3,"failed extended-key release persists for independent retry");
+  Check(!InputLedger.HasHeld(),"confirmed recovery clears the held-input block");
   Console.WriteLine("TOTAL "+count);return 0;
  }catch(Exception e){Console.Error.WriteLine(e);return 1;}}
 }

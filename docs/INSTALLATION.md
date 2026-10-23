@@ -1,46 +1,67 @@
-# Installation and removal
+# Installation, update and removal
 
-## Portable Windows bundle
+Version 0.3.0-beta.1 is a direct `/computer-use` skill with bundled native helpers. The historical v0.2.0 uses the older MCP route; do not confuse its recording or download with this rework.
 
-1. Install Antigravity Agent Manager on Windows x64.
-2. Download the Windows ZIP from [GitHub Releases](https://github.com/shayann07/antigravity-computer-use/releases). During development, build it with `npm run bundle`.
-3. Extract the ZIP completely. Run `install.cmd` from its extracted folder. Administrator access, Python, a compiler and separate model credentials are not required.
-4. In Antigravity, open Customizations → Installed → MCP Servers. Restart `antigravity-computer-use`. Confirm Ready and 21 enabled tools.
-5. In a conversation, invoke `/computer-use`, then describe an ordinary desktop task. Begin with a disposable document.
+## Windows portable bundle
 
-The default installation is `D:\Tools\AntigravityComputerUse` when D: exists, otherwise `%LOCALAPPDATA%\AntigravityComputerUse`. Configuration goes to `%USERPROFILE%\.gemini\config\mcp_config.json`; the global skill goes under that folder's `skills\computer-use`. Other MCP entries and host permission settings are preserved.
+1. Download the Windows ZIP and SHA256 checksums from the [0.3.0-beta.1 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
+2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
+3. Run `install.cmd`. Direct integration is the default. The installer prints the release and exact backup paths.
+4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
 
 ```powershell
-.\install.cmd --target "D:\MyTools\AntigravityComputerUse"
-.\install.cmd --workspace "D:\Projects\Example"
+.\install.cmd --target "D:\Tools\AntigravityComputerUse" --integration direct
+.\install.cmd --workspace "D:\Projects\Example" --integration direct
 ```
 
-Project-local installation writes `.agents/mcp_config.json` and `.agents/skills/computer-use` in that project. `--legacy-profiles` is an explicit optional migration setting for older IDE/CLI profiles; the default targets Agent Manager.
+Default target: `D:\Tools\AntigravityComputerUse` when available, otherwise the current user's LocalAppData. App skill location: `~/.gemini/config/skills/computer-use`. Project location: `.agents/skills/computer-use`. These match [the official App documentation](https://antigravity.google/docs/skills).
 
-## Permissions
+The installer verifies manifest file hashes before making changes. Only this project's old MCP entry is removed during direct migration. Other servers, host security preferences and unrelated configuration survive. Configuration and skill backups are kept under `backups/<timestamp>`. `--legacy-profiles` is optional and never enabled implicitly.
 
-Windows Antigravity can ask for MCP permission even with Turbo selected. Approve only the intended server and scope. A server rule is `mcp(antigravity-computer-use/*)`. The installer does not create allow rules. Manual pause is the default; select Smart takeover from the control bar for deliberate physical-input pausing. Esc always stops.
+## Permission policy
 
-## Update and rollback
+Direct installations default to standalone native app/session and sensitive-operation dialogs. To rely on the host's terminal execution review instead, the operator can explicitly use:
 
-Finish active desktop tasks first. Run the new bundle's installer and restart this MCP server. Each installation creates a separate release folder and an exact configuration backup. The installer prints the backup location.
+```powershell
+.\install.cmd --integration direct --permission-mode host-managed
+```
+
+This does not read or change Antigravity's Turbo preset. The host agent is responsible for required user/sensitive-effect review before running the script. Broad terminal grants grant broad desktop authority. Native identity, frame, budget, watchdog and Stop checks remain active. The mode is fixed deployment configuration, not a model-controlled action flag.
+
+Keep working is the default: normal physical mouse/keyboard activity does not pause. The bar's optional Yield on input mode pauses on deliberate input. Soft Resume follows local human Resume or, in host-managed mode, an explicit user message. Esc/Stop always requires local human re-arm; never restart a service to bypass it. Windows virtual desktops share one mouse, keyboard and active screen capture.
+
+## Verify an installed development bundle
 
 ```powershell
 .\node.exe .\scripts\verify-install.mjs "D:\Tools\AntigravityComputerUse"
+```
+
+This checks manifest files, the pinned skill and the chosen integration. It does not perform desktop actions or establish real application qualification. `status` reports the running build ID; a new build refuses to silently reuse another version's active service.
+
+## Update and rollback
+
+Finish and `end` active tasks first. Use the currently installed direct command's `shutdown` to close the helper, then install the replacement. Each install gets an immutable release folder; user deployment policy and skill command paths are generated separately.
+
+```powershell
 .\node.exe .\scripts\rollback.mjs "D:\Tools\AntigravityComputerUse\backups\EXACT-TIMESTAMP\rollback.json"
 ```
 
-Use your actual backup path, then restart the MCP server. Rollback restores this project's entry while preserving unrelated configuration changes. Old release folders remain available.
+Use the exact printed backup path. Rollback restores this project's prior entry/skill and installation pointer while preserving unrelated host configuration edits. Existing older backup formats may lack the installation pointer record; inspect the restored skill when using one. Release folders remain recoverable.
 
-## Remove
+## Optional legacy MCP
 
-End control, disable/remove only `antigravity-computer-use` in Antigravity, and remove only its global or project-local `skills/computer-use` directory. After its processes exit, the installation folder can be deleted. Keep backups if rollback is wanted. Do not delete the whole `.gemini` or `.agents` folder.
+`--integration mcp` registers the compatibility adapter. Its default policy remains host-managed; standalone can be selected explicitly. Only this route requires refreshing/restarting the host's MCP server. The direct skill does not call this adapter.
 
-## Troubleshooting
+## Removal and troubleshooting
 
-- Missing slash command: check that the skill is installed at the intended global/project location and refresh the conversation.
-- Server not Ready: check the configured executable exists; extract the complete ZIP and reinstall. Inspect host MCP diagnostics.
-- Stopped/paused: use the native human Resume/Re-arm control, then request a fresh observation.
-- Hotkey conflict: stop another active controller before starting this one.
-- Input denied: elevated apps/UAC and secure desktop are outside normal-user control. Do not bypass them.
-- Different cursor on an app: app-owned and resize cursors are not replaced.
+End/shutdown control. Remove only this project's MCP entry if present and its global/project skill. After processes exit, remove only the chosen installation folder if desired; retain backups for recovery. Never delete the whole `.gemini` or `.agents` folder.
+
+- Missing slash command: verify the intended App global/project skill path, then open a fresh conversation.
+- Missing screenshots: open the returned actual `image.path` with the host image viewer. Text alone is not visual verification.
+- Animation/old frame: use a fresh snapshot with `settle_ms:600` or wait for expected visible text. Never repeat the preceding input merely because its first image was transitional.
+- Wrong desktop/minimized: discover with `include_hidden:true`, focus only the intended app and inspect fresh pixels.
+- Different running build: end/shutdown the old owned session before starting the new build; do not interrupt someone else's task.
+- Elevated app/UAC/security surface: human handoff. No normal-user bypass is supported.
+- Cursor roles: common arrow/link/text/app-starting roles are temporary custom cursors; app-owned and resize shapes remain app-controlled.
+
+Specific real Agent Manager tasks and installed human Stop/re-arm checks now have records. Broader application, hardware and release qualification remain open. See VALIDATION.md; passing an installer or fixture test does not prove ordinary-task reliability.

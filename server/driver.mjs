@@ -26,6 +26,7 @@ export class Driver {
     this.env = env;
     this.proc = null;
     this.seq = 0;
+    this.epoch = 0;
     this.pending = new Map();
     this.ready = null;
     this.info = null;
@@ -47,6 +48,7 @@ export class Driver {
   }
 
   _launch() {
+    this.epoch++;
     return new Promise((resolve, reject) => {
       let exe;
       try { exe = ensureHost({ log: this.onLog }).exe; }
@@ -132,7 +134,7 @@ export class Driver {
     } else {
       const e = msg.error || {};
       const error=new HostError(e.code || 'host_error', e.message || 'Unknown host error', e.hint);
-      if(entry.input) this.abort().then(()=>entry.reject(error),()=>entry.reject(error));
+      if(entry.input) this.abort().then(()=>entry.reject(error),cleanupError=>entry.reject(cleanupError));
       else entry.reject(error);
     }
   }
@@ -147,6 +149,7 @@ export class Driver {
 
   async call(op, args = {}, { timeoutMs } = {}) {
     await this.start();
+    if(args.__worker_epoch!=null&&args.__worker_epoch!==this.epoch)throw new HostError('stale_observation','The native worker restarted before execution. Observe again; no input was sent.',null);
     const id = ++this.seq;
     const payload = JSON.stringify({ id, op, args }) + '\n';
     const limit = timeoutMs || this.timeoutMs;
@@ -179,6 +182,7 @@ export class Driver {
     try{return await attempt;}finally{if(this.aborting===attempt)this.aborting=null;}
   }
   async _abort() {
+    this.epoch++;
     const p=this.proc;
     const recover=this.inputMayBeHeld;
     this.proc=null; this.info=null; this.ready=null;
@@ -186,11 +190,20 @@ export class Driver {
     if(p) { try { p.stdin.destroy(); p.kill(); await Promise.race([once(p,'exit'),new Promise(r=>setTimeout(r,1000))]); } catch {} }
     if (!recover) return;
     this.inputMayBeHeld=false;
+    let released=false;
+    try{released=await this.releaseHeldInputs();}catch(error){this.onLog('input recovery: '+error.message);}
+    if(!released){
+      this.onEvent?.({event:'input_cleanup_failed'});
+      throw new HostError('input_cleanup_failed','Automation-held input cleanup could not be confirmed. Control must remain stopped.','Use the local controls only after cleanup succeeds; do not repeat the interrupted action.');
+    }
+  }
+  async releaseHeldInputs(){
     const {exe}=ensureHost();
-    await new Promise(resolve=>{const helper=spawn(exe,['--release-inputs'],{windowsHide:true,stdio:'ignore',env:{...process.env,...this.env}});const t=setTimeout(()=>{helper.kill();resolve();},4000);helper.on('exit',()=>{clearTimeout(t);resolve();});helper.on('error',()=>{clearTimeout(t);resolve();});});
+    return new Promise(resolve=>{let settled=false;const finish=ok=>{if(settled)return;settled=true;clearTimeout(t);resolve(ok);};const helper=spawn(exe,['--release-inputs'],{windowsHide:true,stdio:'ignore',env:{...process.env,...this.env}});const t=setTimeout(()=>{helper.kill();finish(false);},4000);helper.on('exit',code=>finish(code===0));helper.on('error',()=>finish(false));});
   }
   async stop() {
     if (!this.proc) return;
+    this.epoch++;
     const p = this.proc;
     try {
       // Ask the host to leave on its own before forcing it.

@@ -1,64 +1,42 @@
-# Validation boundary — 2026-10-22
+# Validation - 0.3.0-beta.1
 
+24 October 2026 (Asia/Karachi). Distinguish source checks, native component tests, actual applications and physical human input. No fixture or model report alone proves general usability.
 
-
-The old Python draft's 55 tests do not validate this replacement.
-
-
-
-| Check | Latest local result | Scope |
-
+| Check | Evidence | Boundary |
 |---|---|---|
+| Automated source | 69 passing checks | Schemas, direct IPC, cancellation, stale/worker epochs, Unicode, permission flags, install/update/rollback and corrupt-bundle refusal |
+| Native helper | 12 passing checks | Real input/UIA/capture, identity and permission refusal, hung worker termination |
+| Host-managed component workflow | 13 passing checks | Two disposable app processes, owned dialog, real wheel/drag/Unicode and second session; not the host permission engine |
+| Cursor/glow recovery | 8 passing checks | Actual cursor-role pixels change, distinct text insertion artwork, live breathing, restoration after Pause and hard UI/watchdog crashes |
+| Guardian/parent death | 5 guardian checks and parent-death recovery pass | Independent Stop and worker cleanup; injected chord is not physical Esc |
+| Renderer | 100/125/200% renders inspected; alpha/falloff checks pass | Original artwork on a fictional desktop; real multi-monitor/DPI remains untested |
+| Actual Antigravity | Dev5 real AI export/pause/resume/second session; dev6 real JPEG viewing and semantic/Unicode checks; dev7 exact pin/lifecycle discovery | App used read_file for images. These witnesses are scoped to their recorded builds |
+| Real Upscaly | Original and feature build AI PNG/JPEG, in-flight cancel, retry, chosen GPU/tile, actual decoded headers and retained previous outputs | Native NCNN execution and decoded outputs distinguish AI from silent software resize. Broader app features are unqualified |
+| Real editor/emulator | Dev7 Copy after Open/New, rich image transfer with clipboard sharing Off, Undo/Redo, rotation/font layout and Gboard emoji | Sharing On downgraded rich clipboard; original settings restored. Direct emoji commit is not composing-text/IME qualification |
+| Physical Stop/re-arm | Owner performed both re-arms and physical Esc on dev7; fresh observation afterward | Held drag interrupted and seven queued actions skipped; service replacement did not clear Stop |
 
-| `node --test tests/*.test.mjs` | 34 pass | Real stdio, schemas/forged flags, bounded input, stale/one-use observations, negative origins, image sizing/content, batches, lifecycle latches, preserving install/update/rollback |
+## Retained failures and recovery
 
-| `tests/native-integration.mjs` | 12 pass | Actual C# UIA/Unicode/real click/capture; native denials, identity change, hung-operation termination, pause/revocation |
+The beta component workflow initially refused to start because the idle installed helper already owned Ctrl+Alt+F12. The idle service was shut down normally; the unchanged test then passed. Refusing control without the independent emergency shortcut is intentional.
 
-| `tests/host-managed-integration.mjs` | 11 pass | Native image, hover, accessible/pixel click, Unicode/emoji, drag/wheel, owned dialog, two identities, second session, end/activate cannot bypass stop |
+The dev7 Stop harness passed its five safety/human checkpoints but exited unsuccessfully at final cleanup: it supplied an unsupported risk field to close_window. The field was corrected, close/end recovered separately and the original result preserved. It is not a clean whole-script pass.
 
-| `tests/cursor-recovery.mjs` | 7 pass | Glow actually animates; system-arrow pixels change; pause restores; hard UI crash independently revokes/kills/restores; watchdog crash triggers stop/restore |
+The new covered-target capture case returned no pixels from an unapproved cover. The suspected older-helper leak did not reproduce on this desktop; no failing-before claim. Native code now refuses covered-screen fallback and the runtime rejects legacy screen_occluded images.
 
-| `tests/guardian-integration.mjs` | 5 pass | Native control UI, no-app glow, global stop chord, revocation, worker termination |
+In the final dev7 editor run, one expired observation was safely refused. Two successful Close inputs returned input_completed:true with window_not_found during verification. The agent observed again instead of repeating completed input. A transitional white image was re-observed without replaying the action.
 
-| `tests/parent-crash.mjs` | Pass | Killing fixture Node parent terminates native helper through Windows watchdog |
+## Beta real-app results
 
-| `tests/human-acceptance.mjs` | Earlier human pass | Standalone app Allow and sensitive Deny; no input on denial; normal finish. Predates host-managed UX and new visuals. |
+The custom controller operated real Upscaly and Notepad; these were not disposable fixture substitutes. PNG and JPEG decoded at 1920x1320. NCNN logs recorded actual 17154ms/16414ms inference, GPU0/Auto tile/Balanced. PNG SHA256 was 35e841234e83db07284b2aa3d230525931965c8acf9757b5b7e35ed92fe844ee; JPEG was 9159c3817af3e683fc6f9aaae095dcfecb14317cc174451a5c02ea8d16052897. Cancellation during attempt3 terminated its native child, recorded cancelled/aborted and published no third file. Previous outputs remained intact. Settings restored; no model downloads or new consents.
 
-| `tests/physical-escape.mjs` | Human pass, including cursor restoration | Physical Esc, native revocation and worker exit. Revised harness additionally checks restored cursor pixels. |
+Real Notepad exposed three controller failures before publication: exact-HWND focus rejected its own RichEdit child; rapid Unicode packets lost/repeated characters; a save-dialog value write echoed the requested filename while retaining the old internal filename. These are retained failures, not passes. The corrected containing-root check refuses other roots, short typing is paced/capped400 UTF-16 units, and explicit paste reuses upstream clipboard preservation with stricter failure cleanup. Save As uses keyboard editing, Tab commit and readback before confirmation.
 
-| `scripts/render-visuals.mjs` | Pass, images inspected | Renderer primitives at 100/125/200%; center/falloff alpha assertions. Offscreen artwork, not a physical-screen capture. |
+The corrected native sample saved exactly94 UTF-16 units. Explicit paste saved the original1209-unit/37-line sample exactly, including Urdu, Persian joiner and emoji, with clipboard_restored:true. Actual wheel scrolling changed the visible document; the actual displayed custom insertion cursor was captured using this project's GetCursorInfo probe. The misplaced generated failure file was preserved in private evidence and its original test location cleaned. No personal document was used.
 
+The AI workflow predates the final keyboard/paste correction; the text/file-dialog witnesses exercise that correction. Runtime files and the qualified native helper are bound by the release manifest. GitHub Actions checks each source commit; native interactive and hardware checks remain local and separately scoped.
 
+## Not qualified
 
-Tests create disposable fixtures and close them afterward. Direct native grant files are test doubles, not human consent. The host-managed suite explicitly selects operator-authorized mode; it does not test Antigravity's permission engine. Injected stop chords do not count as physical human Esc. Cursor tests send no application input and grant no apps.
+Physical mixed-DPI/multiple displays, complete script/IME/accessibility behavior, long recovery soak, all Upscaly models/face/ROI/video/cache workflows, secure/elevated desktops and macOS/Linux. Binaries are unsigned. Standalone human approval and host Ask/Deny have earlier records, not a new test of the host's global security engine. Host-managed mode never claims an authenticated Turbo value.
 
-
-
-Observed through Codex computer use in actual Agent Manager: Turbo selected; `/computer-use` Global skill listed; MCP Ready with 21 tools in the earlier build. The final build has 21 tools including `computer_move`. Actual model dispatch/image/action acceptance through Agent Manager is pending. The separate IDE does not count as Agent Manager evidence.
-
-
-
-Negative origins/image mapping are automated coverage; physical mixed-DPI/multiple-display hardware remains unverified. Native fixtures ran on the existing 125% desktop. Unicode/emoji round trips do not claim complete IME/script editing coverage. UAC/secure desktop remains a human handoff.
-
-
-
-The provided GitHub source workflow has not run remotely. Old `tools/*-test.mjs` scripts are attributed upstream references for its original protocol, not additional passing replacement tests.
-
-
-
-Do not call the complete release acceptance-verified until actual Agent Manager and remaining human/hardware checks have records. Private local evidence under `.localdata/` is excluded from source releases.
-
-
-2026-10-23: Added persisted automation-owned input recovery and 7 failure/partial-delivery cases; real sampled motion and mid-drag stop passed. Minimal graphite/ice-blue frontend installed. Project-local update/rollback test passed. Actual Agent Manager continuation dispatched against fresh fixtures; final result pending.
-
-## Actual Agent Manager result — 2026-10-23
-
-The updated installed runtime ran in the existing no-project Desktop Acceptance Task Automation conversation. Fresh fixture processes 24220 and 20984 were selected. The live UI showed Unicode text, drag events, checkbox toggle, owned-dialog workflow, and a second session writing Second session verified. The final report showed computer_end returned idle with restart_required false; computer_status showed idle, empty approved_apps, host-managed and manual. The native fence independently read idle. No host restart between the two sessions.
-
-Antigravity reported zero failures. Its scroll step used UIA scroll_pattern (value 0 to 7), not a wheel action; actual wheel delivery remains covered by the native fixture suite. This distinction is retained. Sensitive Allow/Deny and physical Esc have earlier human/native records, not new host-policy tests. Physical Smart takeover/Resume subsequently passed with the owner. Mixed-DPI hardware and public CI/signing remain outside completed evidence.
-
-2026-10-23 human verification: Smart takeover and Resume PASS. Physical input paused control, cleared observations and blocked fresh observation while paused. Human Resume restored control; the old observation was rejected, a fresh screenshot succeeded, and normal completion returned idle. Evidence: .localdata/smart-takeover-live/result.json. This supersedes earlier pending Smart takeover/resume statements.
-
-Final packaging checkpoint (2026-10-23): includes minimal graphite/ice-blue controls, eased cursor, owned-input cleanup, Manual/Smart modes, real Agent Manager two-session acceptance and human Smart takeover/Resume evidence. Remaining external validation: physical mixed-DPI/multiple displays, remote CI, signing/publication. Earlier pending statements above are historical checkpoints.
-
-Open-source review, 2026-10-23: input lease acquisition now fails closed instead of continuing without serialization. Added regression coverage, contributor/security guidance and complete installation/removal documentation. The new source/bundle supersedes the previously installed build; publishing and remote CI remain pending.
+See [repeatable qualification procedures](docs/qualification.md) and [historical records](docs/history/VALIDATION.md). The old Python draft's 55 tests do not apply.

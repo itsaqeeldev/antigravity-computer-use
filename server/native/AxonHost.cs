@@ -63,24 +63,23 @@ namespace Axon
         [DllImport("user32.dll")] internal static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
         [DllImport("user32.dll", EntryPoint = "GetWindow")] internal static extern IntPtr GetWindowRel(IntPtr h, uint cmd);
 
-        // True when the window is the topmost thing at its centre and four inset
-        // corners - that is, a grab of its screen rectangle shows the window and
-        // not something lying over it. Overlay windows of this host do not count.
+        // Check the whole rectangle, not five sample points: a small covering
+        // window can contain private content between all those points. Walk
+        // the documented Z-order relationship with cycle/length bounds.
         internal static bool IsUnobscured(IntPtr h, RECT r)
         {
-            int w = r.Right - r.Left, ht = r.Bottom - r.Top;
-            if (w <= 0 || ht <= 0) return false;
-            int[][] pts = new int[][] {
-                new int[] { r.Left + w / 2, r.Top + ht / 2 },
-                new int[] { r.Left + 8, r.Top + 8 }, new int[] { r.Right - 8, r.Top + 8 },
-                new int[] { r.Left + 8, r.Bottom - 8 }, new int[] { r.Right - 8, r.Bottom - 8 },
-            };
-            foreach (int[] p in pts)
+            if (!IsWindow(h) || r.Right <= r.Left || r.Bottom <= r.Top) return false;
+            IntPtr root = GetAncestor(h, 2); if (root == IntPtr.Zero) return false;
+            HashSet<IntPtr> seen = new HashSet<IntPtr>(); seen.Add(root);
+            for (IntPtr above=GetWindowRel(root,3);above!=IntPtr.Zero;above=GetWindowRel(above,3))
             {
-                IntPtr at = RootWindowAt(p[0], p[1]);
-                if (at != h && !Overlay.IsAnyOverlayWindow(at)) return false;
+                if (!seen.Add(above) || seen.Count > 4096) return false;
+                if (!IsWindowVisible(above) || IsIconic(above) || IsCloaked(above) || Overlay.IsAnyOverlayWindow(above)) continue;
+                RECT other; if (!GetWindowRect(above,out other)) return false;
+                if (other.Right > other.Left && other.Bottom > other.Top &&
+                    other.Left < r.Right && other.Right > r.Left && other.Top < r.Bottom && other.Bottom > r.Top) return false;
             }
-            return true;
+            return IsWindow(h);
         }
         [DllImport("user32.dll")] internal static extern bool IsWindowVisible(IntPtr h);
         [DllImport("user32.dll")] internal static extern bool IsWindow(IntPtr h);
@@ -295,6 +294,10 @@ namespace Axon
                 ControlFence.CheckKeyboard();
                 Presence.NoteSelfInput();
                 Inject(pair);
+                // RichEdit/TSF clients can process VK_PACKET asynchronously.
+                // Short native typing is paced; explicit paste handles bulk
+                // text without letting later packets overrun pending input.
+                if(!Char.IsHighSurrogate(c))System.Threading.Thread.Sleep(45);
             }
         }
 
@@ -441,7 +444,7 @@ namespace Axon
             if(argv.Length==2 && argv[0]=="--visual-preview") { SetDpiAwareness();DesktopVisuals.Export(argv[1]);return 0; }
             if (Array.IndexOf(argv, "--guardian") >= 0) SetDpiAwareness();
             if (Array.IndexOf(argv, "--guardian") >= 0) { int code=0; var ui=new System.Threading.Thread(delegate(){ code=Guardian.Run(); }); ui.SetApartmentState(System.Threading.ApartmentState.STA); ui.Start(); ui.Join(); return code; }
-            if (Array.IndexOf(argv, "--release-inputs") >= 0) { ControlFence.Recover(); return 0; }
+            if (Array.IndexOf(argv, "--release-inputs") >= 0) { ControlFence.Recover(); return InputLedger.HasHeld()?2:0; }
             ControlFence.WatchParent();
             // Build-time warm-up: touch the expensive machinery once so the
             // antivirus scan and the JIT are paid for before Claude ever waits
@@ -1393,27 +1396,9 @@ namespace Axon
             return cr;
         }
 
-        // Text that is not text: the object-replacement character a browser
-        // puts in an empty input, zero-width joiners, byte-order marks. Reported
-        // as a name they look like content; stripped they are nothing.
-        static string CleanText(string s)
-        {
-            if (s == null) return null;
-            StringBuilder sb = null;
-            for (int i = 0; i < s.Length; i++)
-            {
-                char c = s[i];
-                bool junk = c == (char)0xFFFC || c == (char)0xFEFF || (c >= (char)0x200B && c <= (char)0x200F) || c == (char)0x2060;
-                if (junk)
-                {
-                    if (sb == null) { sb = new StringBuilder(s.Length); sb.Append(s, 0, i); }
-                    continue;
-                }
-                if (sb != null) sb.Append(c);
-            }
-            string t = (sb != null ? sb.ToString() : s).Trim();
-            return t.Length == 0 ? null : t;
-        }
+        // Presentation placeholders may be removed; semantic joiners/direction
+        // marks must survive screenshots' companion accessibility text.
+        static string CleanText(string s) { return SnapshotText.Clean(s); }
 
         static bool CachedBool(AutomationElement el, AutomationProperty p)
         {
@@ -2595,11 +2580,11 @@ namespace Axon
         static void RequireForeground(IntPtr expect, Dictionary<string, object> a, Dictionary<string, object> res)
         {
             if (expect == IntPtr.Zero) return;
-            if (Native.GetForegroundWindow() == expect) return;
+            if (ControlFence.SameKeyboardWindow(expect,Native.GetForegroundWindow())) return;
             if (a != null) NoteWait(res, GuardDisturb(a));
             Native.ForceForeground(expect);
             System.Threading.Thread.Sleep(120);
-            if (Native.GetForegroundWindow() != expect)
+            if (!ControlFence.SameKeyboardWindow(expect,Native.GetForegroundWindow()))
                 throw new AxonError("window_not_focused",
                     "The target window is not in front, so keystrokes would go to whatever is.",
                     "Another app is holding the foreground, often a modal dialog. Resolve that first.");
@@ -2613,31 +2598,27 @@ namespace Axon
         // that is worse than doing nothing, so it is checked rather than assumed.
         static void RequireTypingFocus(AutomationElement el, IntPtr expect)
         {
-            try { if (el != null && el.Current.HasKeyboardFocus) return; }
-            catch { }
-
-            IntPtr fg = Native.GetForegroundWindow();
-            if (fg != IntPtr.Zero)
-            {
-                IntPtr fgRoot = Native.GetAncestor(fg, 2 /* GA_ROOT */);
-                if (fgRoot == IntPtr.Zero) fgRoot = fg;
-
-                IntPtr want = expect;
-                // No window was named, so find the element's own top-level window.
-                if (want == IntPtr.Zero) want = TopWindowOf(el);
-                if (want != IntPtr.Zero)
-                {
-                    IntPtr wantRoot = Native.GetAncestor(want, 2);
-                    if (wantRoot == IntPtr.Zero) wantRoot = want;
-                    // The right window is in front. The element may simply not
-                    // report focus honestly, which many providers do not.
-                    if (fgRoot == wantRoot) return;
-                }
-            }
-
+            ControlFence.CheckKeyboard();
+            if(HasTypingFocus(el))return;
             throw new AxonError("focus_failed",
-                "Could not put the keyboard focus on that element, so the text would have gone to whatever window is in front instead.",
-                "Use replace:true, which writes through the element's value pattern and needs no focus at all, or focus the window first.");
+                "The requested control did not acquire keyboard focus; no text or shortcut was sent.",
+                "Click the actual editable control and observe its focus, or use computer_set_value on an accessible field.");
+        }
+        static bool HasTypingFocus(AutomationElement el) {
+            try { if (el != null && el.Current.HasKeyboardFocus) return true; }
+            catch { }
+            // A foreground window alone does not prove which field receives
+            // text. Providers may focus a descendant of the requested editor.
+            try {
+                int[] target=el.GetRuntimeId();
+                AutomationElement focused=AutomationElement.FocusedElement;
+                for(int i=0;focused!=null&&i<24;i++) {
+                    if(SameRuntimeId(target,focused.GetRuntimeId()))return true;
+                    focused=TreeWalker.ControlViewWalker.GetParent(focused);
+                }
+            } catch { }
+
+            return false;
         }
 
         // Nearest ancestor with a real window handle. Child elements report zero.
@@ -3241,9 +3222,29 @@ namespace Axon
             AutomationElement el = t.El;
             List<string> patterns = PatternsOf(el);
             string text = Str(Get(a, "text"));
-            if (text == null) text = "";
+            object numeric = Get(a, "value");
+            if (text == null && numeric == null)
+                throw new AxonError("bad_value", "set_value requires text or a numeric value.", null);
+            if (text == null) text = Convert.ToDouble(numeric, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
 
             Dictionary<string, object> res = new Dictionary<string, object>();
+
+            if (numeric != null && Has(patterns, "RangeValue"))
+            {
+                RangeValuePattern range = el.GetCurrentPattern(RangeValuePattern.Pattern) as RangeValuePattern;
+                double value = Convert.ToDouble(numeric, CultureInfo.InvariantCulture);
+                if (range.Current.IsReadOnly) throw new AxonError("readonly", "That range is read-only.", null);
+                if (Double.IsNaN(value) || Double.IsInfinity(value) || value < range.Current.Minimum || value > range.Current.Maximum)
+                    throw new AxonError("bad_value", "Numeric value is outside the accessible range.", null);
+                ControlFence.Check();
+                range.SetValue(value);
+                double actual = range.Current.Value;
+                for (int tries=0; tries<12 && Math.Abs(actual-value)>0.000001; tries++) {
+                    System.Threading.Thread.Sleep(50); ControlFence.Check(); actual=range.Current.Value;
+                }
+                res["method"]="range_value_pattern"; res["value"]=actual; res["matched"]=Math.Abs(actual-value)<=0.000001;
+                AddNowState(res, el);return res;
+            }
 
             if (Has(patterns, "Value"))
             {
@@ -3333,6 +3334,7 @@ namespace Axon
         {
             string text = Str(Get(a, "text"));
             if (text == null) text = "";
+            if(text.Length>400)throw new AxonError("text_limit","Native typing is limited to 400 UTF-16 units per action.","Use explicit clipboard access and a verified Ctrl+V for larger text; do not silently replay partial input.");
             Dictionary<string, object> res = new Dictionary<string, object>();
             GuardSameWindow(a, HwndArg(a));
             if (Get(a, "index") != null || Get(a, "selector") != null)
@@ -3343,7 +3345,7 @@ namespace Axon
                     IntPtr top = want != IntPtr.Zero ? want : TopWindowOf(t.El);
                     bool force = Bool(Get(a, "background"), false);
                     string m = ModeOf(a);
-                    bool inFront = top != IntPtr.Zero && Native.GetForegroundWindow() == top;
+                    bool inFront = top != IntPtr.Zero && ControlFence.SameKeyboardWindow(top,Native.GetForegroundWindow());
                     if (top != IntPtr.Zero && (force || (!inFront && m != "take" && m != "exclusive")))
                     {
                         string how = TryPostText(t.El, top, text, force);
@@ -3373,9 +3375,11 @@ namespace Axon
                 // Focusing an element in a window that is not in front raises that
                 // window, which the user feels, so it goes through the same gate
                 // as any other foreground change.
-                if (want != IntPtr.Zero && Native.GetForegroundWindow() != want) NoteWait(res, GuardDisturb(a));
-                try { t.El.SetFocus(); } catch { }
-                System.Threading.Thread.Sleep(40);
+                RequireForeground(want,a,res);
+                if(!HasTypingFocus(t.El)) {
+                    try { t.El.SetFocus(); } catch { }
+                    System.Threading.Thread.Sleep(120);
+                }
                 RequireTypingFocus(t.El, want);
             }
             else
@@ -3437,6 +3441,15 @@ namespace Axon
             Dictionary<string, object> res = new Dictionary<string, object>();
             GuardSameWindow(a, HwndArg(a));
             RequireForeground(HwndArg(a), a, res);
+
+            if (Get(a,"index") != null) {
+                Target target = ResolveTarget(a);
+                ControlFence.CheckKeyboard();
+                try { target.El.SetFocus(); }
+                catch { throw new AxonError("focus_failed","The indexed keyboard target refused focus; no shortcut sent.","Observe and click the control before sending keys."); }
+                System.Threading.Thread.Sleep(40);
+                RequireTypingFocus(target.El,HwndArg(a));
+            }
 
             foreach (ushort m in mods) { Native.KeyDown(m); System.Threading.Thread.Sleep(8); }
             Native.KeyTap(main);
@@ -3774,8 +3787,8 @@ namespace Axon
                     // render itself; PW_RENDERFULLCONTENT reaches DirectComposition
                     // surfaces (browsers, WinUI) too. That is what Codex gets from
                     // Windows.Graphics.Capture: a picture of the window behind
-                    // whatever is in front of it. Some apps draw nothing that way;
-                    // a blank result falls back to the screen grab and says so.
+                    // whatever is in front of it. Some apps draw nothing that
+                    // way; never substitute pixels from the covering window.
                     try
                     {
                         using (Graphics g = Graphics.FromImage(full))
@@ -3787,12 +3800,15 @@ namespace Axon
                         if (printed && IsBlank(full)) printed = false;
                     }
                     catch { printed = false; }
-                    capture = printed ? "window" : "screen_occluded";
+                    if (!printed) throw new AxonError("window_capture_unavailable", "The app is covered and could not render a private window capture. No covering-window pixels were returned.", "Bring the approved app to the front, then observe again.");
+                    capture = "window";
                 }
                 if (!printed)
                 {
                     using (Graphics g = Graphics.FromImage(full))
                         g.CopyFromScreen(region.Location, Point.Empty, region.Size);
+                    if (wantedWindow && !Native.IsUnobscured(captureHwnd,captureRect))
+                        throw new AxonError("capture_changed", "Window coverage changed during capture. Discarding pixels; observe again.", "Bring the approved app to the front before capturing.");
                 }
 
                 double scale = Math.Min(1.0, maxWidth / (double)region.Width);
@@ -4154,6 +4170,7 @@ namespace Axon
                 res["button"] = okLabel;
                 return res;
             }
+            using (ControlFence.ForOwnedDialog(owner,dlgHwnd)) {
             GuardSameWindow(a, dlgHwnd);
             RequireForeground(dlgHwnd, a, res);
 
@@ -4170,8 +4187,13 @@ namespace Axon
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
             foreach (AutomationElement target in new AutomationElement[] { box, edit })
             {
+                // Modern Notepad's save dialog echoes a ValuePattern write
+                // while retaining its old IFileDialog filename. Real keyboard
+                // editing supplies the change/commit notifications it needs.
+                if(save)break;
                 if (target == null || set) continue;
                 if (!target.TryGetCurrentPattern(ValuePattern.Pattern, out vp)) continue;
+                ControlFence.CheckOwnedDialog();
                 try
                 {
                     ((ValuePattern)vp).SetValue(full);
@@ -4186,6 +4208,7 @@ namespace Axon
             {
                 // No control took a value write: focus the box, prove the focus
                 // moved, select what is there and type the path as a person would.
+                ControlFence.CheckOwnedDialog();
                 try { (edit ?? box).SetFocus(); } catch { }
                 System.Threading.Thread.Sleep(40);
                 bool focused = false;
@@ -4219,6 +4242,12 @@ namespace Axon
                 Native.KeyTap(VkOf("a"));
                 Native.KeyUp(VkOf("ctrl"));
                 Native.TypeUnicode(full);
+                Native.KeyTap(VkOf("tab"));
+                string committed=null;object committedPattern;
+                AutomationElement committedEdit=edit??box;
+                if(committedEdit.TryGetCurrentPattern(ValuePattern.Pattern,out committedPattern))try {committed=((ValuePattern)committedPattern).Current.Value;}catch {}
+                if(committed==null||!string.Equals(committed.Trim().Trim('"'),full,StringComparison.OrdinalIgnoreCase))
+                    throw new AxonError("file_dialog_path_mismatch","The filename did not match the requested path; Save/Open was not confirmed.","Inspect the dialog before continuing; do not repeat a possibly completed save.");
                 set = true;
                 method = "typed";
             }
@@ -4230,10 +4259,12 @@ namespace Axon
             object ip;
             if (ok != null && ok.TryGetCurrentPattern(InvokePattern.Pattern, out ip))
             {
+                ControlFence.CheckOwnedDialog();
                 try { ((InvokePattern)ip).Invoke(); invoked = true; } catch { }
             }
             if (!invoked)
             {
+                ControlFence.CheckOwnedDialog();
                 try { box.SetFocus(); } catch { }
                 System.Threading.Thread.Sleep(20);
                 Native.KeyTap(VkOf("enter"));
@@ -4278,6 +4309,7 @@ namespace Axon
                 catch { }
             }
             return res;
+            }
         }
 
         // The dialog's own confirm button: automation id 1 (IDOK), whatever the
@@ -4448,11 +4480,10 @@ namespace Axon
 
             int kept, lost;
             DataObject saved = SaveClipboard(out kept, out lost);
-            // Something is on the clipboard and none of it could be copied out, so
-            // overwriting it now would destroy it with no way back. Refusing is
+            // Any uncopyable format would be lost by overwriting it. Refusing is
             // the entire reason this operation exists, so it refuses instead of
             // pasting and apologising afterwards.
-            if (kept == 0 && lost > 0)
+            if (lost > 0)
                 throw new AxonError("clipboard_unsafe",
                     "The clipboard holds " + lost.ToString(CultureInfo.InvariantCulture) + " format(s) that could not be copied, so a paste could not put them back.",
                     "Use computer_type to enter the text instead, or ask the user to copy something else first.");
@@ -4462,10 +4493,16 @@ namespace Axon
             bool restored = false;
             bool userChanged = false;
             bool readObserved = false;
+            uint mine=0;
             try
             {
+                if(Get(a,"index")!=null){
+                    Target target=ResolveTarget(a);
+                    if(!HasTypingFocus(target.El)){try {target.El.SetFocus();}catch {}System.Threading.Thread.Sleep(120);}
+                    RequireTypingFocus(target.El,HwndArg(a));
+                }
                 ClipboardSTA(setClipboard);
-                uint mine = Native.GetClipboardSequenceNumber();
+                mine = Native.GetClipboardSequenceNumber();
 
                 bool held = Exclusive(a) && Native.BeginExclusive();
                 try
@@ -4493,7 +4530,8 @@ namespace Axon
                 // reported as a paste that failed.
                 for (int waited = 0; waited < 400; waited += 10)
                 {
-                    if (Native.GetOpenClipboardWindow() != IntPtr.Zero)
+                    IntPtr reader=Native.GetOpenClipboardWindow();
+                    if (reader!=IntPtr.Zero && ControlFence.SameKeyboardWindow(HwndArg(a),reader))
                     {
                         readObserved = true;
                         System.Threading.Thread.Sleep(20);
@@ -4512,7 +4550,10 @@ namespace Axon
             {
                 try
                 {
-                    if (!userChanged) { RestoreClipboard(saved, kept); restored = true; }
+                    // Recheck even if input/verification threw before the
+                    // ordinary check above. Never overwrite a new human copy.
+                    if(mine!=0&&Native.GetClipboardSequenceNumber()!=mine)userChanged=true;
+                    if (mine!=0&&!userChanged) { RestoreClipboard(saved, kept); restored = true; }
                 }
                 // Best-effort: the paste itself already happened by the time this
                 // runs, so a restore failure is reported in the result, not

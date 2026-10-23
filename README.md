@@ -1,103 +1,97 @@
 # Antigravity Computer Use
 
-> **Experimental prototype — reliability rework in progress.** The owner has reported failures on ordinary tasks, unexpected stops, and an unsatisfactory desktop interface. The controlled demos and passing tests below do not establish everyday usability or parity with native product integrations. v0.2.0 remains available for investigation; a replacement is not yet validated.
+**Windows beta 0.3.0-beta.1.** Direct native integration, tested against real applications. Broader reliability and hardware qualification remain open; see the precise [validation boundary](VALIDATION.md). The historical v0.2.0 uses the older MCP integration.
 
 [![Windows checks](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml/badge.svg)](https://github.com/shayann07/antigravity-computer-use/actions/workflows/windows.yml)
 
-[Download Windows beta](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.2.0) · [Installation guide](docs/INSTALLATION.md) · [Changelog](CHANGELOG.md)
+A `/computer-use` skill for **Antigravity Agent Manager**, using its existing model and native Windows desktop input. The current source uses **skill scripts and a persistent local native service, without MCP**. No separate model, API credentials, browser extension or agent framework.
 
-Native Windows desktop tools for **Antigravity Agent Manager** and its existing LLM. Invoke **`/computer-use`** to inspect apps through accessibility and screenshots, move the real cursor, type, click, scroll and drag. A click-through screen-edge glow and compact control bar show when control is active. An original native dart cursor and breathing ice-blue glow restore on pause/stop; see [visual design](docs/visual-design.md).
-
-This is a fork/adaptation of the published MIT `ridelink0/claude-computer-use` native implementation, with attributed OpenAI recovery and Anthropic sizing/batching adaptations. See `UPSTREAM.json` and `THIRD_PARTY_NOTICES.md`. It is not the proprietary Codex/Claude product engine.
-
-## See it before installing
-
-### Real Antigravity recording
-
-![Real screen recording: Antigravity enters text, physically clicks twice, toggles a checkbox and selects Blue in a disposable Windows app, at 4× speed](docs/media/real-demo.gif)
-
-[Watch the 4× MP4](docs/media/real-demo-4x.mp4) · [Watch the real-time excerpt](docs/media/real-demo-realtime.mp4)
-
-Recorded from a fresh `/computer-use` task in Antigravity Agent Manager, using the published v0.2.0 runtime. It enters **Hello from Antigravity**, physically clicks **Press Me** twice (`pressed:2`), checks **I agree**, and selects **Blue**. Only the disposable app's client area is captured; the surrounding desktop and Antigravity conversation are excluded for privacy.
-
-The GIF/short MP4 plays at **4× speed**. Both versions use the same continuous 136-second excerpt with startup waiting and black capture padding removed. The app actions are real, with no recreated UI or substituted frames. This window-only capture does not show the screen-edge overlay or the later Esc stop. [Recording details](docs/media/REAL-DEMO.md).
-
-### Illustrated walkthrough
-
-![Eight-second walkthrough of invocation, observation/action verification, and human takeover](docs/media/demo.gif)
-
-An eight-second **illustrated workflow**, using artwork exported by the actual native renderer. This is not a recording of an autonomous task; the [validation record](VALIDATION.md) describes the real desktop tests separately.
-
-### Minimal desktop interface
-
-![Native-rendered minimal control bar, ice-blue edge glow, and custom cursor on a clean demonstration desktop](docs/media/desktop-1.png)
-
-The controls stay compact while the screen edges show active control. These images use a fictional desktop, with no personal screenshots or documents.
-
-| Active control | Paused for the human |
-|---|---|
-| ![Active native controls](docs/media/hud-active.png) | ![Paused native controls](docs/media/hud-paused.png) |
-
-Use **Pause** to take over, **Resume** to continue with a fresh observation, and **Esc / Stop** to end control. Smart takeover pauses on deliberate physical input; Manual pause is the default.
-
-## Platform status
-
-Windows x64 beta. Tested in the real Antigravity Agent Manager across two consecutive desktop sessions, plus native fixtures and human Smart takeover/Resume. macOS and Linux are not supported release targets yet. See [validation](VALIDATION.md).
+The agent observes screenshots and accessibility controls, acts, then verifies the result. It can move the real cursor smoothly, click, type Unicode, use shortcuts, scroll, drag and operate owned dialogs. A compact control bar and breathing screen-edge glow indicate active control. The native helper restores temporary cursor styling and releases automation-held inputs when control ends.
 
 ## Install
 
-Download and extract the Windows portable ZIP from [GitHub Releases](https://github.com/shayann07/antigravity-computer-use/releases), or build `dist/AntigravityComputerUse-windows-x64` from source. Double-click **install.cmd** or run it in a terminal. Node and prebuilt native helpers are included: no Python, compiler, model key or new subscription is needed.
+Download the [Windows portable bundle](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1) and extract it completely. Normal installation needs neither a compiler nor Python. SHA256 checksums are included with the release.
 
-The installer uses `D:\Tools\AntigravityComputerUse` when D: exists (otherwise a per-user LocalAppData folder). It installs the global skill and merges its own MCP entry while preserving existing servers/settings. Each release has a separate directory; previous configs/skills are backed up under `backups/<timestamp>`. An optional `--workspace <path>` scopes configuration to one project. `--target <path>` changes installation location.
-
-Refresh MCP servers or restart Antigravity after first installation. Open any workspace and invoke `/computer-use`. If the installed host does not discover global skills, explicitly ask it to read the installed `SKILL.md`; MCP image/tool delivery must still be available. The default target is Agent Manager: `~/.gemini/config/mcp_config.json` and `~/.gemini/config/skills/computer-use/SKILL.md`. Legacy IDE/CLI profiles are changed only when `--legacy-profiles` is explicitly requested.
-
-Full instructions: [installation, update, rollback, removal and troubleshooting](docs/INSTALLATION.md).
-
-Example first task: `/computer-use Open my disposable text document, type Hello, and verify the text. Stop before saving.`
-
-## Permissions and controls
-
-The installed integration uses Antigravity's **global security preset and MCP permissions**. Antigravity reviews or allows the tool call before it reaches this server. There are no duplicate native popups in this path. On Windows, Antigravity currently uses its older permission engine: an unconfigured MCP tool may still ask even with Turbo selected. Approve this server once at the desired host scope, using `mcp(antigravity-computer-use/*)`. See [Google’s platform-specific permissions](https://antigravity.google/docs/permissions). The installer does not change the selected preset or add blanket allow rules. The agent follows the host's review policy and the user's task scope for sensitive effects. Standard MCP does not expose an authenticated per-call preset value, so the server does not pretend to read Turbo independently.
-
-App/session grants still bind to actual executable path, process ID and creation time. Sensitive operations use native one-use capabilities bound to their effect and identity. These are issued by the trusted broker for host-authorized calls. Model-supplied approval flags, permits, modes and session overrides remain rejected. A batch is authorized as one MCP invocation, not separately by the host for each substep.
-
-For use outside an authorizing MCP host, start with `AGCU_PERMISSION_MODE=standalone` (the direct-source default). That mode retains local human application/sensitive-action dialogs. The mode is trusted startup configuration and cannot be switched through a tool call.
-
-**Esc**, **Ctrl+Alt+F12**, or **STOP** invalidates pending work and releases held input. The native guardian can terminate its registered input worker independently of Node/the LLM. **Manual pause is the default:** ordinary mouse/keyboard activity does not interrupt. The control-bar menu offers **Smart takeover**, which ignores tiny pointer jitter and pauses on deliberate clicks, typing, scrolling, or sustained motion. The human selection is remembered. Resume/Re-arm is a local human action. Normal completion uses `computer_end`; a second task does not require restarting Antigravity.
-
-Native checks enforce session state, expiry, app identity and action capabilities. Ending a task cannot clear a human pause or latched emergency stop. They do not form an OS sandbox against other programs or an agent with unrestricted shell access under the same Windows account. Unknown visual semantics cannot be perfectly classified: the LLM must declare sensitive effects and apply the host review policy. Native checks independently classify known controls, keys, clipboard and broad-access apps, but do not duplicate host approvals in host-managed mode. Use a separate account/VM for important data. Password/authentication/security surfaces and UAC are human handoffs.
-
-Screenshots/UI text go through Antigravity to its configured provider. The tool has no telemetry service or separate model connection. Provider/host retention still applies. Do not enter secrets. Capture exclusion hides control overlays; unsupported capture exclusion uses temporary hiding.
-
-## Tools
-
-`computer_apps`, `computer_grant`, `computer_snapshot`, `computer_move`, `computer_click`, `computer_type`, `computer_set_value`, `computer_key`, `computer_scroll`, `computer_drag`, `computer_focus`, `computer_close_window`, `computer_clipboard`, `computer_launch`, `computer_open`, `computer_file_dialog`, `computer_run`, `computer_end`, `computer_pause`, `computer_stop`, `computer_status`.
-
-Cursor travel eases to its exact destination before clicking (120–600 ms according to distance; instant for tiny moves or reduced motion). Four common Windows cursor roles use the custom dart; app-owned and resize cursors remain application-controlled.
-
-Snapshot coordinates are returned-image pixels. Every action uses a one-use observation, native process identity and physical geometry; window movement requires re-observation. Batches run 1-8 predictable steps and stop on first failure. Sessions default to 10 minutes/200 input attempts. Multiple monitors and negative coordinates are supported by the mapping; actual monitor/DPI configurations must be validated before claiming coverage.
-
-## Develop and validate
-
-Requires Node 22+ and Windows' .NET Framework C# compiler for building from source. Production bundles use the prebuilt helper.
+To build from source instead, use Windows x64, Node 24.20.0 and the Windows .NET Framework compiler:
 
 ```text
 npm test
-npm run build
-node tests/native-integration.mjs
-node tests/guardian-integration.mjs
-node tests/host-managed-integration.mjs
-node tests/parent-crash.mjs
-node tests/motion-integration.mjs
-node tests/cursor-recovery.mjs
 npm run bundle
 ```
 
-Native tests operate disposable fixture windows. The direct native fixture grant file is a test double; the host-managed suite explicitly selects trusted host authorization and is not evidence of Antigravity's own permission engine. Guardian tests grant no app access and only activate the overlay and emergency-stop chord. Native component results do not prove an actual Antigravity model completed a task. See `VALIDATION.md` for current evidence and pending acceptance.
+The source-build output is `dist/AntigravityComputerUse-windows-x64`. It includes Node and a prebuilt native helper.
 
-Rollback: run the bundled Node with `scripts/rollback.mjs <exact-backup-folder>/rollback.json`. Stop the MCP server before updates/rollback. Old installed release folders are deliberately preserved. Release binaries are currently unsigned.
+Extract the complete bundle and run:
 
-## Contributing and license
+```powershell
+.\install.cmd --integration direct
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [review guide](docs/review-guide.md). MIT licensed; upstream copyrights and licenses are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This is an independent compatibility project, not affiliated with Google, OpenAI or Anthropic.
+This installs the global skill at `~/.gemini/config/skills/computer-use`, pins it to the bundled runtime, and removes only this project's previous MCP entry. Existing unrelated configuration is preserved and backed up. The default installation is `D:\Tools\AntigravityComputerUse` when available, otherwise a per-user LocalAppData directory. `--target <path>` changes it; `--workspace <path>` installs project-local instructions.
+
+Start a fresh Antigravity conversation and invoke `/computer-use`. [Official App skills support scripts and slash invocation](https://antigravity.google/docs/skills). This is a supported skill executing local helpers, not an undocumented built-in desktop-tool hook. Fresh No Project conversations in Agent Manager have exercised the registered global skill, actual screenshot viewing and native actions. Other host versions still need their own check.
+
+[Detailed installation, updates, rollback and removal](docs/INSTALLATION.md). Legacy MCP is an optional compatibility adapter (`--integration mcp`), not a dependency of the direct route. [Historical v0.2.0 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.2.0).
+
+## Permissions and control
+
+Standalone mode is the default for direct installs. The native runtime asks the human for app/session approval and confirms sensitive effects separately. Grants bind to executable, process ID and creation time; model-supplied approval/permit flags are rejected.
+
+An operator can explicitly install `--permission-mode host-managed` to rely on the host's terminal execution permissions instead of duplicate native dialogs. **The runtime cannot inspect or prove Antigravity's Turbo preset.** In this mode the agent must obtain any sensitive-action approval required by the host/user before executing the command. Broad terminal allow rules grant broad desktop authority. The installer does not change host security settings or create blanket allow rules.
+
+- **Keep working** is the default: ordinary physical mouse/keyboard activity does not pause automation. Pause deliberately with the control bar. One physical desktop still has one cursor; this is not independent background desktop control.
+- **Yield on input** is optional: deliberate human input pauses. The skill preserves its task instead of opening a question form just because control paused. In host-managed mode, an explicit new user message authorizes soft `resume`; a fresh observation is required and old input is not replayed.
+- **Esc / Ctrl+Alt+F12 / Stop** cancels independently, invalidates work and releases automation-held inputs. Chat Resume cannot clear emergency Stop; local human re-arm is required. Never restart a service to bypass the latch.
+- End ordinary tasks with `end`. Another session can start without restarting Antigravity.
+
+Native identity, geometry, observation, budget and watchdog checks remain active in both permission modes. They are not an OS sandbox against software running under the same Windows account. Pixel semantics cannot be classified perfectly. Authentication, security surfaces, UAC and secure desktop remain human handoffs. See [SECURITY.md](SECURITY.md).
+
+## Direct command workflow
+
+The installed skill contains the exact bundled Node/script command. The development entry is:
+
+```text
+node scripts/desktop.mjs --help
+node scripts/desktop.mjs start
+node scripts/desktop.mjs apps
+node scripts/desktop.mjs snapshot --request request.json
+node scripts/desktop.mjs end
+```
+
+A snapshot returns an indexed accessibility tree and a local `image.path`. **Open the actual image in the host viewer** (`read_file` in the tested Agent Manager App). Subsequent actions need the fresh, one-use `observation_id`. Coordinates are returned-image pixels, mapped centrally to physical screen pixels. Prefer accessible controls; use coordinates for custom canvases. `settle_ms` optionally delays observation of an animation by at most 2 seconds. It does not repeat input or guarantee an animation has finished. Use `describe <command>` or `<command> --help` for exact argument schemas; write request files as UTF-8.
+
+Available commands include `apps`, `snapshot`, `move`, `click`, `type`, `set_value`, `key`, `scroll`, `drag`, `focus`, `file_dialog`, `launch`, `open`, `clipboard`, `run`, `wait`, `pause`, `resume`, `stop`, `status`, `end`, `shutdown`. Use `apps` with `include_hidden:true` to find minimized/other-desktop windows. Focus the intended window before requesting its pixels; never confuse it with a closed app or act on the wrong visible desktop.
+
+The service authenticates local clients with a random per-session capability, rejects overlapping actions, prioritizes Stop, and cancels an active operation if its client disconnects. Screenshots are private local data, capped at50 recent files. There is no telemetry or separate model connection; host/provider retention still applies.
+
+Native `type` is paced and bounded to 400 UTF-16 units. For larger text, explicit `paste` temporarily uses the clipboard and restores supported formats; it refuses unpreservable formats and avoids overwriting a new human copy. Both require normal permission review. Verify the result; completed input does not prove exact content.
+
+## Evidence and limits
+
+The rework has been used directly in real original/feature Upscaly builds: file pickers, semantic and coordinate actions, real wheel scrolling, split-divider drag, virtual-desktop recovery and100% RealESRGAN Ultra AI PNG export. Independent decoded-file checks and engine diagnostics distinguish that result from ordinary resizing. Backend hardware tests also exercise real AI PNG/JPEG. These are specific witnesses, not qualification of every workflow or model.
+
+A second session is testing the same controller in a real rich-text editor/emulator and reporting controller defects separately from editor defects. Real GUI JPEG/PNG reruns, in-flight AI cancellation, execution-profile selection and actual output headers have witnesses. Antigravity itself completed an Ultra 4x AI export, deliberate soft pause/resume and a second session without restarting. A separate installed dev7 check interrupted a held drag, skipped all seven queued actions, and preserved Stop across service replacement; the owner then performed physical Esc and both local re-arms. Its final cleanup argument error and separate recovery remain recorded rather than being presented as a clean script pass.
+
+The final dev7 peer-editor run also exercised Copy after Open/New, rich transfer with an image, Undo/Redo, rotation, larger-font control access and real keyboard emoji input. The emulator's clipboard-sharing bridge reduced content to plain text when enabled; disabling it allowed rich transfer. The original setting was restored. One expired observation was correctly refused; two completed Close actions reported the expected missing-window verification result. No new controller defect was found in this bounded run.
+
+There are 69 passing automated controller checks. Exact build identities, evidence boundaries and remaining work are in [PROJECT-STATUS.md](PROJECT-STATUS.md), [VALIDATION.md](VALIDATION.md) and [IMPLEMENTATION_PROGRESS.md](IMPLEMENTATION_PROGRESS.md). Broader failure recovery, mixed-DPI/multiple-monitor hardware and owner visual acceptance remain open. macOS/Linux are not release targets yet; platform-specific code remains separate.
+
+## Historical recording and interface
+
+![Real Antigravity v0.2.0 fixture recording at4x speed](docs/media/real-demo.gif)
+
+[Real-time excerpt](docs/media/real-demo-realtime.mp4) · [4x MP4](docs/media/real-demo-4x.mp4) · [Recording details](docs/media/REAL-DEMO.md). This is an actual older Antigravity task in a disposable app, not the current Upscaly comparison or the new direct integration.
+
+![Native-rendered minimal interface on a fictional desktop](docs/media/desktop-1.png)
+
+![Actual custom insertion cursor displayed in Notepad](docs/media/live-text-cursor.png)
+
+This image is a renderer preview, not an autonomous task or evidence of the latest live appearance. The real desktop has compact Pause/Stop controls, a click-through edge glow and temporary cursor styling. Cursor travel eases to its exact endpoint; reduced motion is respected. [Visual design](docs/visual-design.md).
+
+## Develop and contribute
+
+`npm test` runs bounded automated/component checks. `node tests/bundle-identity.mjs` checks repeated packaging without rebuilding unchanged native sources. Native integration scripts operate disposable windows and must not run while someone else controls the desktop. Actual application and human-input checks remain distinct from fixtures and simulations. See [the review guide](docs/review-guide.md).
+
+This reuses the published MIT native implementation from `ridelink0/claude-computer-use`, with attributed OpenAI recovery and Anthropic sizing/batching adaptations. Exact revisions and modifications are in [UPSTREAM.json](UPSTREAM.json) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No private vendor implementation is included. MIT licensed, unsigned development binaries. Independent of Google, OpenAI and Anthropic.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) · [LICENSE](LICENSE)

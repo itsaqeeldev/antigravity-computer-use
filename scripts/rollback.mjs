@@ -10,6 +10,7 @@ for(const r of data.records){
   fs.mkdirSync(path.dirname(r.file),{recursive:true});fs.writeFileSync(r.file,JSON.stringify(c,null,2)+'\n');
  }
  else if(r.existed)fs.cpSync(r.saved,r.file,{recursive:true});
+ else if(r.kind==='installation'&&fs.existsSync(r.file))fs.unlinkSync(r.file);
  else if(r.kind==='skill'&&fs.existsSync(path.join(r.file,'SKILL.md')))fs.unlinkSync(path.join(r.file,'SKILL.md'));
 }
 console.log('Prior configuration and skill files restored. Installed release folders were preserved.');
