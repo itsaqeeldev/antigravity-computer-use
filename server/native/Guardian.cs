@@ -433,9 +433,9 @@ namespace Axon {
             }
             if (op != "prompt") return;
             if (state == "stopped" || state == "paused") { Emit(new { id=id, allowed=false, state=state }); return; }
-            // In the installed App integration, Antigravity's trusted MCP
-            // permission engine already authorized this invocation before the
-            // stdio server receives it. Standard MCP carries no preset token.
+            // An operator-selected host-managed deployment trusts the host's
+            // execution review (direct skill commands or the legacy adapter).
+            // No authenticated Turbo/preset token is inferred from transport.
             // This is immutable startup configuration, never a tool argument.
             bool allowed=hostManaged; bool timedOut=false;
             if(!hostManaged) {

@@ -4,7 +4,7 @@
 
 | Check | Evidence | Boundary |
 |---|---|---|
-| Automated source | 88 passing checks on speed candidate; previous69-check baseline passed GitHub CI | Includes strict named arguments, bounded receipts/privacy, post-launch failure evidence, batch preflight/captures, literal argv, isolated launchers and live-update refusal; new CI/App speed qualification pending |
+| Automated source | 92 passing local checks; previous88-check speed source passed GitHub CI40040313414 | Adds sealed inventory, file-dialog held-input cleanup, worker registration/epoch binding and unknown-delivery batch handling; new fix CI/App speed qualification pending |
 | Native helper | 12 passing checks | Real input/UIA/capture, identity and permission refusal, hung worker termination |
 | Host-managed component workflow | 13 passing checks | Two disposable app processes, owned dialog, real wheel/drag/Unicode and second session; not the host permission engine |
 | Cursor/glow recovery | 8 passing checks | Actual cursor-role pixels change, distinct text insertion artwork, live breathing, restoration after Pause and hard UI/watchdog crashes |
@@ -15,6 +15,7 @@
 | Real editor/emulator | Dev7 Copy after Open/New, rich image transfer with clipboard sharing Off, Undo/Redo, rotation/font layout and Gboard emoji | Sharing On downgraded rich clipboard; original settings restored. Direct emoji commit is not composing-text/IME qualification |
 | Physical Stop/re-arm | Owner performed both re-arms and physical Esc on dev7; fresh observation afterward | Held drag interrupted and seven queued actions skipped; service replacement did not clear Stop |
 | Speed1 native candidate | Exact build8d9d8082 real Upscaly batched import, no leftover picker; actual Notepad pause/refusal/resume/stale frame and exact1319-unit saved Unicode | Direct timings are not host wall-time improvement. Windows Notepad's launcher returned observe_pending; apps/snapshot recovered without duplicate launch. Later source launcher hardening still needs refreshed packaging |
+| Provider exception replay | Exact old nativea2: after-effect1dispatch/2effects/1physical; before-effect1/1/1. Candidate2abe/nativea2fd:1/1/0 and1/0/0, both input_outcome_unknown | Real owned WPF accessibility provider, same reusable harness, old exit1/new exit0. This qualifies the fault path, not real Upscaly export, host speed or new physical Esc |
 
 ## Retained failures and recovery
 

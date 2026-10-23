@@ -151,6 +151,11 @@ export class Runtime {
     if(op==='click'&&payload.point)payload.physical=true;
     if(typeof payload.text==='string'&&payload.text.length>20000)fail('text_limit','Text limit is 20,000 characters per action.');
     if(op==='type'&&payload.text?.length>400)fail('text_limit','Native typing is limited to 400 UTF-16 units. Use explicit clipboard access and a verified paste for larger text.');
+    await this.driver.start?.();
+    if(Number.isSafeInteger(this.driver.info?.pid))this.guardian.send({op:'attach',pid:this.driver.info.pid});
+    // Window-free clipboard work and first-launch/restarted workers also need
+    // independent guardian registration. Never replace a frame's older epoch.
+    if(payload.__worker_epoch==null)payload.__worker_epoch=this.driver.epoch;
     const preview=(await this.driver.call('authorize',{action_op:op,action_args:payload})).result;
     if(preview.sensitive){
       const answer=await this.guardian.prompt({kind:'action',hwnd:w?.hwnd,host_pid:this.driver.info?.pid,action_op:op,args:payload,label:preview.label||'',
@@ -200,6 +205,8 @@ export class Runtime {
     if(!active.allowed)fail('control_inactive','Use the local controls.');this.state='active';
     const payload={app,args:args.args||[],...this.stamp(),__risk:'sensitive'};
     await this.driver.start();
+    this.guardian.send({op:'attach',pid:this.driver.info.pid});
+    payload.__worker_epoch=this.driver.epoch;
     const a=await this.guardian.prompt({kind:'action',host_pid:this.driver.info.pid,action_op:'launch',args:payload,label:'',message:`Launch this application?\r\n\r\n${args.reason}\r\n\r\n${JSON.stringify({app,args:payload.args},null,2)}\r\n\r\nThis starts software with your account's privileges. No shell is used. Approve only if intended.`});
     if(!a.allowed)fail('permission_denied','Human denied application launch.');
     this.check();const result=(await this.driver.call('launch',{...payload,__permit:a.permit})).result;

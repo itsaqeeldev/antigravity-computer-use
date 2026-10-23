@@ -162,7 +162,9 @@ export class Driver {
           'The target app may be busy or showing a modal dialog.'));
       }, limit);
 
-      const input = ['move','click','type','set_value','key','scroll','drag','paste','paste_files','focus'].includes(op);
+      // file_dialog can type a path/chord. A failure or hard worker exit during
+      // it needs the same independent held-input recovery as ordinary typing.
+      const input = ['move','click','type','set_value','key','scroll','drag','paste','paste_files','focus','file_dialog'].includes(op);
       if (input) this.inputMayBeHeld = true;
       this.pending.set(id, { resolve, reject, timer, input });
 

@@ -17,6 +17,18 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const version=metadata.version;
  if(!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version))throw new Error('Invalid bundle version');
  if(!metadata.files||typeof metadata.files!=='object'||Array.isArray(metadata.files)||!Object.keys(metadata.files).length)throw new Error('A complete bundle file manifest is required.');
+ const inventory=[];
+ function enumerate(dir){
+  for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+   const file=path.join(dir,entry.name),name=path.relative(bundle,file).replaceAll('\\','/');
+   if(entry.isSymbolicLink())throw new Error('Bundle links are not supported: '+name);
+   if(entry.isDirectory())enumerate(file);
+   else if(entry.isFile()){if(name!=='bundle-manifest.json')inventory.push(name);}
+   else throw new Error('Unsupported bundle entry: '+name);
+  }
+ }
+ enumerate(bundle);
+ if(inventory.length!==Object.keys(metadata.files).length||inventory.some(name=>!Object.hasOwn(metadata.files,name)))throw new Error('Bundle inventory differs from the manifest; every payload file must be sealed.');
  // Validate before making backups, writing config or installing executable bytes.
  for(const [name,expected] of Object.entries(metadata.files)){
   if(!name||name.includes('\\')||name.split('/').some(p=>!p||p==='.'||p==='..')||path.isAbsolute(name)||!/^[a-f0-9]{64}$/.test(expected))throw new Error('Invalid bundle manifest entry: '+name);

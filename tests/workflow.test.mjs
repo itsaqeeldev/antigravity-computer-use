@@ -11,6 +11,23 @@ test('unconfirmed held-input recovery requests Stop and returns an actionable fa
   assert.deepEqual(events,[{event:'input_cleanup_failed'}]);assert.equal(driver.epoch,2);
  }
 });
+
+test('failed file-picker keyboard input requests held-input cleanup before rejecting',async()=>{
+ let recoveries=0;
+ const driver={seq:0,epoch:1,pending:new Map(),timeoutMs:1000,inputMayBeHeld:false,async start(){},onLog(){},
+  async abort(){assert.equal(this.inputMayBeHeld,true);recoveries++;this.inputMayBeHeld=false;},
+  proc:{stdin:{write(payload){const request=JSON.parse(payload);Driver.prototype._onLine.call(driver,JSON.stringify({id:request.id,ok:false,error:{code:'input_rejected',message:'Partial file dialog key delivery'}}));}}}};
+ await assert.rejects(Driver.prototype.call.call(driver,'file_dialog',{}),error=>error.code==='input_rejected');
+ assert.equal(recoveries,1);assert.equal(driver.pending.size,0);
+});
+
+test('window-free clipboard action registers its restarted worker and binds its epoch before approval',async()=>{
+ const events=[];const r={generation:1,deadline:Date.now()+10000,remaining:10,check(){},stamp(){return {};},
+  guardian:{send(message){events.push(message);},async prompt(){assert.deepEqual(events,[{op:'attach',pid:42}]);return {allowed:true,permit:'one-use'};}},
+  sessions:{async withInput(_op,_target,run){return run();}},
+  driver:{epoch:2,info:{pid:42},async start(){},async call(op,args){if(op==='authorize')return {result:{sensitive:true}};assert.equal(op,'clipboard');assert.equal(args.__worker_epoch,2);return {result:{has_text:false}};}}};
+ const result=await Runtime.prototype.action.call(r,'clipboard',{reason:'Explicit clipboard read'});assert.equal(result.input_completed,true);
+});
 test('status fallback reads the same persisted takeover preference as the native UI',()=>{
  const dir=fs.mkdtempSync(path.join(dataDir(),'mode-'));const file=path.join(dir,'control-preferences.json');
  try {

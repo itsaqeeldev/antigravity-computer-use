@@ -6,10 +6,10 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-launch-'));
 const app=path.join(dir,'OwnedTest.exe');fs.writeFileSync(app,'not executed: mock tests only');
 process.on('exit',()=>{fs.unlinkSync(app);fs.rmdirSync(dir);});
 function harness(windows){
- let launches=0,observations=0;
+ let launches=0,observations=0,attached=false;
  const r={state:'idle',generation:1,token:'',check(){if(this.state!=='active')throw Object.assign(Error('stopped'),{code:'control_inactive'});},stamp(){return {};},
- guardian:{async start(){},async request(){return {allowed:true};},async prompt(){return {allowed:true,permit:'native-permit'};}},
- driver:{info:{pid:99},async start(){},async call(op,args){if(op==='launch'){assert.equal(args.__permit,'native-permit');launches++;return {result:{pid:123,path:app}};}assert.equal(op,'list_apps');return {result:{windows}};}},
+ guardian:{send(message){assert.deepEqual(message,{op:'attach',pid:99});attached=true;},async start(){},async request(){return {allowed:true};},async prompt(){assert.equal(attached,true,'Register the worker before permission/dispatch');return {allowed:true,permit:'native-permit'};}},
+ driver:{epoch:1,info:{pid:99},async start(){},async call(op,args){if(op==='launch'){assert.equal(args.__permit,'native-permit');assert.equal(args.__worker_epoch,1);launches++;return {result:{pid:123,path:app}};}assert.equal(op,'list_apps');return {result:{windows}};}},
  async observe(args){observations++;assert.equal(args.hwnd,8);return {metadata:{hwnd:8,observation_id:'fresh'},image:{data:'actual-mock-image'}};}};
  return {r,counts:()=>({launches,observations})};
 }

@@ -84,7 +84,7 @@ export async function call(r,name,a){
   for(let i=0;i<plan.length;i++){
    const {kind,n,args}=plan[i];
    try{last=await call(r,n,{...args,observation_id:observation});completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};observation=last.metadata?.observation_id;}
-   catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,error:{code:e.code||'batch_step_failed',message:e.message},observe_before_continuing:true};}
+   catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
  }

@@ -2807,9 +2807,11 @@ namespace Axon
                         System.Reflection.BindingFlags.InvokeMethod, null, a2, new object[] { 0 });
                 });
             }
-            // A refused default action did nothing, so the UIA path still gets
-            // its turn rather than the click falling through to a real one.
-            catch { return null; }
+            // A provider can perform its effect and then throw. Once dispatched,
+            // neither UIA Invoke nor a real click is a safe automatic retry.
+            catch (Exception ex) { throw new AxonError("input_outcome_unknown",
+                "MSAA action failed after dispatch: " + ex.GetType().Name,
+                "Observe the actual result. Do not repeat this action merely to recover its acknowledgement."); }
         }
 
         static bool RunPattern(Action act, int deadlineMs)
@@ -2976,6 +2978,7 @@ namespace Axon
             if (!forcePhysical && single)
             {
                 string tried = null;
+                bool dispatched = false;
                 try
                 {
                     if (Has(patterns, "Invoke"))
@@ -2986,6 +2989,7 @@ namespace Axon
                         {
                             Trace(el, "click", HwndArg(a));
                             InvokePattern ip = p;
+                            dispatched = true;
                             bool? msaa = MsaaPress(el);
                             bool done;
                             if (msaa == null) done = RunPattern(delegate { ip.Invoke(); });
@@ -3014,6 +3018,7 @@ namespace Axon
                         {
                             Trace(el, "toggle", HwndArg(a));
                             TogglePattern tp2 = p;
+                            dispatched = true;
                             bool? msaa = MsaaPress(el);
                             bool done;
                             if (msaa == null) done = RunPattern(delegate { tp2.Toggle(); });
@@ -3044,6 +3049,7 @@ namespace Axon
                         {
                             Trace(el, "select", HwndArg(a));
                             SelectionItemPattern sp2 = p;
+                            dispatched = true;
                             bool done = RunPattern(delegate { sp2.Select(); });
                             if (!done) res["slow_provider"] = true;
                             res["method"] = "selection_pattern";
@@ -3063,6 +3069,7 @@ namespace Axon
                         {
                             ExpandCollapsePattern ep2 = p;
                             bool collapsed = before != null && before.Expand == "Collapsed";
+                            dispatched = true;
                             bool done = RunPattern(delegate { if (collapsed) ep2.Expand(); else ep2.Collapse(); });
                             res["method"] = "expand_collapse_pattern";
                             if (!done) res["slow_provider"] = true;
@@ -3078,10 +3085,13 @@ namespace Axon
                 catch (AxonError) { throw; }
                 catch (Exception ex)
                 {
-                    // Fall through to the physical path, and say why: a real
-                    // click the caller did not ask for should never be a mystery.
                     Exception root = ex;
                     if (root is System.Reflection.TargetInvocationException && root.InnerException != null) root = root.InnerException;
+                    if(dispatched)throw new AxonError("input_outcome_unknown",
+                        (tried ?? "Pattern") + " action failed after dispatch: " + root.GetType().Name,
+                        "Observe the actual result before continuing. No alternate click was sent; do not replay a possibly completed action.");
+                    // Only a metadata/pattern lookup failure before dispatch can
+                    // fall through to the already authorized physical path.
                     res["pattern_error"] = (tried ?? "pattern") + " failed: " + root.GetType().Name;
                 }
             }
@@ -4260,7 +4270,10 @@ namespace Axon
             if (ok != null && ok.TryGetCurrentPattern(InvokePattern.Pattern, out ip))
             {
                 ControlFence.CheckOwnedDialog();
-                try { ((InvokePattern)ip).Invoke(); invoked = true; } catch { }
+                try { ((InvokePattern)ip).Invoke(); invoked = true; }
+                catch (Exception ex) { throw new AxonError("input_outcome_unknown",
+                    "File dialog confirmation failed after dispatch: " + ex.GetType().Name,
+                    "Inspect the dialog and destination file. No Enter fallback was sent; do not repeat a possibly completed confirmation."); }
             }
             if (!invoked)
             {

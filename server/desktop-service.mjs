@@ -84,7 +84,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

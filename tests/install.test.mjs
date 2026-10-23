@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 const root=path.resolve('.localdata/test-install');fs.mkdirSync(root,{recursive:true});
 function seal(bundle,version='9.1.2-test'){
- const files={};for(const file of ['node.exe','bin/AxonHost.exe','skills/computer-use/SKILL.md'])files[file]=createHash('sha256').update(fs.readFileSync(path.join(bundle,file))).digest('hex');
+ const files={};const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name),name=path.relative(bundle,file).replaceAll('\\','/');if(entry.isDirectory())walk(file);else if(name!=='bundle-manifest.json')files[name]=createHash('sha256').update(fs.readFileSync(file)).digest('hex');}};walk(bundle);
  fs.writeFileSync(path.join(bundle,'bundle-manifest.json'),JSON.stringify({version,files}));
 }
 test('direct installation removes only its legacy MCP entry and pins the script runtime',()=>{
@@ -94,4 +94,12 @@ test('a live desktop service blocks update before backups, executable or configu
  fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);
  fs.mkdirSync(path.join(target,'data'),{recursive:true});const session=JSON.stringify({pid:process.pid,secret:'must not be printed or consumed'});fs.writeFileSync(path.join(target,'data/desktop-session.json'),session);
  assert.throws(()=>install({bundle,target,home}),/still running/);assert(!fs.existsSync(path.join(target,'backups')));assert(!fs.existsSync(path.join(target,'releases')));assert(!fs.existsSync(home));assert.equal(fs.readFileSync(path.join(target,'data/desktop-session.json'),'utf8'),session);
+});
+
+test('unsealed extra code is refused before any installation write',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'extra-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});
+ fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);
+ fs.mkdirSync(path.join(bundle,'server'));fs.writeFileSync(path.join(bundle,'server/unsealed.mjs'),'throw Error("unsealed executable code");');
+ assert.throws(()=>install({bundle,target,home:path.join(dir,'home')}),/inventory differs/);assert(!fs.existsSync(target));
 });

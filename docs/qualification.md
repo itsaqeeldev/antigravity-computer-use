@@ -10,7 +10,7 @@ Run `node scripts/verify-install.mjs <installation-folder>` to verify the instal
 
 ## Actual Antigravity task
 
-Use the Agent Manager App, a fresh No Project conversation and its registered `/computer-use` entry. Keep existing host settings. Ask it to report the build ID, discover command schemas, launch a real existing app and open an actual returned screenshot in its available image tool. The tested App uses `read_file`; do not assume IDE tools exist.
+Use the Agent Manager App, a fresh No Project conversation and its registered `/computer-use` entry. Keep existing host settings. Ask it to report the build ID, follow the skill quick reference, fetch only unfamiliar schemas together, launch a real existing app and open an actual returned screenshot in its available image tool. Avoid per-command catalogue setup, per-action receipt files and screenshot copies. Automatic bounded receipts are sufficient. The tested App uses `read_file`; do not assume IDE tools exist.
 
 Exercise both semantic and screenshot-coordinate actions, an owned native dialog and a meaningful application result. Independently inspect produced files for an export task. Verify soft Pause blocks input, authorized Resume invalidates the previous observation, normal End clears grants, and another session works without restarting Antigravity. Never count accessibility text alone as image viewing.
 
@@ -49,3 +49,9 @@ The original dev7 run passed all five safety/human checkpoints but failed its fi
 The new helper passed this case. The suspected older-helper leak did not reproduce on the tested desktop. That is a limitation of the reproduction, not evidence of a failing-before regression. More display/provider combinations still need testing.
 
 Never publish private desktop images, local capability files, approvals or user data as test artifacts. Hardware mixed-DPI/multi-monitor checks, host Ask/Deny behavior and broad app/model qualification need their own records.
+
+## Provider exceptions without replay
+
+On an exclusive interactive Windows desktop, run `node tests/provider-failure-integration.mjs <exact-release-folder> <new-private-evidence-folder>`. This developer test compiles an owned WPF target using the Windows Framework compiler; normal bundle users need no compiler. It records dispatch, effect and physical-click counters for a provider that throws after its effect and one that refuses before effect. It never retries either action itself, normal-ends control and closes only its owned target. Do not run concurrently with another desktop task.
+
+The old nativea2 helper failed with an automatic physical fallback in both cases. Candidate nativea2fd passed with one dispatch, no physical fallback, correct effect counts and input_outcome_unknown. Error means observe the actual result before continuing; it does not prove no effect. The harness retains compile errors and full private results while printing bounded counters. It is a native fault-path regression, not an autonomous task or actual app qualification.

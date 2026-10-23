@@ -1,5 +1,11 @@
 # Implementation progress
 
+## 24 October2026 - provider replay and cleanup repair
+
+An owned WPF provider reproduced a consequential controller error on nativea2: a semantic action changed its counter and threw, then the controller sent a physical fallback, producing two effects. A provider refusal before its effect also caused a physical click. The repaired nativea2fd helper reports input_outcome_unknown after dispatched pattern/MSAA errors and sends no alternate click; a file-dialog confirmation exception similarly gets no Enter fallback. The reusable native regression fails old and passes candidate2abe, with one dispatch and zero physical retries in both cases. Direct IPC and batches preserve unknown delivery and guidance to observe without replay.
+
+Also fixed file_dialog missing from held-input recovery tracking, registered first-launch/window-free/restarted workers with the independent guardian before approval, preserved worker epoch binding, and refused unsealed extra bundle files before installation writes.92 local checks pass; prior88-check speed commitce9 passed GitHub CI. Native ordinary-app reruns, refreshed installation and actual Agent Manager speed comparison remain pending. Failing provider counters and initial harness startup failures are retained privately.
+
 ## 24 October 2026 - speed repair in progress
 
 The actual final Agent Manager run was cancelled after roughly8minutes near import. It is not acceptance; v0.3.0-beta.1 remains draft. Repeated schema calls, request/result artifact management and inter-action deliberation dominated the trace. Strict named flags, brief replies, automatic bounded private timing receipts, exact-process launch/observation and batch preflight reduce unnecessary orchestration. Batches skip intermediate captures by default and retain partial failure evidence. Installed speed1 build8d9d8082 passed real Upscaly import and Notepad1319-unit save with pause/resume/stale-frame checks. The actual Agent Manager comparison is pending human restoration after a stock window-activation failure.

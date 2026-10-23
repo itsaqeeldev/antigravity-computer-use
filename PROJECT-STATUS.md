@@ -6,6 +6,8 @@ Updated 24 October 2026 (Asia/Karachi). This is a Windows beta, not a claim of v
 
 ## Implemented
 
+The later native audit reproduced automatic physical replay after a provider exception. Candidate2abe67e5/nativea2fd1fbc now preserves unknown delivery without an alternate click/Enter; the owned provider regression fails olda2 and passes the candidate.92 local tests pass, with prior88-check sourcece9 green on GitHub. New ordinary-app native qualification, installation and host speed acceptance are still pending; installed speed1 and project0a8 are not yet this repair.
+
 - Direct global/project /computer-use skill using Antigravity's existing model, a local Node service and prebuilt C# helper. MCP is optional compatibility only.
 - Screenshots and scoped accessibility references; real smooth cursor travel, clicks, typing, shortcuts, scrolling, drag and owned dialogs.
 - Fixed deployment permission authority, process/window identity checks, stale/one-use observation rejection, cancellation and independent automation-owned input cleanup.

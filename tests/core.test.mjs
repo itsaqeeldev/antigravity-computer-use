@@ -94,3 +94,9 @@ test('post-input verification failure stops the batch with delivery evidence int
  const result=await call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
  assert.equal(delivered,1);assert.equal(result.input_completed,true);assert.equal(result.batch.phase,'verification');assert.equal(result.batch.skipped,1);
 });
+
+test('uncertain provider delivery stops a batch and preserves recovery guidance without replay',async()=>{
+ let calls=0;const r={async action(){calls++;throw Object.assign(Error('Provider failed after dispatch'),{code:'input_outcome_unknown',hint:'Observe actual result; do not retry'});}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'enter'},{kind:'key',keys:'enter'}]});
+ assert.equal(calls,1);assert.equal(result.ok,false);assert.equal(result.delivery_unknown,true);assert.equal(result.error.code,'input_outcome_unknown');assert.match(result.error.hint,/do not retry/);assert.equal(result.skipped,1);
+});

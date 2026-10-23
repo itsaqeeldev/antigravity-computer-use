@@ -21,11 +21,11 @@ for(const f of ['README.md','CONTRIBUTING.md','SECURITY.md','LICENSE','LICENSE.u
 fs.cpSync(path.join(root,'docs'),path.join(out,'docs'),{recursive:true});
 const sha=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const nativeSource=createHash('sha256');for(const file of SOURCES)nativeSource.update(path.basename(file)+'\0').update(fs.readFileSync(file));
-fs.writeFileSync(path.join(out,'bundle-manifest.json'),JSON.stringify({version,platform:process.platform,arch:process.arch,node:process.version,node_sha256:sha(path.join(out,'node.exe')),host_sha256:sha(path.join(out,'bin','AxonHost.exe')),native_source_sha256:nativeSource.digest('hex'),license_node_revision:'v24.20.0',built_at:new Date().toISOString(),permission_mode:'host-managed'},null,2));
+fs.writeFileSync(path.join(out,'bundle-manifest.json'),JSON.stringify({version,platform:process.platform,arch:process.arch,node:process.version,node_sha256:sha(path.join(out,'node.exe')),host_sha256:sha(path.join(out,'bin','AxonHost.exe')),native_source_sha256:nativeSource.digest('hex'),license_node_revision:'v24.20.0',built_at:new Date().toISOString(),default_direct_permission_mode:'standalone',permission_modes:['standalone','host-managed']},null,2));
 fs.writeFileSync(path.join(out,'install.cmd'),'@echo off\r\n"%~dp0node.exe" "%~dp0scripts\\install.mjs" %*\r\n');
 console.log(out);
 const files={};
-function inventory(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())inventory(p);else if(e.name!=='bundle-manifest.json')files[path.relative(out,p).replaceAll('\\','/')]=sha(p);}}
+function inventory(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())inventory(p);else if(path.relative(out,p)!=='bundle-manifest.json')files[path.relative(out,p).replaceAll('\\','/')]=sha(p);}}
 inventory(out);
 const manifestPath=path.join(out,'bundle-manifest.json');const manifest=JSON.parse(fs.readFileSync(manifestPath));
 manifest.files=files;manifest.build_id=createHash('sha256').update(JSON.stringify(files)).digest('hex');
