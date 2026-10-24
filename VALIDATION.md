@@ -1,3 +1,18 @@
+# Latest validation — 24 October 2026
+
+| Check | Current evidence | Boundary |
+| --- | --- | --- |
+| Windows source / CI |137passed,0failed,5explicitly skipped | Installation-ACL qualification is refused under unsafe checkout ancestors; skips are not qualification passes. Native source compilation and provenance checks passed. |
+| Real Antigravity PNG |1920×1320,3424092bytes, SHA256`7945386ae3df58d29b96fd303d922716a12bc5894cac494278311c7c9ec46b6c`; native inference16272ms, DBpublished | Exact controllerde470849, helper5e2cbf20.269280ms end-to-end; source/app changes prevent treating it as a statistical A/B. |
+| Real Antigravity JPEG |1920×1320,174151bytes, SHA256`5fb3342865f9e85e75572e21d8d791d321f1787211a737dce0038a2ba29fd13b`; native inference18915ms, DBpublished | Same controller/helper/model, independent new session,272954ms. It is slower than an earlier JPEG witness. |
+| Real custom-controller application | Rebuilt Upscaly native AI export, actual completion view and independent bytes/DB/engine checks; settings restored | Direct controller operation is not an Antigravity orchestration timing result. Application GPU-profile fix is separate from this library. |
+| Installation | Both scopes pinned to the tested build; sealed files/skill/reference content checked, global configuration unchanged | Later documentation-only bundle changes require a refreshed pin/inventory check. |
+| Physical final Stop | Pending owner Esc/re-arm | The queued-wait check timed out without physical Stop, skipped the queued move and is retained as incomplete. It is not a physical-stop pass. |
+
+The earlier records below are retained historical build-specific evidence, not current totals or a claim that unrun checks passed.
+
+---
+
 # Validation - 0.3.0-beta.1
 
 24 October 2026 (Asia/Karachi). Distinguish source checks, native component tests, actual applications and physical human input. No fixture or model report alone proves general usability.
