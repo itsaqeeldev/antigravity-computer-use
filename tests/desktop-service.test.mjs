@@ -1,5 +1,6 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import fs from 'node:fs';import path from 'node:path';
 import {serveDesktop,compact} from '../server/desktop-service.mjs';
 import {request,describeCommand,encodeReply} from '../scripts/desktop.mjs';
 import net from 'node:net';
@@ -17,7 +18,7 @@ test('direct command discovery exposes action schemas without source or session 
 });
 
 test('one offline discovery call exposes multiple schemas and never creates a desktop session',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-describe-'));
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-describe-'));
  try {
   for(const args of [['describe','click','paste','run'],['describe','--all']]){
    const result=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/desktop.mjs',import.meta.url)),...args],{windowsHide:true,encoding:'utf8',env:{...process.env,AGCU_DATA_DIR:dir}});
@@ -28,7 +29,7 @@ test('one offline discovery call exposes multiple schemas and never creates a de
 });
 
 test('importing the service library never treats an unrelated --serve argument as activation',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-import-only-'));
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-import-only-'));
  try{
   const script=`await import(${JSON.stringify(new URL('../server/desktop-service.mjs',import.meta.url).href)});console.log('import only');`;
   const result=spawnSync(process.execPath,['--input-type=module','-e',script,'--','--serve'],{windowsHide:true,encoding:'utf8',timeout:4000,env:{...process.env,AGCU_DATA_DIR:dir}});assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.trim(),'import only');assert.deepEqual(fs.readdirSync(dir),[]);
@@ -36,7 +37,7 @@ test('importing the service library never treats an unrelated --serve argument a
 });
 
 test('foreground serve stays resident for host-owned background execution and shuts down normally',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-foreground-'));
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-foreground-'));
  const child=spawn(process.execPath,[fileURLToPath(new URL('../scripts/desktop.mjs',import.meta.url)),'serve'],{windowsHide:true,env:{...process.env,AGCU_DATA_DIR:dir,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']});
  let stderr='';child.stderr.on('data',s=>stderr+=s);
  try{
@@ -56,7 +57,7 @@ test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Uni
 });
 
 test('a passive sidecar releases idle control and serves a later session without restarting',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-idle-'));let state='active',finishes=0;
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-'));let state='active',finishes=0;
  const runtime={status:()=>({state}),async finish(){finishes++;state='idle';},async observe(){state='active';return {metadata:{observation_id:'next-session'}};},async close(){}};
  const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:25,idleCheckMs:5});const session=JSON.parse(fs.readFileSync(service.file));
  try{
@@ -68,7 +69,7 @@ test('a passive sidecar releases idle control and serves a later session without
 
 test('passive idle cleanup never resumes or clears a human Pause or Stop',async()=>{
  for(const state of ['paused','stopped']){
-  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-idle-stop-'));let finishes=0;
+  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-stop-'));let finishes=0;
   const runtime={status:()=>({state}),async finish(){finishes++;},async close(){}};
   const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:10,idleCheckMs:5});
   try{await new Promise(r=>setTimeout(r,60));assert.equal(finishes,0);assert.equal((await request(JSON.parse(fs.readFileSync(service.file)),'status')).state,state);}
@@ -77,11 +78,11 @@ test('passive idle cleanup never resumes or clears a human Pause or Stop',async(
 });
 
 test('an unreachable saved service has a recovery message, never raw pipe errors',async()=>{
- await assert.rejects(request({pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-missing-'+process.pid:path.join(os.tmpdir(),'missing-agcu-'+process.pid),secret:'test'},'status'),error=>error.code==='session_unavailable'&&/Emergency Stop remains latched/.test(error.message));
+ await assert.rejects(request({pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-missing-'+process.pid:path.join(testDirectory('tmp'),'missing-agcu-'+process.pid),secret:'test'},'status'),error=>error.code==='session_unavailable'&&/Emergency Stop remains latched/.test(error.message));
 });
 
 test('a standalone client cannot silently reuse a host-managed service with the same build',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-policy-'));let inputs=0;
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-policy-'));let inputs=0;
  const runtime={permissionMode:'host-managed',status:()=>({state:'active',permission_mode:'host-managed'}),async action(){inputs++;return {};},async close(){}};
  const service=await serveDesktop({directory:dir,runtime});try{
   const session=JSON.parse(fs.readFileSync(service.file));
@@ -94,7 +95,7 @@ test('a standalone client cannot silently reuse a host-managed service with the 
 });
 
 test('start refuses to replace a live but unresponsive service',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-start-'));const file=path.join(dir,'desktop-session.json');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-start-'));const file=path.join(dir,'desktop-session.json');
  const raw=JSON.stringify({pid:process.pid,pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-unresponsive-'+process.pid:path.join(dir,'missing.sock'),secret:'fixture'});fs.writeFileSync(file,raw);
  try{
   const result=await new Promise((resolve,reject)=>{
@@ -106,7 +107,7 @@ test('start refuses to replace a live but unresponsive service',async()=>{
 });
 
 test('shutdown reports cleanup failure and remains reachable for recovery',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-close-'));let fail=true;
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-close-'));let fail=true;
  const runtime={status:()=>({state:'stopped'}),async close(){await new Promise(r=>setTimeout(r,20));if(fail)throw Object.assign(Error('Held-input cleanup failed'),{code:'input_cleanup_failed'});}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{
@@ -116,7 +117,7 @@ test('shutdown reports cleanup failure and remains reachable for recovery',async
  }finally{fail=false;await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct skill IPC authenticates, rejects overlapping actions, and permits independent stop',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-direct-'));let release,stops=0,calls=0;
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let release,stops=0,calls=0;
  const runtime={status(){return {state:'idle'};},async stop(){stops++;return {stopped:true};},async close(){},async observe(){calls++;return new Promise(resolve=>{release=()=>resolve({metadata:{observation_id:'test'}});});}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{
@@ -131,7 +132,7 @@ test('direct skill IPC authenticates, rejects overlapping actions, and permits i
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct IPC client timeout cancels active work without replay',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-direct-'));let stops=0,release;
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let stops=0,release;
  const runtime={async observe(){return new Promise(resolve=>release=()=>resolve({}));},async stop(){stops++;},async close(){}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{
@@ -140,14 +141,14 @@ test('direct IPC client timeout cancels active work without replay',async()=>{
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct observations return an actual local image without duplicate tree payload',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-image-'));
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-image-'));
  try{const r=compact({metadata:{observation_id:'abc',tree:'controls',elements:[1]},image:{data:Buffer.from('image').toString('base64'),width:100,height:80,source:[-100,0,100,80]}},dir);
  assert.equal(fs.readFileSync(r.image.path,'utf8'),'image');assert(!r.metadata.elements);assert(!r.image.data);assert.equal(r.metadata.tree,'controls');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
 test('direct IPC preserves Urdu and emoji when UTF-8 bytes arrive separately',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-utf8-'));const unicode='اردو — café 👩🏽‍💻';
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-utf8-'));const unicode='اردو — café 👩🏽‍💻';
  const runtime={async observe(args){return {metadata:{tree:args.query}};},async close(){}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try {

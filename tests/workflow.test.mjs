@@ -1,3 +1,4 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {Runtime,savedTakeoverMode,appKey,queryNodes} from '../server/runtime.mjs';
 import {Driver} from '../server/driver.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
@@ -29,7 +30,7 @@ test('window-free clipboard action registers its restarted worker and binds its 
  const result=await Runtime.prototype.action.call(r,'clipboard',{reason:'Explicit clipboard read'});assert.equal(result.input_completed,true);
 });
 test('status fallback reads the same persisted takeover preference as the native UI',()=>{
- const dir=fs.mkdtempSync(path.join(dataDir(),'mode-'));const file=path.join(dir,'control-preferences.json');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'mode-'));const file=path.join(dir,'control-preferences.json');
  try {
   assert.equal(savedTakeoverMode(file,'manual'),'manual');
   for(const mode of ['manual','smart']){fs.writeFileSync(file,JSON.stringify({takeover_mode:mode}));assert.equal(savedTakeoverMode(file,'manual'),mode);}

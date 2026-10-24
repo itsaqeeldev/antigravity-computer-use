@@ -1,3 +1,4 @@
+import {testDirectory, testPath} from './paths.mjs';
 // Real human grant/denial flow. No synthetic approval or test bypass.
 import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
 import {Runtime} from '../server/runtime.mjs';
@@ -16,4 +17,4 @@ try{
  catch(e){if(e.code!=='permission_denied')throw e;denied=true;record.checks.push('Human denied sensitive action; no input executed');}
  await r.finish();record.checks.push('Normal finish without server restart');record.denial_test_passed=denied;record.passed=denied;
 }catch(e){record.error=e.message;console.error(e.stack);}
-finally{await r.close();fixture.kill();fs.mkdirSync('.localdata/acceptance',{recursive:true});fs.writeFileSync('.localdata/acceptance/human.json',JSON.stringify(record,null,2));console.log(JSON.stringify(record,null,2));}
+finally{await r.close();fixture.kill();testDirectory('acceptance');fs.writeFileSync(testPath('acceptance/human.json'),JSON.stringify(record,null,2));console.log(JSON.stringify(record,null,2));}

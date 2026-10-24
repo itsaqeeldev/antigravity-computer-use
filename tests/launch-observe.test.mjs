@@ -1,9 +1,10 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import fs from 'node:fs';import path from 'node:path';
 import {Runtime} from '../server/runtime.mjs';
 import {parseArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
 import {spawnSync} from 'node:child_process';
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-launch-'));
+const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-launch-'));
 const app=path.join(dir,'OwnedTest.exe');fs.writeFileSync(app,'not executed: mock tests only');
 process.on('exit',()=>{fs.unlinkSync(app);fs.rmdirSync(dir);});
 function harness(windows){

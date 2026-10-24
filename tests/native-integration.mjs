@@ -1,8 +1,9 @@
+import {testDirectory} from './paths.mjs';
 // Explicit native component test. Grants are a FIXTURE TEST DOUBLE, not human consent.
 // It only authorizes its own throwaway WinForms target. No production auto-approval mode exists.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import assert from 'node:assert/strict';
 import {Driver} from '../server/driver.mjs';
-const evidence=path.resolve('.localdata/native-evidence');fs.mkdirSync(evidence,{recursive:true});
+const evidence=testDirectory('native-evidence');fs.mkdirSync(evidence,{recursive:true});
 const guard=path.join(evidence,'fixture.state');const token='native-fixture-'+process.pid;
 const deadline=(BigInt(Date.now()+60000)*10000n+621355968000000000n).toString();
 fs.writeFileSync(guard,'idle||0|');

@@ -46,6 +46,15 @@ export function queryNodes(nodes,query){
  return nodes.filter(node=>selected.has(node.i));
 }
 
+export function observedIndex(elements,selector){
+ const fields=['name','role','automation_id'].filter(k=>Object.hasOwn(selector,k));
+ if(!fields.length||fields.some(k=>typeof selector[k]!=='string'||!selector[k].trim()||selector[k].length>1000))fail('bad_selector','Supply a nonempty exact observed name, role or automation_id.');
+ const matches=(elements||[]).filter(node=>fields.every(key=>String(key==='automation_id'?(node.aid??node.automation_id??''):(node[key]??''))===selector[key]));
+ if(matches.length!==1)fail(matches.length?'ambiguous_observed_target':'target_not_observed',matches.length?'Several controls match that exact name/role/id. Inspect and select an index.':'No control in this observation matches that exact name/role/id. Observe the relevant section; no input was sent.');
+ if(!Number.isSafeInteger(matches[0].i)||matches[0].i<0)fail('bad_observed_target','The observed control has no valid native index. Observe again; no input was sent.');
+ return matches[0].i;
+}
+
 export class Runtime {
   constructor({driver=null,guardian=null,sessions=null,latchFile=undefined,permissionMode=process.env.AGCU_PERMISSION_MODE||'standalone',takeoverMode=process.env.AGCU_TAKEOVER_MODE||'manual'}={}){
     if(!['standalone','host-managed'].includes(permissionMode))throw new Error('Invalid startup permission mode');
@@ -139,7 +148,9 @@ export class Runtime {
     }
     this.check();
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
-    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch});
+    for(const [id,frame] of this.frames)if(Date.now()-frame.at>90000||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
+    while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
+    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes});
     return {metadata:response,image};
   }
   async action(op,args){
@@ -159,7 +170,8 @@ export class Runtime {
         payload.__worker_epoch=f.workerEpoch;
         if(f.key!==appKey(w))fail('identity_changed','App identity changed since observation.');
         if(f.image&&JSON.stringify(f.image.source)!==JSON.stringify(w.rect))fail('window_moved','Window moved or resized. Observe again.');
-        if(args.index!=null){payload.snapshot_id=f.snapshot;}
+        if(['name','role','automation_id'].some(k=>Object.hasOwn(args,k))){payload.index=observedIndex(f.elements,args);delete payload.name;delete payload.role;delete payload.automation_id;}
+        if(payload.index!=null){payload.snapshot_id=f.snapshot;}
         if(args.x!=null||args.y!=null){if(!f.image)fail('no_image','Observe with_image first.');payload.point=imagePoint(f.image,args.x,args.y);delete payload.x;delete payload.y;}
         if(op==='drag'){
           if(!f.image)fail('no_image','Observe with_image first.');

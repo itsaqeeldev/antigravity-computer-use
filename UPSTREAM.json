@@ -216,7 +216,7 @@
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "474b2cca45b57e5280f25e938095aef506ad0eff2baefbea538da795603c2462"
+      "sha256": "8b8005619acdba16294309c654394a3662503cc202283d5b40d0893ce7955bad"
     },
     {
       "path": "server/mcp.mjs",
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "085b98f0af029d4b9d969ebcef6502feac422fa456f39fd8faf2cf4633716082"
+      "sha256": "bb4dc33fbf6167fd89d06ea1636b4eb71bea6f08aeb3ab4deaec05637eb2d4b5"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -268,7 +268,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "a890eb374cedc5538573f4fbd095c84d440aaf801671162f679c432484b6bd9a"
+      "sha256": "9f2fad1458a776ec014e3e5f92d542fe5f6686c7b2ed27575d89eb50d6beb791"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -288,7 +288,7 @@
     },
     {
       "path": "scripts/arguments.mjs",
-      "sha256": "e23f79ced1b19fbb10f91a146431ee9887802bead2e2cdc0f3c227fc642b8a6a"
+      "sha256": "a3b3cc9a59a986465b125028e753105ddfc03ef0d7fa877e76c43dd0de3a4266"
     },
     {
       "path": "server/receipts.mjs",
@@ -296,15 +296,15 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "e44f7e46befca2edc2e3890a8302a15d01b830a5ab7ae2a988166bd9e32f9259"
+      "sha256": "8bc9b0ac16dcbf9daea2c13fabab80453c8423193ba72793a4ca5488e9d8080e"
     },
     {
       "path": "tests/receipts.test.mjs",
-      "sha256": "7e74f6e3da4c23b29f5fb44f368d7922a5d895f546114230af6fc303c8eb2dbb"
+      "sha256": "1b64e3479c44dc4de123710aa74cfcfa62c56db1ab849b8048788f89855a4154"
     },
     {
       "path": "tests/launch-observe.test.mjs",
-      "sha256": "3dc180be8082dbdda62ea0d0238c2bc2544ed37f5b7269d5689e5a59424544b9"
+      "sha256": "e6e0532fce7f1d4829bc1aef196ffec64c950ef013dc3e62953d2f8a1c7df4f7"
     },
     {
       "path": "scripts/install.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "97c0332b8cdc76beba91e98f62b0fd9e61c22961a3b4aea5283216ec2f7abe9a"
+      "sha256": "e154f91c9a20f880d97072e4bd4ac4e63fa99381fc525d4324dfdf72a26fa93e"
     },
     {
       "path": "tests/core.test.mjs",
@@ -332,7 +332,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "45e8d38911dbab85e9f12edb8b74b6e4523caeae63db3ec366507657cd4f36b1"
+      "sha256": "9b4e2d49ef422a61ed8c5206bf88ce7680d29791f96092750a495b18ea84dea4"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -352,7 +352,7 @@
     },
     {
       "path": "tests/storage.test.mjs",
-      "sha256": "1bb04238b283a45eef4f789a64c55433c4b99ba1534104b9748bf910c833115f"
+      "sha256": "2f0c6bbe8f88972ae914b72c87b82fc4a94e15f8918ce27bb65317ee6bbbd49d"
     },
     {
       "path": "server/deployment.mjs",
@@ -360,7 +360,7 @@
     },
     {
       "path": "tests/deployment.test.mjs",
-      "sha256": "38c73fa5893f9178376401fa7aef86dcb965a2ec075cb00da0deba2de412079d"
+      "sha256": "ce048922e723fa1cf87c89a8f300cf426c2b87405ef4ae3d010fa79a7e9ce5b4"
     },
     {
       "path": "server/native/DesktopContext.cs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/desktop-context.test.mjs",
-      "sha256": "b2636ab0335419df73a294eba314f0adfad97dcc677a4101d6301273d4b6c723"
+      "sha256": "967fa4e3187825972c83aff84822d941e7871b6916d6e2a0fe2c8b497647e5b0"
     },
     {
       "path": "scripts/sidecar.mjs",
@@ -380,7 +380,7 @@
     },
     {
       "path": "tests/sidecar.test.mjs",
-      "sha256": "0a048dd0b6ea837f0e0fcf0021f5bab930d25b2039f4c6683934e07def0d0ada"
+      "sha256": "b91a66e5d4c5238006585edd9c4758d8b5a6a8f3ef044fa3c5c1a25d610221dc"
     },
     {
       "path": "server/service-lease.mjs",
@@ -388,7 +388,7 @@
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "74d8eeff1b6007b252f0cb37d1eb588bbfa12a1b1be4016c9120b23a953cf81b"
+      "sha256": "0cb730dd5fb6fc2809ca7510cb8740ed77d7060cfe281f9c098e3ca8794bfd82"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -400,7 +400,7 @@
     },
     {
       "path": "tests/window-geometry.test.mjs",
-      "sha256": "d0ec5f4243ad50a4249894a37a17830bd764d6dd2d71dd7bdd5201dc28486a24"
+      "sha256": "4e9cb9e23e90fd4df8299f3bf03e1e28f2c259b229fbd8abfe522380da3d871a"
     },
     {
       "path": "tests/OffscreenWindowTarget.cs",
@@ -409,6 +409,46 @@
     {
       "path": "tests/window-fit-integration.mjs",
       "sha256": "a7598ef27e5d4bfb049d21a6f1f2855e7d679e1d2345b878deb47f8893411003"
+    },
+    {
+      "path": "tests/observed-selectors.test.mjs",
+      "sha256": "cd557a809651e8b0e71795a4abc781106cfad69ee8b8728df0f7319820e32a58"
+    },
+    {
+      "path": "tests/observed-selectors-integration.mjs",
+      "sha256": "e8dd2252c1d0de9be0de74a42fc5491a31221175d8c13f9ad50a0850b98c236f"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "bf67cc03f0977977d5cbec729a665848cb326a911d57f76fa3ecc9d4b9952b5b"
+    },
+    {
+      "path": "tests/paths.mjs",
+      "sha256": "46c9efa524837ba793a8830a9b073c3e2c826ab68be0c43209ed69ff4d9cc3a9"
+    },
+    {
+      "path": "tests/paths.test.mjs",
+      "sha256": "022cc68843f18162640cd8593699ddc530a83e64b606201be637f98d0bce3783"
+    },
+    {
+      "path": "tests/batch-wait.test.mjs",
+      "sha256": "e52cbc12664fa14b2693a0fe2b965d6a9a9ab3dd3ad00a3d5ab2c99d605b5441"
+    },
+    {
+      "path": "skills/computer-use/references/recovery.md",
+      "sha256": "80d2a35d30ac59557fe9a7ee4a62698bf866c7087d1ee01dee80f7aa8c3ba04b"
+    },
+    {
+      "path": "scripts/measure-run.mjs",
+      "sha256": "cd9f77df3527c9ef08bbdf20728000bea21848e620d8a72248d3915d7b370898"
+    },
+    {
+      "path": "tests/measure-run.test.mjs",
+      "sha256": "5049433c243c1349d4fbfa303c0d4c2c6f4b9e0d911b51abcc80840099ecd851"
+    },
+    {
+      "path": "docs/PERFORMANCE.md",
+      "sha256": "21297567ed0eb350b41c0efa1067e1cefe39d5f4c6dd3a8fcc8590ce76b52d75"
     }
   ]
 }

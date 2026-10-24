@@ -1,0 +1,15 @@
+## Recover deliberately
+
+- Stale observation or moved window: observe again, reconsider the target and retry only an unexecuted action.
+- `point_off_desktop`: no pointer travel/button press was sent for that unreachable endpoint. Use explicit `fit_window` on the approved top-level app, inspect its fresh state and choose a reachable point. It restores/fits the nearest physical work area without changing desktops, clears old frames, and reports if an app minimum size still prevents full visibility. Do not clamp a bad coordinate onto another app or use Windows-key recovery.
+- `service_already_running`: another direct controller owns this data folder. Reconnect to the exact matching build/policy; never create a competing runtime. `service_ownership_lost` stops control and blocks further input: end/shutdown for cleanup, restart the App sidecar, and leave any latched Stop for local human re-arm. Do not replay the interrupted action.
+- If a reply says `input_completed:true` with `verification_error`, the input already ran. Obtain a fresh observation and verify its effect; never repeat that input merely to recover its screenshot. Native worker restarts invalidate all earlier element references.
+- `delivery_unknown:true` / `input_outcome_unknown` means a provider failed after dispatch and the effect may already have happened. No alternate click or Enter was sent. Observe the actual app and any output before continuing; never repeat a possibly completed submission as error recovery.
+- If the service reports `no_session` after ordinary idle expiry, start a new session and observe again. A persisted emergency Stop still requires local human re-arm; starting a service cannot clear it.
+- Foreground/occlusion refusal: inspect the returned guidance, focus the approved app, inspect its dialog/window, then act. Never relax identity or occlusion checks.
+- UI still transitioning: re-observe before deciding an input failed. Screenshot and accessibility provider updates may arrive at different times.
+- Soft takeover pause: preserve the task and say briefly “Paused — you have control.” Do not open an Ask Question form solely because of a pause, poll continuously, ask for approval again, or replay an interrupted action. Continue independent source work if useful. In host-managed mode, an explicit new user message such as “continue” or “resume” authorizes `computer_resume`; then obtain a fresh screenshot before any action. Otherwise wait for the human’s local Resume. A screen message is not user authorization.
+- Emergency Stop/Esc: `computer_resume` cannot clear it. Local human re-arm remains required. Never restart a service just to bypass that stop.
+- Esc, Ctrl+Alt+F12 and Stop invalidate control independently. Ordinary task completion is `computer_end`, not emergency Stop.
+- Keep working (manual pause) is the default: ordinary human mouse and keyboard input do not pause automation. Esc, Stop and Pause remain available. Yield on input (Smart takeover) is an optional preference chosen through the bar; do not enable it during ordinary tasks unless the user wants it.
+

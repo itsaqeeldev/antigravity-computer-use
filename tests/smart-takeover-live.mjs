@@ -1,7 +1,8 @@
+import {testDirectory} from './paths.mjs';
 // Requires real human motion/click and real human Resume. Never synthesizes
 // physical-input events or operates the control bar on the human's behalf.
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';
-const dir=path.resolve('.localdata/smart-takeover-live');fs.mkdirSync(dir,{recursive:true});
+const dir=testDirectory('smart-takeover-live');fs.mkdirSync(dir,{recursive:true});
 process.env.AGCU_DATA_DIR=dir;
 const {Runtime}=await import('../server/runtime.mjs');
 const r=new Runtime({permissionMode:'host-managed',takeoverMode:'smart'});

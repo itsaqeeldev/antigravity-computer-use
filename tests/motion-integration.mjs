@@ -1,6 +1,7 @@
+import {testDirectory} from './paths.mjs';
 // Real motion and cancellation against our disposable fixture only.
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';import {Runtime} from '../server/runtime.mjs';
-const dir=path.resolve('.localdata/motion-integration');fs.mkdirSync(dir,{recursive:true});const sampler=path.join(dir,'CursorSampler.exe');
+const dir=testDirectory('motion-integration');fs.mkdirSync(dir,{recursive:true});const sampler=path.join(dir,'CursorSampler.exe');
 const build=spawnSync(path.join(process.env.WINDIR,'Microsoft.NET/Framework64/v4.0.30319/csc.exe'),['-nologo','-out:'+sampler,path.resolve('tests/CursorSampler.cs')],{windowsHide:true,encoding:'utf8'});assert.equal(build.status,0,build.stdout+build.stderr);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));const checks=[],record={passed:false};let r,fixture;
 async function startSample(ms){let resolveReady;const ready=new Promise(r=>resolveReady=r),p=spawn(sampler,[String(ms)],{windowsHide:true});const samples=[];createInterface({input:p.stdout}).on('line',l=>l==='ready'?resolveReady():samples.push(l.split(',').map(Number)));const done=new Promise(resolve=>p.on('exit',()=>resolve(samples)));await ready;return {done};}

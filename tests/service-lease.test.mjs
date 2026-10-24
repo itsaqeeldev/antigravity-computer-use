@@ -1,8 +1,9 @@
+import {testDirectory} from './paths.mjs';
 // Real Windows kernel ownership, using inert runtimes: no screenshots or input.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {once} from 'node:events';
 import {acquireServiceLease} from '../server/service-lease.mjs';import {serveDesktop} from '../server/desktop-service.mjs';import {request} from '../scripts/desktop.mjs';
 import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';
-const base=path.resolve('.localdata/service-lease-tests');fs.mkdirSync(base,{recursive:true});
+const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
 test('one real kernel owner covers path-case aliases and prevents directory replacement until release',async()=>{
  const dir=temporary(),moved=dir+'-moved';const lease=await acquireServiceLease(dir);

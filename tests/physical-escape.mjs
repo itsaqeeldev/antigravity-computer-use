@@ -1,7 +1,8 @@
+import {testDirectory} from './paths.mjs';
 // Requires a REAL human Esc key. Never injects a key or approves an application.
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';import {ensureHost} from '../server/build.mjs';
 import {Guardian} from '../server/guardian.mjs';import {Driver} from '../server/driver.mjs';
-const dir=path.resolve('.localdata/physical-escape');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');
+const dir=testDirectory('physical-escape');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');
 const env={AGCU_GUARD_FILE:file,AGCU_PARENT_PID:String(process.pid),CU_PRESENCE:'off',CU_OVERLAY:'off'};
 const g=new Guardian(env);const d=new Driver({env});const record={passed:false,no_app_grants:true,pending:true,started_at:new Date().toISOString()};
 fs.writeFileSync(path.join(dir,'result.json'),JSON.stringify(record,null,2));

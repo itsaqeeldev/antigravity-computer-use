@@ -1,6 +1,7 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {mergeSidecarConfig,sidecarDefinition,SIDECAR_ID} from '../scripts/sidecar.mjs';
+import {testDirectory} from './paths.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {mergeSidecarConfig,sidecarDefinition,SIDECAR_ID} from '../scripts/sidecar.mjs';
 test('sidecar configuration preserves permissions and unrelated sidecars, and respects a disabled entry on update',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-sidecar-')),file=path.join(dir,'config.json');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-sidecar-')),file=path.join(dir,'config.json');
  try{
   const original={permissions:{preset:'unchanged'},model:'same',sidecars:{other:{enabled:true},[SIDECAR_ID]:{enabled:false,projectId:'preserved'}}};fs.writeFileSync(file,JSON.stringify(original));
   const updated=JSON.parse(mergeSidecarConfig(file));assert.deepEqual(updated,original);

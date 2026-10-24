@@ -1,9 +1,10 @@
+import {testDirectory} from './paths.mjs';
 // Real native components under operator-selected host authorization. The only
 // target apps are fixtures created here. This does not test Antigravity's own
 // permission engine or pretend a direct test invocation came from its model.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import assert from 'node:assert/strict';
 import {Runtime} from '../server/runtime.mjs';
-const children=[];const checks=[];const evidence=path.resolve('.localdata/host-managed');fs.mkdirSync(evidence,{recursive:true});
+const children=[];const checks=[];const evidence=testDirectory('host-managed');fs.mkdirSync(evidence,{recursive:true});
 async function fixture(){
  const p=spawn('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.resolve('tools/make-target.ps1'),'-Right'],{windowsHide:false,stdio:['ignore','pipe','pipe']});children.push(p);
  return new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('Fixture startup timeout')),15000);createInterface({input:p.stdout}).on('line',l=>{try{const v=JSON.parse(l);if(v.hwnd){clearTimeout(t);resolve(v);}}catch{}});p.stderr.on('data',d=>process.stderr.write(d));});

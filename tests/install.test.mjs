@@ -1,9 +1,10 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
 import {mergeConfig,install as productionInstall} from '../scripts/install.mjs';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
-const root=path.resolve('.localdata/test-install');fs.mkdirSync(root,{recursive:true});
+const root=testDirectory('test-install');fs.mkdirSync(root,{recursive:true});
 // Fixture profiles must never discover or alter the developer's real install.
 const install=options=>productionInstall({home:path.join(options.target,'inert-home'),...options,prepareStorage(){return {private_storage:true,test_fixture:true};}});
 function seal(bundle,version='9.1.2-test'){

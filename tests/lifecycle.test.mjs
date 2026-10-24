@@ -1,6 +1,7 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';
 import {Runtime} from '../server/runtime.mjs';
-import fs from 'node:fs';import path from 'node:path';import os from 'node:os';
+import fs from 'node:fs';import path from 'node:path';
 function fixture(){
  const guardian=new EventEmitter();guardian.messages=[];guardian.send=m=>guardian.messages.push(m);guardian.close=()=>{};guardian.pid=998;
  const driver={abortCalls:0,async abort(){this.abortCalls++;},info:{pid:999}};
@@ -56,7 +57,7 @@ test('emergency Stop wins a race with a successful native soft-resume reply',asy
 });
 
 test('emergency Stop survives service replacement; ordinary idle shutdown does not create a latch',async()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-latch-'));const file=path.join(dir,'emergency.stop');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-latch-'));const file=path.join(dir,'emergency.stop');
  const make=()=>{const r=fixture();r.latchFile=file;return r;};
  try {
   const ordinary=make();await ordinary.close();assert(!fs.existsSync(file));

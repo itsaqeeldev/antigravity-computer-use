@@ -1,6 +1,7 @@
+import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {parseArguments,parseRunArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
-import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
+import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
 const parse=(command,words,options)=>{const name='computer_'+command;const args=parseArguments(TOOLS.find(t=>t.name===name).inputSchema,words,options);validate(name,args);return args;};
 test('named native action flags need no request file and preserve explicit frame/permission boundaries',()=>{
  const args=parse('click',['--hwnd','123','--observation-id','fresh','--index','7','--risk','routine','--reason','Open settings']);
@@ -42,6 +43,14 @@ test('file-picker clipboard entry is explicit and cannot manufacture confirmatio
 });
 
 const batchSchema=TOOLS.find(t=>t.name==='computer_run').inputSchema;
+test('named section queries are tree-only unless an image is explicitly requested',()=>{
+ const schema=TOOLS.find(t=>t.name==='computer_snapshot').inputSchema;
+ const base=['--hwnd','123','--query','Export format','--reason','Inspect section'];
+ assert.equal(parseArguments(schema,base).with_image,false);
+ assert.equal(parseArguments(schema,[...base,'--image']).with_image,true);
+ assert.equal(parseArguments(schema,['--hwnd','123']).with_image,undefined);
+ assert.equal(parseArguments(schema,['{"hwnd":123,"query":"Export format"}']).with_image,undefined);
+});
 const describe=name=>({inputSchema:TOOLS.find(t=>t.name==='computer_'+name).inputSchema});
 test('named batch groups need no plan file and retain fresh-frame and explicit image boundaries',()=>{
  const a=parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','Import owned image','--step','click','--index','7','--risk','routine','--step','file_dialog','--path','D:/cat.png','--action','open','--entry-method','clipboard'],describe,{read(){throw Error('No file should be read');}});
@@ -52,7 +61,7 @@ test('named batch groups need no plan file and retain fresh-frame and explicit i
 });
 
 test('named batches cross actual Windows PowerShell without JSON quoting or Unicode path loss',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-batch-')),file=path.join(dir,'parse.mjs');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-batch-')),file=path.join(dir,'parse.mjs');
  try{
   fs.writeFileSync(file,`import {parseRunArguments} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/arguments.mjs')).href)};import {describeCommand,encodeReply} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/desktop.mjs')).href)};console.log(encodeReply(parseRunArguments(describeCommand('run').inputSchema,process.argv.slice(2),describeCommand)));`);
   const quote=s=>"'"+s.replaceAll("'","''")+"'",sample="D:/Samples/cat's 100% & اردو 😀.png";

@@ -1,7 +1,8 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {testDirectory} from './paths.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
 import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 test('installed service policy wins over unrelated plugin/environment overrides',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-deploy-')),file=path.join(dir,'desktop-policy.json');
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-deploy-')),file=path.join(dir,'desktop-policy.json');
  try{
   fs.writeFileSync(file,JSON.stringify({permission_mode:'standalone',data_dir:path.join(dir,'private')}));
   const env={AGCU_PERMISSION_MODE:'host-managed',AGCU_DATA_DIR:'wrong',CU_PLUGIN_DATA:'wrong-plugin',CLAUDE_PLUGIN_DATA:'other-plugin'};

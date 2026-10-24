@@ -51,6 +51,10 @@ export function parseArguments(schema,words,{read=readText,defaultImage=false}={
   if(nested)(result.observe??={})[key]=value;
   else result[key]=key==='observe'&&type.type==='object'?{with_image:false,...value}:value;
  }
+ // A literal section query is usually discovery of controls, not a visual
+ // checkpoint. Avoid an unnecessary JPEG/image-reading round trip. Explicit
+ // --image still wins; JSON callers retain their original defaults.
+ if(properties.with_image&&typeof result.query==='string'&&result.query.trim()&&!Object.hasOwn(result,'with_image'))result.with_image=false;
  return result;
 }
 
