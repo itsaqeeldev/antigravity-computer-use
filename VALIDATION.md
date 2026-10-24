@@ -7,7 +7,7 @@
 | Real Antigravity JPEG |1920×1320,174151bytes, SHA256`5fb3342865f9e85e75572e21d8d791d321f1787211a737dce0038a2ba29fd13b`; native inference18915ms, DBpublished | Same controller/helper/model, independent new session,272954ms. It is slower than an earlier JPEG witness. |
 | Real custom-controller application | Rebuilt Upscaly native AI export, actual completion view and independent bytes/DB/engine checks; settings restored | Direct controller operation is not an Antigravity orchestration timing result. Application GPU-profile fix is separate from this library. |
 | Installation | Both scopes pinned to the tested build; sealed files/skill/reference content checked, global configuration unchanged | Later documentation-only bundle changes require a refreshed pin/inventory check. |
-| Physical final Stop | Pending owner Esc/re-arm | The queued-wait check timed out without physical Stop, skipped the queued move and is retained as incomplete. It is not a physical-stop pass. |
+| Physical final Stop | Owner reported Esc/re-arm; native status recorded human resume, idle, empty grants and cursor off | Instrumented queued waits timed out before physical input and are not live queued/held-input cancellation passes. That qualification remains open. |
 
 The earlier records below are retained historical build-specific evidence, not current totals or a claim that unrun checks passed.
 

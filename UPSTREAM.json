@@ -320,7 +320,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "e2952ff59a23613a9686f74a6ac8357b3fa8f2d4a5d21302cff52cc1c949e517"
+      "sha256": "9bc53acd8507886df18200dc95a5ce761f240f129da546dd9fdc1b144fdd24ce"
     },
     {
       "path": "tests/install.test.mjs",
@@ -449,6 +449,10 @@
     {
       "path": "docs/PERFORMANCE.md",
       "sha256": "387eea80f6d9261bc699deb35bf05f4882deb3395c2b8574368a1c5f7f12d043"
+    },
+    {
+      "path": "HANDOFF.md",
+      "sha256": "ff0f7bd4b21843ed08bea81128bb9a1e9b1405212b32ab10ba2f06eecca22240"
     }
   ]
 }

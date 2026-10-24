@@ -19,7 +19,7 @@ fs.copyFileSync(process.execPath,path.join(out,'node.exe'));
 const modules=['index.mjs','desktop-service.mjs','service-lease.mjs','desktop-tools.mjs','receipts.mjs','storage.mjs','deployment.mjs','mcp.mjs','runtime.mjs','guardian.mjs','driver.mjs','build.mjs','sessions.mjs','policy.mjs','render.mjs','upstream-utils.mjs','version.mjs'];
 fs.mkdirSync(path.join(out,'server'),{recursive:true});for(const f of modules)fs.copyFileSync(path.join(root,'server',f),path.join(out,'server',f));
 for(const folder of ['skills','scripts','licenses'])fs.cpSync(path.join(root,folder),path.join(out,folder),{recursive:true});
-for(const f of ['README.md','CONTRIBUTING.md','SECURITY.md','LICENSE','LICENSE.upstream','THIRD_PARTY_NOTICES.md','UPSTREAM.json','VALIDATION.md','PROJECT-STATUS.md','IMPLEMENTATION_PROGRESS.md'])if(fs.existsSync(path.join(root,f)))fs.copyFileSync(path.join(root,f),path.join(out,f));
+for(const f of ['README.md','HANDOFF.md','CONTRIBUTING.md','SECURITY.md','LICENSE','LICENSE.upstream','THIRD_PARTY_NOTICES.md','UPSTREAM.json','VALIDATION.md','PROJECT-STATUS.md','IMPLEMENTATION_PROGRESS.md'])if(fs.existsSync(path.join(root,f)))fs.copyFileSync(path.join(root,f),path.join(out,f));
 fs.cpSync(path.join(root,'docs'),path.join(out,'docs'),{recursive:true});
 const sha=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const nativeSource=createHash('sha256');for(const file of SOURCES)nativeSource.update(path.basename(file)+'\0').update(fs.readFileSync(file));

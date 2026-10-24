@@ -1,13 +1,13 @@
 # Current Windows beta qualification — 24 October 2026
 
-The direct Windows runtime is installed and exercised in the real Antigravity App. The public release remains a draft; this is not a claim of vendor parity or completed speed qualification.
+The direct Windows runtime is installed and exercised in the real Antigravity App. The Windows beta is published as a prerelease with its remaining limitations documented in [HANDOFF.md](HANDOFF.md); this is not a claim of vendor parity or completed speed qualification.
 
 - Exact tested controller: `de4708498a561ebaddd55ec60ea606df14d11bd43a907084ebf84a66783542cd`; native helper: `5e2cbf2060ee228006234dd90fb0832adaed6dc8f63c9bd80e1c08863088aa1a`.
 - Actual fresh No Project `/computer-use` tasks produced native-AI PNG and JPEG1920×1320 outputs, restored settings, closed their owned app and ended normally. File signatures/pixels, database publication and native engine completion were checked independently. No software fallback or automatic replay.
 - PNG:269280ms /15controller calls /11893service-ms; JPEG:272954ms /15calls /15937service-ms. Model:Gemini3.8FlashHigh, Turbo preserved. The earlier successful High PNG witness was326493ms /25calls. The earlier JPEG witness was235796ms, so general speed improvement is not established. Application GPU-profile/a11y fixes are another comparison variable.
 - Local and Windows CI:137passed, zero failures,5explicit ACL qualification skips because the checkout has replaceable ancestors. No parent permission changes. The unsafe-ancestor refusal test passed.
 - Exact global/project pins and unrelated host configuration were checked. The runtime uses a supported global skill and App Sidecar, without MCP or a separate model.
-- Final physical Esc/re-arm on this helper is pending owner input. Real mixed-DPI/multiple-display hardware, wider application coverage and remaining cursor/glow feedback remain unqualified.
+- The owner reported physical Esc/re-arm; installed status recorded `human_resume`, idle, empty grants and cursor off. Live queued/held-input interruption on this exact helper remains unqualified; the timed-out queue checks were not passes. Real mixed-DPI/multiple-display hardware, wider application coverage and remaining cursor/glow feedback remain unqualified.
 
 Detailed local evidence is intentionally ignored under `.localdata/speed-resume-20261024/`; public source CI and [performance guidance](docs/PERFORMANCE.md) remain reviewable. Earlier snapshots below are historical and may describe superseded pending work.
 
