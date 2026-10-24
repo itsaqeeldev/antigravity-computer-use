@@ -8,7 +8,14 @@ if(fs.existsSync(sessionFile)){
  if(alive)throw Error('A desktop service is still running. End and shutdown its task before rollback; no configuration was changed.');
 }
 for(const r of data.records){
- if(r.kind==='config'){
+ if(r.kind==='sidecar-config'){
+  const current=fs.existsSync(r.file)?JSON.parse(fs.readFileSync(r.file)):{};
+  const previous=r.existed?JSON.parse(fs.readFileSync(r.saved)):{};
+  current.sidecars??={};const old=previous.sidecars?.['antigravity-computer-use'];
+  if(old)current.sidecars['antigravity-computer-use']=old;else delete current.sidecars['antigravity-computer-use'];
+  fs.mkdirSync(path.dirname(r.file),{recursive:true});fs.writeFileSync(r.file,JSON.stringify(current,null,2)+'\n');
+ }
+ else if(r.kind==='config'){
   const c=fs.existsSync(r.file)?JSON.parse(fs.readFileSync(r.file)):{};
   const previous=r.existed?JSON.parse(fs.readFileSync(r.saved)):{};
   c.mcpServers??={};const old=previous.mcpServers?.['antigravity-computer-use'];
@@ -16,7 +23,7 @@ for(const r of data.records){
   fs.mkdirSync(path.dirname(r.file),{recursive:true});fs.writeFileSync(r.file,JSON.stringify(c,null,2)+'\n');
  }
  else if(r.existed)fs.cpSync(r.saved,r.file,{recursive:true});
- else if(['installation','launcher','deployment','deployment-registry'].includes(r.kind)&&fs.existsSync(r.file))fs.unlinkSync(r.file);
+ else if(['installation','launcher','deployment','deployment-registry','sidecar-definition'].includes(r.kind)&&fs.existsSync(r.file))fs.unlinkSync(r.file);
  else if(r.kind==='skill'&&fs.existsSync(path.join(r.file,'SKILL.md')))fs.unlinkSync(path.join(r.file,'SKILL.md'));
 }
 console.log('Prior configuration and skill files restored. Installed release folders were preserved.');

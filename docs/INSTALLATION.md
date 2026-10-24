@@ -14,6 +14,16 @@ Version 0.3.0-beta.1 is a direct `/computer-use` candidate with bundled native h
 .\install.cmd --workspace "D:\Projects\Example" --integration direct
 ```
 
+For the App's documented process lifecycle, opt in during the **global** direct installation:
+
+```powershell
+.\install.cmd --integration direct --sidecar
+```
+
+This registers only `antigravity-computer-use` under `~/.gemini/config/sidecars/` and enables its own entry in `config.json`, preserving permissions, models and other sidecars. Existing disabled state survives ordinary updates; explicitly passing `--sidecar` enables it. Project-local installs reuse the global companion and do not rewrite its configuration. Sidecars are an [official Antigravity App feature](https://www.antigravity.google/docs/sidecars/), distinct from MCP. The definition uses the pinned Node launcher, `serve` and `on-failure` restart. It creates no conversations or model requests. Managed startup in the actual App still needs qualification; reload the sidecar/App if its configuration has not refreshed.
+
+The installed sidecar policy keeps the private listener resident after idle cleanup; app grants, cached observations and held inputs are released. It never resumes a Pause or clears emergency Stop. `end` finishes a task while retaining the listener; `shutdown` exits normally and is not an automatic crash restart. Manual installs without `--sidecar` retain the 15-minute service expiry. No Windows login task is registered.
+
 Private-storage candidate default: `D:\AntigravityComputerUse-<owner-hash>` when available, otherwise the current user's LocalAppData. The printed directory is stable for the Windows account. A writable/renamable parent such as an inherited shared `D:\Tools` is rejected; parent/global settings are never changed. Choose a private direct-drive or user-profile folder for `--target`. App skill location: `~/.gemini/config/skills/computer-use`. Project location: `.agents/skills/computer-use`. These match [the official App documentation](https://antigravity.google/docs/skills).
 
 The installer verifies manifest file hashes before making changes and refuses to update a live service. A short `cu.mjs` entrypoint with bundled `cu-node.exe` calls the exact installed script without command-shell forwarding. Node uses a hard link to the immutable payload where supported, otherwise a copy. Project-local launchers have separate names so they cannot redirect an existing global skill. Updates and rollback preserve both launcher files alongside the skill and installation pointer. `verify-install.mjs` checks the launcher pin and Node bytes as well as the payload. Only this project's old MCP entry is removed during direct migration. Other servers, host security preferences and unrelated configuration survive. Backups are kept under `backups/<timestamp>`. `--legacy-profiles` is optional and never enabled implicitly.
@@ -69,6 +79,6 @@ Specific real Agent Manager tasks and installed human Stop/re-arm checks now hav
 
 ## Windows desktop startup
 
-After installation, double-click the printed `controller_start` file (**Start Computer Use.cmd**) from the normal Windows desktop, then invoke `/computer-use`. It uses only the installed pinned Node/runtime and accepts no forwarded arguments. It does not add a login task, change security settings, or grant approval. End/shutdown still cleans up normally; start it again after service expiry or reboot.
+If the managed sidecar is not available, double-click the printed `controller_start` file (**Start Computer Use.cmd**) from the normal Windows desktop, then invoke `/computer-use`. It uses only the installed pinned Node/runtime and accepts no forwarded arguments. It does not add a login task, change security settings, or grant approval. End/shutdown still cleans up normally; start it again after service expiry or reboot.
 
 Actual Agent Manager terminal jobs were attached to an isolated `exebox` desktop while the visible input desktop was `Default`, even with Turbo selected. Their detached children were also retired between commands. Host-owned `serve` fixed lifetime but could not supply visible-desktop access. The native preflight now returns `desktop_context_unavailable` rather than creating hidden app windows or failing later in UI Automation. A local companion started on the normal desktop is the supported bridge; do not use WMI or desktop-switching recovery. Background startup at login is not enabled by this build.

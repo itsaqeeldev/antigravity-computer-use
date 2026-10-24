@@ -31,13 +31,14 @@ export function compact(result,dir){
   return value;
 }
 
-export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={}){
+export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),idlePolicy='shutdown',idleTimeoutMs=15*60000,idleCheckMs=10000}={}){
+  if(!['release','shutdown'].includes(idlePolicy))throw Error('Invalid listener idle policy.');
   fs.mkdirSync(directory,{recursive:true});
   await runtime.prepare?.();
   const secret=randomBytes(32).toString('hex');
   const pipe=process.platform==='win32'?`\\\\.\\pipe\\agcu-${randomBytes(18).toString('hex')}`:path.join(directory,`desktop-${process.pid}.sock`);
   const file=path.join(directory,'desktop-session.json');
-  let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending;
+  let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending,idleReleased=false;
   const sockets=new Set();
   const receipts=new Receipts(directory);
   const shutdown=()=>{
@@ -64,7 +65,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
         let request;try{request=JSON.parse(buffer.slice(0,buffer.indexOf('\n')));}catch{throw Error('Invalid request');}
         const given=Buffer.from(String(request.secret||''));const expected=Buffer.from(secret);
         if(given.length!==expected.length||!timingSafeEqual(given,expected))throw Error('Unauthorized local client');
-        lastCall=Date.now();
+        lastCall=Date.now();idleReleased=false;
         const name=request.command?.startsWith('computer_')?request.command:'computer_'+request.command;
         ticket=receipts.begin(name,request.args);
         if(closing&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Error('Desktop service is shutting down; no more actions are accepted.');
@@ -82,7 +83,8 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
         }
         if(!control){busy=true;executing=true;}
         try{
-          const result=compact(await call(runtime,name,request.args||{}),directory);
+          const raw=await call(runtime,name,request.args||{});
+          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
@@ -93,9 +95,17 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
   server.on('error',()=>shutdown().catch(()=>{}));
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(pipe,resolve);});
   fs.writeFileSync(file,JSON.stringify({pid:process.pid,pipe,secret}),{mode:0o600});
-  expiry=setInterval(()=>{if(Date.now()-lastCall>15*60000)shutdown().catch(()=>{});},10000);expiry.unref();
+  expiry=setInterval(()=>{
+    if(busy||closing||Date.now()-lastCall<=idleTimeoutMs)return;
+    if(idlePolicy==='shutdown'){shutdown().catch(()=>{});return;}
+    // A local sidecar may keep its private listener, never its control grants.
+    // Preserve a human Pause/Stop; this is not an automatic Resume/re-arm.
+    if(idleReleased||['stopped','paused'].includes(runtime.status().state))return;
+    idleReleased=true;busy=true;
+    Promise.resolve().then(()=>runtime.finish()).catch(()=>runtime.stop()).catch(()=>{}).finally(()=>{busy=false;});
+  },idleCheckMs);expiry.unref();
   process.once('SIGTERM',()=>shutdown().catch(()=>{}));process.once('SIGINT',()=>shutdown().catch(()=>{}));
-  return {shutdown,server,file,status:()=>runtime.status()};
+  return {shutdown,server,file,status:()=>({...runtime.status(),listener_idle_policy:idlePolicy})};
 }
 
-if(process.argv.includes('--serve')){applyDeployment(loadDeployment());await serveDesktop();}
+if(process.argv.includes('--serve')){const policy=applyDeployment(loadDeployment());await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});}

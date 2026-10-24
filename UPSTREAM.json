@@ -252,7 +252,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "507d08a49f83002eae21510fdcadba91f6e3b180b173846c8dc50c5db95c3fb6"
+      "sha256": "715a2abd5555621b7079230083538f1d2cb0ac14f1372e84192fba9dece22a54"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -260,7 +260,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "c20d4ffcf603636a79cde351e9439dc875e4371fbc0a21b93dd1f757c4768862"
+      "sha256": "f6d5bd31263f846c9434933f052d3917c42b13c959828c368a6e03621b2bb5dc"
     },
     {
       "path": "server/version.mjs",
@@ -268,7 +268,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "ceb2a32e4947ee144a5b81870e0f16b32b9ead1934f33538a6a07324c43c9a9c"
+      "sha256": "92ddb1dedcc6f3bd6649faa3432d00df4031eba355bb1217394e20f18b40a6b5"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -308,15 +308,15 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "cc937395f65b46634988cea5cee50a5c2865ed0655b109feeef51991c3f2f614"
+      "sha256": "00421fb9a5f4ad75533fa4afcee635a2849c905b0a8e1a3430a351f128100b4a"
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "7e81c35e00a92698edf0d72f0e7ad90fd7a3a838fc118f65d8ae6a55241588b4"
+      "sha256": "6de49c14958f31ed86a4ebbafeecc82e1182515434e231edf202bf3d55a4f197"
     },
     {
       "path": "scripts/verify-install.mjs",
-      "sha256": "e3a45be69c3bab58cc72c549f7c44fc8ea4e995e5698b456672050a8e1d3b684"
+      "sha256": "37918b4c33d092dba103e6c9f6758cce515453e7e39143fe8e540cd596251cc8"
     },
     {
       "path": "scripts/bundle.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "d2ce25e1db2ea532bb494614d32ef38c96818a56a83b0cb757e572609f939d75"
+      "sha256": "bbde382f81b0c2c3d568253d38f4918af92b246fdee7431d8b74309408b547a6"
     },
     {
       "path": "tests/core.test.mjs",
@@ -356,7 +356,7 @@
     },
     {
       "path": "server/deployment.mjs",
-      "sha256": "153b17bf7e6fb0f18eddcffa046038a99a6a85e247ddea674a0d91bf82246797"
+      "sha256": "5a4052c49e64a2f66a2342e4d81969cc77a12020f580e6d30b84593136305aec"
     },
     {
       "path": "tests/deployment.test.mjs",
@@ -373,6 +373,14 @@
     {
       "path": "tests/desktop-context.test.mjs",
       "sha256": "b2636ab0335419df73a294eba314f0adfad97dcc677a4101d6301273d4b6c723"
+    },
+    {
+      "path": "scripts/sidecar.mjs",
+      "sha256": "e4a227d71e3aa9d9a17162c51c9cb09a0e3a96d99d2898caeab4be493733582d"
+    },
+    {
+      "path": "tests/sidecar.test.mjs",
+      "sha256": "0a048dd0b6ea837f0e0fcf0021f5bab930d25b2039f4c6683934e07def0d0ada"
     }
   ]
 }

@@ -47,6 +47,27 @@ test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Uni
  assert.match(wire,/\\u200c/);assert.match(wire,/\\ud83d/);
 });
 
+test('a passive sidecar releases idle control and serves a later session without restarting',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-idle-'));let state='active',finishes=0;
+ const runtime={status:()=>({state}),async finish(){finishes++;state='idle';},async observe(){state='active';return {metadata:{observation_id:'next-session'}};},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:25,idleCheckMs:5});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  for(let i=0;i<30&&!finishes;i++)await new Promise(r=>setTimeout(r,10));assert.equal(finishes,1);assert(fs.existsSync(service.file));
+  const status=await request(session,'status');assert.equal(status.state,'idle');assert.equal(status.listener_idle_policy,'release');
+  assert.equal((await request(session,'snapshot',{hwnd:1})).metadata.observation_id,'next-session');assert.equal(state,'active');
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('passive idle cleanup never resumes or clears a human Pause or Stop',async()=>{
+ for(const state of ['paused','stopped']){
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-idle-stop-'));let finishes=0;
+  const runtime={status:()=>({state}),async finish(){finishes++;},async close(){}};
+  const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:10,idleCheckMs:5});
+  try{await new Promise(r=>setTimeout(r,60));assert.equal(finishes,0);assert.equal((await request(JSON.parse(fs.readFileSync(service.file)),'status')).state,state);}
+  finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+ }
+});
+
 test('an unreachable saved service has a recovery message, never raw pipe errors',async()=>{
  await assert.rejects(request({pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-missing-'+process.pid:path.join(os.tmpdir(),'missing-agcu-'+process.pid),secret:'test'},'status'),error=>error.code==='session_unavailable'&&/Emergency Stop remains latched/.test(error.message));
 });

@@ -1,6 +1,7 @@
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {storageOperation,defaultInstallationRoot} from '../server/storage.mjs';
+import {SIDECAR_ID,sidecarDefinition,mergeSidecarConfig} from './sidecar.mjs';
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function mergeConfig(file,entry){
  const current=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')):{};
@@ -10,7 +11,7 @@ export function mergeConfig(file,entry){
 }
 // Inert installer unit fixtures inject this filesystem boundary, like the
 // runtime's mock driver. No CLI/environment/model argument can disable it.
-export function install({bundle=here,target,home=os.homedir(),workspace=null,legacyProfiles=false,integration='direct',permissionMode,prepareStorage=(folder,helper,purpose='install')=>storageOperation(purpose,folder,{helper})}={}){
+export function install({bundle=here,target,home=os.homedir(),workspace=null,legacyProfiles=false,integration='direct',permissionMode,sidecar,prepareStorage=(folder,helper,purpose='install')=>storageOperation(purpose,folder,{helper})}={}){
  if(!['direct','mcp'].includes(integration)||permissionMode!=null&&!['standalone','host-managed'].includes(permissionMode))throw new Error('Invalid integration/permission mode');
  bundle=path.resolve(bundle);
  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
@@ -63,6 +64,10 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const registryFile=path.join(target,'deployments.json'),registry=fs.existsSync(registryFile)?JSON.parse(fs.readFileSync(registryFile,'utf8')):{};
  if(!registry||typeof registry!=='object'||Array.isArray(registry))throw new Error('Invalid private deployment registry.');
  const previous=registry[scope||'global']||(prior?.workspace===resolvedWorkspace?prior:null);
+ if(sidecar!=null&&typeof sidecar!=='boolean')throw Error('Sidecar selection must be boolean.');
+ const sidecarSelected=sidecar;
+ sidecar??=integration==='direct'&&!workspace&&previous?.sidecar===true;
+ if(sidecar&&(workspace||integration!=='direct'))throw Error('The local sidecar belongs to the global direct install; project-local installs reuse it.');
  permissionMode??=previous?.integration===integration&&['standalone','host-managed'].includes(previous.permission_mode)?previous.permission_mode:integration==='mcp'?'host-managed':'standalone';
  const liveFile=path.join(target,'data','desktop-session.json');
  for(const root of new Set([target,...previousRoots])){const sessionFile=path.join(root,'data','desktop-session.json');if(fs.existsSync(sessionFile)){
@@ -83,6 +88,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const skillDirs=workspace?[path.join(base,'skills','computer-use')]:[path.join(base,'skills','computer-use'),...(legacyProfiles?['antigravity','antigravity-cli','antigravity-ide'].map(p=>path.join(home,'.gemini',p,'skills','computer-use')):[])];
  // Parse every config BEFORE writing anything. Keep exact backup bytes for rollback.
  const updates=configs.map(file=>({file,text:mergeConfig(file,integration==='mcp'?entry:null)}));
+ const sidecarFiles=sidecar||previous?.sidecar===true?{definition:path.join(home,'.gemini/config/sidecars',SIDECAR_ID,'sidecar.json'),config:path.join(home,'.gemini/config/config.json')}:null;
+ const sidecarConfig=sidecarFiles?mergeSidecarConfig(sidecarFiles.config,{enable:!sidecar?false:sidecarSelected===true?true:undefined}):null;
  // Before secrets/backups or executable bytes are written, establish a private
  // anchor and refuse writable/reparse ancestors. Never change those parents.
  prepareStorage(target,storageHelper);
@@ -98,6 +105,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  preserveControl();
  const backup=path.join(target,'backups',stamp);fs.mkdirSync(backup,{recursive:true});
  const records=[];
+ if(sidecarFiles)for(const [kind,file] of [['sidecar-definition',sidecarFiles.definition],['sidecar-config',sidecarFiles.config]]){const saved=path.join(backup,kind+'.json'),existed=fs.existsSync(file);if(existed)fs.copyFileSync(file,saved);records.push({file,saved,existed,kind});}
  for(const {file} of updates){const saved=path.join(backup,'config-'+records.length+'.json');const exists=fs.existsSync(file);if(exists)fs.copyFileSync(file,saved);records.push({file,saved,existed:exists,kind:'config'});}
  for(const file of skillDirs){const saved=path.join(backup,'skill-'+records.length);const exists=fs.existsSync(file);if(exists)fs.cpSync(file,saved,{recursive:true});records.push({file,saved,existed:exists,kind:'skill'});}
  for(const dir of skillDirs){const file=path.join(dir,'deployment.json'),saved=path.join(backup,'deployment-'+records.length+'.json'),exists=fs.existsSync(file);if(exists)fs.copyFileSync(file,saved);records.push({file,saved,existed:exists,kind:'deployment'});}
@@ -111,7 +119,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
   records.push({file,saved,existed,kind:'launcher'});
  }
  fs.mkdirSync(path.dirname(release),{recursive:true});fs.cpSync(bundle,release,{recursive:true});
- fs.writeFileSync(path.join(release,'desktop-policy.json'),JSON.stringify({permission_mode:permissionMode,data_dir:path.join(target,'data')},null,2));
+ fs.writeFileSync(path.join(release,'desktop-policy.json'),JSON.stringify({permission_mode:permissionMode,data_dir:path.join(target,'data'),idle_policy:sidecar||workspace&&registry.global?.sidecar===true?'release':'shutdown'},null,2));
  // No batch wrapper: CMD would reparse percent signs and shell metacharacters
  // in model-supplied text. A Node entrypoint preserves the actual argv.
  fs.writeFileSync(launcher+'.agcu.tmp',launcherSource(release));
@@ -130,6 +138,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  fs.renameSync(launcher+'.agcu.tmp',launcher);
  fs.renameSync(controllerStart+'.agcu.tmp',controllerStart);
  for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}
+ if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(launcherNode,launcher),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
  for(const file of skillDirs){
   fs.mkdirSync(file,{recursive:true});fs.cpSync(path.join(release,'skills','computer-use'),file,{recursive:true});
   const instructions=path.join(file,'SKILL.md');
@@ -137,15 +146,15 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
   fs.writeFileSync(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',controllerStart));
   fs.writeFileSync(path.join(file,'deployment.json'),JSON.stringify({target,release,workspace:resolvedWorkspace,permission_mode:permissionMode},null,2));
  }
- registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace};
+ registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace,sidecar};
  fs.writeFileSync(registryFile+'.agcu.tmp',JSON.stringify(registry,null,2));fs.renameSync(registryFile+'.agcu.tmp',registryFile);
- const manifest={release,launcher,launcher_node:launcherNode,controller_start:controllerStart,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};fs.writeFileSync(path.join(backup,'rollback.json'),JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(target,'installation.json'),JSON.stringify({...manifest,backup},null,2));
- return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,configs,skills:skillDirs,backup};
+ const manifest={release,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};fs.writeFileSync(path.join(backup,'rollback.json'),JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(target,'installation.json'),JSON.stringify({...manifest,backup},null,2));
+ return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,configs,skills:skillDirs,backup};
 }
 // Fixed, argument-free human entrypoint; no model text or command forwarding.
 export function controllerStartSource(scope){const stem=scope?`cu-${scope}`:'cu';return `@echo off\r\n"%~dp0${stem}-node.exe" "%~dp0${stem}.mjs" start\r\nif errorlevel 1 pause\r\n`;}
 export function launcherSource(release){return `import {main,encodeReply} from ${JSON.stringify(pathToFileURL(path.join(release,'scripts','desktop.mjs')).href)};\nawait main().catch(error=>{console.log(encodeReply({ok:false,error:{code:error.code||'refused',message:error.message}}));process.exitCode=1;});\n`;}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const args=process.argv.slice(2);const take=k=>{const i=args.indexOf(k);return i<0?undefined:args[i+1];};
- console.log(JSON.stringify(install({bundle:take('--bundle')||here,target:take('--target'),workspace:take('--workspace'),legacyProfiles:args.includes('--legacy-profiles'),integration:take('--integration')||'direct',permissionMode:take('--permission-mode')}),null,2));
+ console.log(JSON.stringify(install({bundle:take('--bundle')||here,target:take('--target'),workspace:take('--workspace'),legacyProfiles:args.includes('--legacy-profiles'),integration:take('--integration')||'direct',permissionMode:take('--permission-mode'),sidecar:args.includes('--sidecar')?true:undefined}),null,2));
 }

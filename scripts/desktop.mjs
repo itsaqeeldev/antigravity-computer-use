@@ -89,7 +89,7 @@ export async function main(){
     }
     if(command==='serve'){
       const {serveDesktop}=await import('../server/desktop-service.mjs');
-      const service=await serveDesktop();
+      const service=await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});
       printReply({ok:true,...service.status(),service_mode:'foreground',requires_background_execution:true});return;
     }
     // Fixed deployment policy: never accept permission overrides in an action.

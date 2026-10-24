@@ -34,3 +34,11 @@ The owner physically performed Esc and both local re-arms on dev7. Its held-drag
 - This unsigned beta relies on the current user's privileges. Host-managed mode cannot inspect/prove Turbo; broad terminal permission grants broad desktop authority.
 
 See [validation](VALIDATION.md), [installation](docs/INSTALLATION.md), and [historical checkpoints](docs/history/PROJECT-STATUS.md). Exact installed identity comes from status and bundle-manifest.json. Private evidence remains excluded from Git.
+
+
+## 24 October: real host isolation and companion qualification
+
+- Actual Agent Manager terminal desktop was exebox, distinct from Default input desktop. Detached start lifetime and foreground hidden-app failures are retained. Native preflight now refuses this context before app actions; no sandbox escape or security-setting change.
+- Desktop-context2 build be7d765c2e7ba9b0aea65b8e551e609159480f2c722605092183cdafa613bde8, native5e55146303a00d0d2d04a0b7888999fb809303462e1360f45bc47dccf83d2c9a, installed both global/project scopes. Actual negative host refusal and normal end/shutdown passed. Source109 checks and GitHub CI passed.
+- With the local runtime started on the normal desktop, a fresh No Project /computer-use task completed actual Upscaly import, AI PNG1920x1320, settings restoration, owned-window close and idle/empty-grants cleanup. Independent NCNN/file/database verification passed. About5min wall time means orchestration latency remains open. Same-service Notepad follow-up is in progress, not yet acceptance.
+- Next source candidate adds opt-in official App Sidecars and persistent passive listener with idle control release, preserving Pause/Stop. Managed startup and final-artifact qualification remain pending. Public release stays draft.

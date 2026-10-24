@@ -32,6 +32,20 @@ test('configuration merge preserves unrelated servers/settings',()=>{
  const f=path.join(root,'merge.json');fs.writeFileSync(f,JSON.stringify({custom:7,mcpServers:{keep:{command:'keep'}}}));
  const c=JSON.parse(mergeConfig(f,{command:'native'}));assert.equal(c.custom,7);assert.equal(c.mcpServers.keep.command,'keep');assert.equal(c.mcpServers['antigravity-computer-use'].command,'native');
 });
+
+test('opt-in global sidecar pins the direct controller and rollback preserves later unrelated configuration',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'sidecar-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});
+ fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'{{CONTROLLER_START}}');seal(bundle);
+ const config=path.join(home,'.gemini/config/config.json');fs.mkdirSync(path.dirname(config),{recursive:true});fs.writeFileSync(config,JSON.stringify({permissions:{preset:'unchanged'},sidecars:{other:{enabled:true}}}));
+ const first=install({bundle,target,home,sidecar:true});const definition=JSON.parse(fs.readFileSync(first.sidecar.definition));assert.equal(definition.command,first.launcher_node);assert.deepEqual(definition.args,[first.launcher,'serve']);assert(!definition.env);assert.equal(JSON.parse(fs.readFileSync(path.join(first.release,'desktop-policy.json'))).idle_policy,'release');
+ const project=install({bundle,target,home,workspace:path.join(dir,'project')});assert.equal(project.sidecar,null);assert.equal(JSON.parse(fs.readFileSync(path.join(project.release,'desktop-policy.json'))).idle_policy,'release');assert.deepEqual(JSON.parse(fs.readFileSync(first.sidecar.definition)),definition);
+ const c=JSON.parse(fs.readFileSync(config));assert.equal(c.sidecars['antigravity-computer-use'].enabled,true);c.sidecars['antigravity-computer-use'].enabled=false;fs.writeFileSync(config,JSON.stringify(c));
+ const update=install({bundle,target,home});assert.equal(JSON.parse(fs.readFileSync(config)).sidecars['antigravity-computer-use'].enabled,false);
+ const later=JSON.parse(fs.readFileSync(config));later.sidecars.later={enabled:true};later.unrelated_after=true;fs.writeFileSync(config,JSON.stringify(later));
+ const rolled=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(first.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rolled.status,0,rolled.stderr);
+ const restored=JSON.parse(fs.readFileSync(config));assert(!restored.sidecars['antigravity-computer-use']);assert(restored.sidecars.other.enabled);assert(restored.sidecars.later.enabled);assert(restored.unrelated_after);assert.equal(restored.permissions.preset,'unchanged');assert(!fs.existsSync(first.sidecar.definition));
+});
 test('invalid configuration is untouched',()=>{const f=path.join(root,'invalid.json');fs.writeFileSync(f,'{broken');assert.throws(()=>mergeConfig(f,{}));assert.equal(fs.readFileSync(f,'utf8'),'{broken');});
 test('project-local installation and update rollback preserve later unrelated changes',()=>{
  const dir=fs.mkdtempSync(path.join(root,'workspace-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),workspace=path.join(dir,'project');

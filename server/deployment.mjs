@@ -5,6 +5,7 @@ export function loadDeployment(file=policyFile,env=process.env){
  const policy=installed?JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')):{permission_mode:env.AGCU_PERMISSION_MODE||'standalone'};
  if(!['standalone','host-managed'].includes(policy.permission_mode))throw Object.assign(Error('Invalid fixed deployment permission policy.'),{code:'invalid_deployment_policy'});
  if(installed&&(typeof policy.data_dir!=='string'||!path.isAbsolute(policy.data_dir)))throw Object.assign(Error('Installed deployment needs an absolute private data directory.'),{code:'invalid_deployment_policy'});
+ if(policy.idle_policy!=null&&!['release','shutdown'].includes(policy.idle_policy))throw Object.assign(Error('Invalid installed idle policy.'),{code:'invalid_deployment_policy'});
  return {...policy,installed};
 }
 export function applyDeployment(policy,env=process.env){

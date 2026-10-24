@@ -44,3 +44,11 @@ The AI workflow predates the final keyboard/paste correction; the text/file-dial
 Physical mixed-DPI/multiple displays, complete script/IME/accessibility behavior, long recovery soak, all Upscaly models/face/ROI/video/cache workflows, secure/elevated desktops and macOS/Linux. Binaries are unsigned. Standalone human approval and host Ask/Deny have earlier records, not a new test of the host's global security engine. Host-managed mode never claims an authenticated Turbo value.
 
 See [repeatable qualification procedures](docs/qualification.md) and [historical records](docs/history/VALIDATION.md). The old Python draft's 55 tests do not apply.
+
+
+## 24 October: real host isolation and companion qualification
+
+- Actual Agent Manager terminal desktop was exebox, distinct from Default input desktop. Detached start lifetime and foreground hidden-app failures are retained. Native preflight now refuses this context before app actions; no sandbox escape or security-setting change.
+- Desktop-context2 build be7d765c2e7ba9b0aea65b8e551e609159480f2c722605092183cdafa613bde8, native5e55146303a00d0d2d04a0b7888999fb809303462e1360f45bc47dccf83d2c9a, installed both global/project scopes. Actual negative host refusal and normal end/shutdown passed. Source109 checks and GitHub CI passed.
+- With the local runtime started on the normal desktop, a fresh No Project /computer-use task completed actual Upscaly import, AI PNG1920x1320, settings restoration, owned-window close and idle/empty-grants cleanup. Independent NCNN/file/database verification passed. About5min wall time means orchestration latency remains open. Same-service Notepad follow-up is in progress, not yet acceptance.
+- Next source candidate adds opt-in official App Sidecars and persistent passive listener with idle control release, preserving Pause/Stop. Managed startup and final-artifact qualification remain pending. Public release stays draft.
