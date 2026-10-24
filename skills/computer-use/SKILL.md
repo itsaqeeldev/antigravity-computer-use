@@ -17,6 +17,20 @@ The installed App sidecar keeps a passive listener across tasks. Finish with `en
 
 ## Observe, act, verify
 
+These common command shapes are complete; use them directly without schema setup. H/F/N are observed handle/frame/index values. Optional flags are in brackets; replace placeholders, not the command names.
+
+| Command | Named arguments |
+| --- | --- |
+| `launch` | `--app EXE --observe --reason TEXT` |
+| `snapshot` | `--hwnd H --reason TEXT [--query TEXT] [--max-nodes 500] [--image] [--settle-ms 600]` |
+| `click` | `--hwnd H --observation-id F --name TEXT --role Button --risk routine --reason TEXT [--image] [--max-nodes 500]`; or `--index N` in place of name/role |
+| `set_value` | `--hwnd H --observation-id F --name TEXT --role Edit --text VALUE --risk routine --reason TEXT`; or `--index N` |
+| `file_dialog` | `--hwnd OWNER --observation-id F --path FILE --action open` (or `save`) `--entry-method clipboard --reason TEXT` |
+| `run` | `--hwnd H --observation-id F --reason TEXT --step COMMAND` followed by that step's flags; repeat at most8times, omitting per-step owner/frame |
+| `wait` | `--hwnd H --until TEXT --timeout-ms 30000 --reason TEXT` |
+| `close_window` | `--hwnd H --reason TEXT` |
+| `end`, `status` | No arguments |
+
 - Inspect the returned `tree` and **open the actual `image.path` with the host image viewer** at visual checkpoints. Agent Manager's `read_file` can view its JPEGs. JSON, a reconstructed picture or an accessibility label does not prove visual behavior. Report an unavailable image viewer.
 - Every action consumes its `observation_id` and returns a **fresh frame and tree**. Use that reply directly. Do not take another snapshot merely to get a frame you already have. Ordinary named actions are tree-only; add `--image` when pixels or visual verification are needed. Pixel targets require a fresh viewed image.
 - Prefer observed accessibility indexes or exact **unique** `--name`, `--role`, `--automation-id`. Names resolve against that frame's bounded native snapshot, not an unbounded live search. Ambiguous/missing controls refuse; inspect rather than guess. `--query 'Export format'` returns a matching section and its child controls. Named section snapshots are tree-only by default; add `--image` for visual inspection. Queries are literal substrings, not regex. If a reply is truncated, use one relevant section query or `--max-nodes 500`, rather than many repeated full screenshots.
