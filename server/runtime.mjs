@@ -11,6 +11,7 @@ import {classify,TIER} from './policy.mjs';
 import {renderSnapshot} from './render.mjs';
 import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
+import {storageOperation} from './storage.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -35,7 +36,9 @@ export class Runtime {
     if(!['standalone','host-managed'].includes(permissionMode))throw new Error('Invalid startup permission mode');
     this.permissionMode=permissionMode;
     if(!['manual','smart'].includes(takeoverMode))throw new Error('Invalid startup takeover mode');this.takeoverMode=takeoverMode;
-    fs.mkdirSync(dataDir(),{recursive:true});
+    this.privateDataStorage=null;
+    if(!driver&&!guardian)this.privateDataStorage=storageOperation('data',dataDir()).private_storage===true;
+    else fs.mkdirSync(dataDir(),{recursive:true}); // inert unit-test dependencies
     this.latchFile=latchFile===undefined?(!driver&&!guardian?path.join(dataDir(),'emergency.stop'):null):latchFile;
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
     fs.writeFileSync(this.guardFile,'idle||0|');
@@ -197,7 +200,7 @@ export class Runtime {
     if(this.state==='stopped'||this.state==='paused')this.check();
     const app=path.resolve(args.app);
     if(!fs.existsSync(app)||path.extname(app).toLowerCase()!=='.exe')fail('invalid_application','Supply an existing .exe path.');
-    if(/^AxonHost(?:-[0-9a-f]+)?\.exe$/i.test(path.basename(app)))fail('protected_app','Cannot launch the native control helper as a target application.');
+    if(/^(?:AxonHost|StorageGuard)(?:-[0-9a-f]+)?\.exe$/i.test(path.basename(app)))fail('protected_app','Cannot launch internal runtime helpers as target applications.');
     if(classify({process:path.basename(app),path:app}).tier===TIER.BLOCKED)fail('protected_app','Cannot launch a protected application.');
     await this.guardian.start();
     if(this.state==='stopped'||this.state==='paused')this.check();
@@ -228,6 +231,10 @@ export class Runtime {
           const observed=await this.observe({hwnd:Number(matches[0].hwnd),reason:args.reason});
           return {...observed,result,input_completed:true};
         }
+        // Packaged Windows launchers often exit after handing off. Waiting the
+        // entire discovery budget cannot produce a window of an exited PID.
+        let alive=true;try{process.kill(result.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
+        if(!alive)return {...result,input_completed:true,observe_pending:true,launcher_exited:true,observation_hint:'The starter process exited, possibly after handing off. Discover apps and observe the intended window; do not relaunch.'};
         await new Promise(resolve=>setTimeout(resolve,200));
       }while(Date.now()<until);
       this.check();
@@ -246,6 +253,6 @@ export class Runtime {
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
   async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch(error){this.lastControlReason='stop_persistence_failed: '+error.message;}await this.driver.abort?.();await this.prepare();return {stopped:true,human_rearm_required:true};}
-  status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:'native-windows',build_version:VERSION,build_id:BUILD_ID,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
+  status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:'native-windows',build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }

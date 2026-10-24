@@ -1,6 +1,7 @@
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';
 import {ensureHost,SOURCES} from '../server/build.mjs';
 import {createHash} from 'node:crypto';
+import {ensureStorageGuard} from '../server/storage.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const version=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
 const nodeLicense=JSON.parse(fs.readFileSync(path.join(root,'licenses','Node-provenance.json'),'utf8'));
@@ -13,15 +14,16 @@ if(outputIndex>=0&&fs.existsSync(out)&&fs.readdirSync(out).length)throw new Erro
 // rebuild here discards the qualified binary (legacy csc outputs vary by build).
 const host=ensureHost();fs.mkdirSync(path.join(out,'bin'),{recursive:true});
 fs.copyFileSync(host.exe,path.join(out,'bin','AxonHost.exe'));
+fs.copyFileSync(ensureStorageGuard(),path.join(out,'bin','StorageGuard.exe'));
 fs.copyFileSync(process.execPath,path.join(out,'node.exe'));
-const modules=['index.mjs','desktop-service.mjs','desktop-tools.mjs','receipts.mjs','mcp.mjs','runtime.mjs','guardian.mjs','driver.mjs','build.mjs','sessions.mjs','policy.mjs','render.mjs','upstream-utils.mjs','version.mjs'];
+const modules=['index.mjs','desktop-service.mjs','desktop-tools.mjs','receipts.mjs','storage.mjs','mcp.mjs','runtime.mjs','guardian.mjs','driver.mjs','build.mjs','sessions.mjs','policy.mjs','render.mjs','upstream-utils.mjs','version.mjs'];
 fs.mkdirSync(path.join(out,'server'),{recursive:true});for(const f of modules)fs.copyFileSync(path.join(root,'server',f),path.join(out,'server',f));
 for(const folder of ['skills','scripts','licenses'])fs.cpSync(path.join(root,folder),path.join(out,folder),{recursive:true});
 for(const f of ['README.md','CONTRIBUTING.md','SECURITY.md','LICENSE','LICENSE.upstream','THIRD_PARTY_NOTICES.md','UPSTREAM.json','VALIDATION.md','PROJECT-STATUS.md','IMPLEMENTATION_PROGRESS.md'])if(fs.existsSync(path.join(root,f)))fs.copyFileSync(path.join(root,f),path.join(out,f));
 fs.cpSync(path.join(root,'docs'),path.join(out,'docs'),{recursive:true});
 const sha=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const nativeSource=createHash('sha256');for(const file of SOURCES)nativeSource.update(path.basename(file)+'\0').update(fs.readFileSync(file));
-fs.writeFileSync(path.join(out,'bundle-manifest.json'),JSON.stringify({version,platform:process.platform,arch:process.arch,node:process.version,node_sha256:sha(path.join(out,'node.exe')),host_sha256:sha(path.join(out,'bin','AxonHost.exe')),native_source_sha256:nativeSource.digest('hex'),license_node_revision:'v24.20.0',built_at:new Date().toISOString(),default_direct_permission_mode:'standalone',permission_modes:['standalone','host-managed']},null,2));
+fs.writeFileSync(path.join(out,'bundle-manifest.json'),JSON.stringify({version,platform:process.platform,arch:process.arch,node:process.version,node_sha256:sha(path.join(out,'node.exe')),host_sha256:sha(path.join(out,'bin','AxonHost.exe')),storage_guard_sha256:sha(path.join(out,'bin','StorageGuard.exe')),storage_source_sha256:sha(path.join(root,'server/native/StorageGuard.cs')),native_source_sha256:nativeSource.digest('hex'),license_node_revision:'v24.20.0',built_at:new Date().toISOString(),default_direct_permission_mode:'standalone',permission_modes:['standalone','host-managed']},null,2));
 fs.writeFileSync(path.join(out,'install.cmd'),'@echo off\r\n"%~dp0node.exe" "%~dp0scripts\\install.mjs" %*\r\n');
 console.log(out);
 const files={};

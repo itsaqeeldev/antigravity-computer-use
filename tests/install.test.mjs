@@ -1,10 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
-import {mergeConfig,install} from '../scripts/install.mjs';
+import {mergeConfig,install as productionInstall} from '../scripts/install.mjs';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 const root=path.resolve('.localdata/test-install');fs.mkdirSync(root,{recursive:true});
+const install=options=>productionInstall({...options,prepareStorage(){return {private_storage:true,test_fixture:true};}});
 function seal(bundle,version='9.1.2-test'){
+ if(!fs.existsSync(path.join(bundle,'bin/StorageGuard.exe')))fs.writeFileSync(path.join(bundle,'bin/StorageGuard.exe'),'inert ACL fixture; never executed');
  const files={};const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name),name=path.relative(bundle,file).replaceAll('\\','/');if(entry.isDirectory())walk(file);else if(name!=='bundle-manifest.json')files[name]=createHash('sha256').update(fs.readFileSync(file)).digest('hex');}};walk(bundle);
  fs.writeFileSync(path.join(bundle,'bundle-manifest.json'),JSON.stringify({version,files}));
 }
@@ -102,4 +104,46 @@ test('unsealed extra code is refused before any installation write',()=>{
  fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);
  fs.mkdirSync(path.join(bundle,'server'));fs.writeFileSync(path.join(bundle,'server/unsealed.mjs'),'throw Error("unsealed executable code");');
  assert.throws(()=>install({bundle,target,home:path.join(dir,'home')}),/inventory differs/);assert(!fs.existsSync(target));
+});
+
+test('direct updates retain the previously chosen permission policy',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'policy-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ install({bundle,target,home,permissionMode:'host-managed'});const updated=install({bundle,target,home});
+ assert.equal(JSON.parse(fs.readFileSync(path.join(updated.release,'desktop-policy.json'))).permission_mode,'host-managed');
+});
+
+test('failed post-copy storage verification leaves the prior launcher, pointer and host config in place',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'staged-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'v1');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ const first=install({bundle,target,home});const before={launcher:fs.readFileSync(first.launcher,'utf8'),node:fs.readFileSync(first.launcher_node,'utf8'),pointer:fs.readFileSync(path.join(target,'installation.json'),'utf8'),config:fs.readFileSync(first.configs[0],'utf8'),skill:fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8')};
+ fs.writeFileSync(path.join(bundle,'node.exe'),'v2');seal(bundle,'9.2.0-test');let phases=0;
+ assert.throws(()=>productionInstall({bundle,target,home,prepareStorage(){if(++phases===2)throw Error('Injected copied-tree ACL refusal');}}),/ACL refusal/);
+ assert.equal(phases,2);assert.equal(fs.readFileSync(first.launcher,'utf8'),before.launcher);assert.equal(fs.readFileSync(first.launcher_node,'utf8'),before.node);assert.equal(fs.readFileSync(path.join(target,'installation.json'),'utf8'),before.pointer);assert.equal(fs.readFileSync(first.configs[0],'utf8'),before.config);assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),before.skill);
+});
+
+test('bundle and target overlap is refused before security or configuration changes',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'overlap-')),bundle=path.join(dir,'bundle'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);
+ let touched=false;assert.throws(()=>productionInstall({bundle,target:bundle,home,prepareStorage(){touched=true;}}),/overlap/);assert.equal(touched,false);assert(!fs.existsSync(home));
+});
+
+test('cross-folder migration refuses a live controller and preserves Stop/preferences without old capabilities',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'migrate-')),bundle=path.join(dir,'bundle'),firstTarget=path.join(dir,'old'),nextTarget=path.join(dir,'new'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ const first=install({bundle,target:firstTarget,home,permissionMode:'host-managed'});const data=path.join(firstTarget,'data');fs.mkdirSync(data);
+ fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');fs.writeFileSync(path.join(data,'control-preferences.json'),JSON.stringify({takeover_mode:'smart'}));fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:process.pid,secret:'never copied'}));
+ const original=fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8');assert.throws(()=>install({bundle,target:nextTarget,home,permissionMode:'host-managed'}),/still running/);assert(!fs.existsSync(nextTarget));assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),original);
+ fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:2147483647,secret:'never copied'}));
+ const next=install({bundle,target:nextTarget,home,permissionMode:'host-managed'});
+ assert(fs.existsSync(path.join(nextTarget,'data/emergency.stop')));assert.equal(JSON.parse(fs.readFileSync(path.join(nextTarget,'data/control-preferences.json'))).takeover_mode,'smart');assert(!fs.existsSync(path.join(nextTarget,'data/desktop-session.json')));
+ const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(next.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);assert.equal(JSON.parse(fs.readFileSync(path.join(first.skills[0],'deployment.json'))).target,firstTarget);
+});
+
+test('global and project updates retain their own policies instead of the last installed scope',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'scope-policy-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home'),workspace=path.join(dir,'project');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ install({bundle,target,home,permissionMode:'host-managed'});install({bundle,target,home,workspace,permissionMode:'standalone'});
+ const global=install({bundle,target,home});assert.equal(JSON.parse(fs.readFileSync(path.join(global.release,'desktop-policy.json'))).permission_mode,'host-managed');
+ const project=install({bundle,target,home,workspace});assert.equal(JSON.parse(fs.readFileSync(path.join(project.release,'desktop-policy.json'))).permission_mode,'standalone');
 });

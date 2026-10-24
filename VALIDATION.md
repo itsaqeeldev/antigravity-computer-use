@@ -4,7 +4,7 @@
 
 | Check | Evidence | Boundary |
 |---|---|---|
-| Automated source | 92 passing local checks; previous88-check speed source passed GitHub CI40040313414 | Adds sealed inventory, file-dialog held-input cleanup, worker registration/epoch binding and unknown-delivery batch handling; new fix CI/App speed qualification pending |
+| Automated source | 104 passing local checks on private-storage branch; main93-check filename source passed GitHub CI | Includes actual NTFS privacy/refusal/junction tests, migration Stop preservation, same-build policy binding, per-scope policy retention and exited-starter handoff; branch CI/final host speed pending |
 | Native helper | 12 passing checks | Real input/UIA/capture, identity and permission refusal, hung worker termination |
 | Host-managed component workflow | 13 passing checks | Two disposable app processes, owned dialog, real wheel/drag/Unicode and second session; not the host permission engine |
 | Cursor/glow recovery | 8 passing checks | Actual cursor-role pixels change, distinct text insertion artwork, live breathing, restoration after Pause and hard UI/watchdog crashes |
@@ -17,6 +17,7 @@
 | Speed1 native candidate | Exact build8d9d8082 real Upscaly batched import, no leftover picker; actual Notepad pause/refusal/resume/stale frame and exact1319-unit saved Unicode | Direct timings are not host wall-time improvement. Windows Notepad's launcher returned observe_pending; apps/snapshot recovered without duplicate launch. Later source launcher hardening still needs refreshed packaging |
 | Provider exception replay | Exact old nativea2: after-effect1dispatch/2effects/1physical; before-effect1/1/1. Candidate2abe/nativea2fd:1/1/0 and1/0/0, both input_outcome_unknown | Real owned WPF accessibility provider, same reusable harness, old exit1/new exit0. This qualifies the fault path, not real Upscaly export, host speed or new physical Esc |
 | Explicit filename entry | Native3d/build9f0 real Notepad Unicode/emoji Save, longer ASCII/space Save As, Unicode Open; exact74-unit file bodies, all clipboard restoration flags true | Bypasses the observed incremental keyboard filename loss when clipboard access is explicitly authorized; no claim keyboard entry is globally lossless. Provider regression also passed on exact3d |
+| Private deployment | Real68-file storage1 install verified payloads, generated policy, skill pin and actual ACLs; host-managed startup reports private data; standalone same-build startup/discovery refused; rollback verified | No native input in the mode-mismatch check. Exact3d provider regression also passed. Final scope-registry/launcher-speed changes postdate this diagnostic artifact and need refreshed packaging |
 
 ## Retained failures and recovery
 

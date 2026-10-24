@@ -38,6 +38,19 @@ test('an unreachable saved service has a recovery message, never raw pipe errors
  await assert.rejects(request({pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-missing-'+process.pid:path.join(os.tmpdir(),'missing-agcu-'+process.pid),secret:'test'},'status'),error=>error.code==='session_unavailable'&&/Emergency Stop remains latched/.test(error.message));
 });
 
+test('a standalone client cannot silently reuse a host-managed service with the same build',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-policy-'));let inputs=0;
+ const runtime={permissionMode:'host-managed',status:()=>({state:'active',permission_mode:'host-managed'}),async action(){inputs++;return {};},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});try{
+  const session=JSON.parse(fs.readFileSync(service.file));
+  for(const mode of ['standalone',undefined]){
+   const result=await request(session,'clipboard',{reason:'Explicit access'},1000,mode);assert.equal(result.ok,false);assert.equal(result.error.code,'deployment_policy_mismatch');
+  }
+  assert.equal(inputs,0);const result=await request(session,'clipboard',{reason:'Explicit access'},1000,'host-managed');assert.equal(result.ok,true);assert.equal(inputs,1);
+  assert.equal((await request(session,'status',{},1000,'standalone')).permission_mode,'host-managed');
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('start refuses to replace a live but unresponsive service',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-start-'));const file=path.join(dir,'desktop-session.json');
  const raw=JSON.stringify({pid:process.pid,pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-unresponsive-'+process.pid:path.join(dir,'missing.sock'),secret:'fixture'});fs.writeFileSync(file,raw);

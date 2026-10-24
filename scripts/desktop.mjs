@@ -8,6 +8,7 @@ import {dataDir} from '../server/build.mjs';
 import {VERSION,BUILD_ID} from '../server/version.mjs';
 import {TOOLS,validate} from '../server/desktop-tools.mjs';
 import {parseArguments} from './arguments.mjs';
+import {storageOperation} from '../server/storage.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
@@ -37,14 +38,14 @@ export function briefReply(value){
 let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
 
-export function request(session,command,args={},timeout=100000){
+export function request(session,command,args={},timeout=100000,expectedPermissionMode){
   return new Promise((resolve,reject)=>{
     let buffer='',settled=false,connected=false;
     const socket=net.createConnection(session.pipe);
     socket.setEncoding('utf8');
     const done=(error,result)=>{if(settled)return;settled=true;socket.destroy();error?reject(error):resolve(result);};
     socket.setTimeout(timeout,()=>done(Error('Desktop request timed out; session was cancelled. Observe status before continuing.')));
-    socket.on('connect',()=>{connected=true;socket.write(JSON.stringify({secret:session.secret,command,args,expected_build_id:BUILD_ID})+'\n');});
+    socket.on('connect',()=>{connected=true;socket.write(JSON.stringify({secret:session.secret,command,args,expected_build_id:BUILD_ID,expected_permission_mode:expectedPermissionMode})+'\n');});
     socket.on('data',chunk=>{buffer+=chunk;if(Buffer.byteLength(buffer)>4*1024*1024)return done(Error('Desktop response too large'));if(buffer.includes('\n')){try{done(null,JSON.parse(buffer.slice(0,buffer.indexOf('\n'))));}catch(error){done(error);}}});
     socket.on('error',error=>done(Object.assign(Error(connected?'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.':'The saved desktop service is unreachable. Run start to recover, then discover apps and observe again. Emergency Stop remains latched.'),{code:connected?'connection_lost':'session_unavailable',cause:error})));
     socket.on('end',()=>{if(!settled)done(Error('Desktop session disconnected; do not replay the action.'));});
@@ -72,10 +73,12 @@ export async function main(){
   if(policy.data_dir&&!process.env.AGCU_DATA_DIR)process.env.AGCU_DATA_DIR=policy.data_dir;
   const file=path.join(dataDir(),'desktop-session.json');
   if(command==='start'){
+    storageOperation('data',dataDir());
     let existing,saved;
-    try{saved=JSON.parse(fs.readFileSync(file));existing=await request(saved,'status',{},1500);}catch{}
+    try{saved=JSON.parse(fs.readFileSync(file));existing=await request(saved,'status',{},1500,policy.permission_mode);}catch{}
     if(existing?.ok){
       if(existing.build_id!==BUILD_ID||existing.build_version!==VERSION)throw Error('A different runtime version owns the live session. End and shutdown that session before starting this build; do not interrupt another task.');
+      if(existing.permission_mode!==policy.permission_mode)throw Object.assign(Error('A different permission policy owns the live session. Finish and shutdown its task before using this installed policy; no override was applied.'),{code:'deployment_policy_mismatch'});
       printReply(existing);return;
     }
     // An unresponsive live service may still be controlling the desktop. Never
@@ -90,7 +93,7 @@ export async function main(){
     const child=spawn(process.execPath,[fileURLToPath(new URL('../server/desktop-service.mjs',import.meta.url)),'--serve'],{detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,AGCU_PERMISSION_MODE:policy.permission_mode}});child.unref();
     for(let i=0;i<100;i++){
       await new Promise(resolve=>setTimeout(resolve,100));
-      try{const session=JSON.parse(fs.readFileSync(file));if(session.pid===child.pid){printReply(await request(session,'status'));return;}}catch{}
+      try{const session=JSON.parse(fs.readFileSync(file));if(session.pid===child.pid){printReply(await request(session,'status',{},100000,policy.permission_mode));return;}}catch{}
     }
     throw Error('Native session did not start; run the service in foreground for diagnostics.');
   }
@@ -100,10 +103,10 @@ export async function main(){
   }
   const session=JSON.parse(fs.readFileSync(file));
   if(command==='shutdown'){
-    const previous=await request(session,'status');
+    const previous=await request(session,'status',{},100000,policy.permission_mode);
     // Preserve an old adapter's stop during migration, before that process exits.
     if(previous.state==='stopped')fs.writeFileSync(path.join(dataDir(),'emergency.stop'),'stopped');
   }
-  const result=await request(session,command,args);printReply(result);if(!result.ok)process.exitCode=1;
+  const result=await request(session,command,args,100000,policy.permission_mode);printReply(result);if(!result.ok)process.exitCode=1;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{printReply({ok:false,error:{code:error.code||'refused',message:error.message}});process.exitCode=1;});

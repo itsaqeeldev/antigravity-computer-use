@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
 import {Runtime} from '../server/runtime.mjs';
 import {parseArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
+import {spawnSync} from 'node:child_process';
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-launch-'));
 const app=path.join(dir,'OwnedTest.exe');fs.writeFileSync(app,'not executed: mock tests only');
 process.on('exit',()=>{fs.unlinkSync(app);fs.rmdirSync(dir);});
@@ -33,4 +34,12 @@ test('post-launch Stop and observation failure retain delivery evidence without 
 });
 test('legacy launch remains a launch-only operation',async()=>{
  const {r,counts}=harness([]);const result=await Runtime.prototype.launch.call(r,{app,reason:'test'});assert.deepEqual(result,{pid:123,path:app});assert.deepEqual(counts(),{launches:1,observations:0});
+});
+
+test('an exited starter returns pending promptly without guessing a handoff or relaunching',async()=>{
+ const exited=spawnSync(process.execPath,['-e',''],{windowsHide:true});assert.equal(exited.status,0);
+ const {r,counts}=harness([]),original=r.driver.call;
+ r.driver.call=async(op,args)=>{const reply=await original(op,args);if(op==='launch')reply.result.pid=exited.pid;return reply;};
+ const started=Date.now(),result=await Runtime.prototype.launch.call(r,{app,observe:true,reason:'Owned exited starter'});
+ assert.equal(result.launcher_exited,true);assert.equal(result.observe_pending,true);assert.equal(result.input_completed,true);assert(Date.now()-started<2000,'Do not wait out8seconds after definite starter exit');assert.deepEqual(counts(),{launches:1,observations:0});
 });

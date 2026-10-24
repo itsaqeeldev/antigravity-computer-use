@@ -10,11 +10,11 @@ Version 0.3.0-beta.1 is a direct `/computer-use` candidate with bundled native h
 4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
 
 ```powershell
-.\install.cmd --target "D:\Tools\AntigravityComputerUse" --integration direct
+.\install.cmd --target "D:\MyPrivateComputerUse" --integration direct
 .\install.cmd --workspace "D:\Projects\Example" --integration direct
 ```
 
-Default target: `D:\Tools\AntigravityComputerUse` when available, otherwise the current user's LocalAppData. App skill location: `~/.gemini/config/skills/computer-use`. Project location: `.agents/skills/computer-use`. These match [the official App documentation](https://antigravity.google/docs/skills).
+Private-storage candidate default: `D:\AntigravityComputerUse-<owner-hash>` when available, otherwise the current user's LocalAppData. The printed directory is stable for the Windows account. A writable/renamable parent such as an inherited shared `D:\Tools` is rejected; parent/global settings are never changed. Choose a private direct-drive or user-profile folder for `--target`. App skill location: `~/.gemini/config/skills/computer-use`. Project location: `.agents/skills/computer-use`. These match [the official App documentation](https://antigravity.google/docs/skills).
 
 The installer verifies manifest file hashes before making changes and refuses to update a live service. A short `cu.mjs` entrypoint with bundled `cu-node.exe` calls the exact installed script without command-shell forwarding. Node uses a hard link to the immutable payload where supported, otherwise a copy. Project-local launchers have separate names so they cannot redirect an existing global skill. Updates and rollback preserve both launcher files alongside the skill and installation pointer. `verify-install.mjs` checks the launcher pin and Node bytes as well as the payload. Only this project's old MCP entry is removed during direct migration. Other servers, host security preferences and unrelated configuration survive. Backups are kept under `backups/<timestamp>`. `--legacy-profiles` is optional and never enabled implicitly.
 
@@ -33,17 +33,17 @@ Keep working is the default: normal physical mouse/keyboard activity does not pa
 ## Verify an installed development bundle
 
 ```powershell
-.\node.exe .\scripts\verify-install.mjs "D:\Tools\AntigravityComputerUse"
+.\node.exe .\scripts\verify-install.mjs "D:\MyPrivateComputerUse"
 ```
 
 This checks manifest files, the pinned skill and the chosen integration. It does not perform desktop actions or establish real application qualification. `status` reports the running build ID; a new build refuses to silently reuse another version's active service.
 
 ## Update and rollback
 
-Finish and `end` active tasks first. Use the currently installed direct command's `shutdown` to close the helper, then install the replacement. Each install gets an immutable release folder; user deployment policy and skill command paths are generated separately.
+Finish and `end` active tasks first. Use the currently installed direct command's `shutdown` to close the helper, then install the replacement. Each install gets an immutable release folder; user deployment policy and skill command paths are generated separately. Ordinary direct updates retain the previously chosen approval mode unless explicitly changed. The private-storage candidate detects known prior deployment roots, preserves Stop and takeover preferences across a move, and never copies old capabilities/permits. Existing roots/backups remain recoverable. First migration from the historical location should explicitly select the intended permission mode; do not infer a Turbo token.
 
 ```powershell
-.\node.exe .\scripts\rollback.mjs "D:\Tools\AntigravityComputerUse\backups\EXACT-TIMESTAMP\rollback.json"
+.\node.exe .\scripts\rollback.mjs "D:\MyPrivateComputerUse\backups\EXACT-TIMESTAMP\rollback.json"
 ```
 
 Use the exact printed backup path. Rollback restores this project's prior entry/skill and installation pointer while preserving unrelated host configuration edits. Existing older backup formats may lack the installation pointer record; inspect the restored skill when using one. Release folders remain recoverable.

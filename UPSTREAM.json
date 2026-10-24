@@ -210,12 +210,13 @@
     "Speed hardening: direct Node entrypoint preserves literal argv instead of a CMD forwarding wrapper; scoped project launchers cannot repoint global, live-service install refuses before writes, and ambiguous/incomplete batch target shapes refuse before input. Exact1319-unit real Notepad save and Upscaly batched import witnessed on speed1; actual App comparison awaits human window restoration.",
     "Owned WPF provider baseline reproduced dispatch-then-error followed by duplicate physical input and before-effect refusal followed by physical input. Native click/MSAA/file-dialog confirmation now refuse automatic alternate actions after dispatch errors and return input_outcome_unknown. Qualification pending. Also track file-dialog held-input recovery, register first-launch/window-free workers with guardian and preserve worker epoch, and refuse unsealed bundle extras.",
     "Reusable native WPF provider regression fails olda2 and passes candidatea2fd with exactly one dispatch, correct effect counters and no physical replay. Clarify host-managed comment for direct terminal integration. Ordinary-app and host acceptance still pending.",
-    "Work branch: actual reviewed2 Save filename stream dropped a character; exact-path guard refused confirmation. Add explicit clipboard filename entry reusing preserved-format PasteCore within the owned-dialog fence; default keyboard and Native confirmation authority remain unchanged. New mode native qualification pending."
+    "Work branch: actual reviewed2 Save filename stream dropped a character; exact-path guard refused confirmation. Add explicit clipboard filename entry reusing preserved-format PasteCore within the owned-dialog fence; default keyboard and Native confirmation authority remain unchanged. New mode native qualification pending.",
+    "Private-storage work: actual inherited Windows ACLs were too broad. Add separate prebuilt ACL helper (no UI/elevation), dedicated/private anchor and payload sealing, ancestor/link/owner/root refusal, legacy ACL journal, data protection, migration Stop/preferences without capabilities, deployment pointers/rollback, retained direct policy and same-build policy binding. Actual NTFS and installer/IPC tests pass; full new install/host qualification pending."
   ],
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "52ffd0d8ad6d1dd30a31b6445a19c1d0e058e0c7c0be991782dd627da58ac3a5"
+      "sha256": "b1a9ab5940d322e69360e84f1100133f4c10ca67dea62e2acee07564267f3790"
     },
     {
       "path": "server/mcp.mjs",
@@ -251,7 +252,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "2aa23af8f46773e5a046dd8efa4a742347227513a837a2e84b8ef29e5e97e276"
+      "sha256": "60c86c14feabd28e3c29feeb89dbebf707814dd26520b84080ad636117264ebf"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -259,7 +260,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "740d8fa29390f0757e727990d24471a1ae7eeb1ab5c7cb52ce3bd3208c73d72a"
+      "sha256": "14920220227ad3d5f6038e28cd11d1ae3759bb793edb86dccf35751291482e29"
     },
     {
       "path": "server/version.mjs",
@@ -267,7 +268,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "9856e5a1a73168d1ffebf8d59e243259541da78fadce84ab4614705ddbac3ff5"
+      "sha256": "0c6ac213723a3faa717bc34c073399b5bca70305881e1fa0fd68c8853b2b060f"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -303,27 +304,27 @@
     },
     {
       "path": "tests/launch-observe.test.mjs",
-      "sha256": "dc8963447ee499b19f4e30a9f3c6b7b9afa61e21591d26c7a4f73d9ba0fd2d0f"
+      "sha256": "3dc180be8082dbdda62ea0d0238c2bc2544ed37f5b7269d5689e5a59424544b9"
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "ac30963da02a93d340c8d0a7694849e804dd37e6002fa47a4ae8fa599e1d1708"
+      "sha256": "ce0816e54e85dbf50e7319862c0e7280b07b349146ae8be430af77e36e564cc1"
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "99ebcea467ca16249b3bbeed87a345c205eebfd78f8c6e32065a9fae78ec53db"
+      "sha256": "8de9dd51e688f5393cd50eeb7e24751b01dd789c287db0cb765f04ad6627b8d7"
     },
     {
       "path": "scripts/verify-install.mjs",
-      "sha256": "6e48608f87d636138111ed8fe8f8cb8891ac0ae94cc6317eac5da42a9409ff8b"
+      "sha256": "89dd8459863a27ef95b8762f01d32c4d01fca9c18968149ce6b9d11041b8ac70"
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "9e73bb88dfb3f90ea7533054e2011d04f80cc08275fe5a5f5047e848daa1dbca"
+      "sha256": "6f2ac24cb5c89b786b1710a42bc27ab5efc70176f5c1f31b4e2fd3d8d5626f34"
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "e13cd2f0538a79216ab19355996c23736452cb1d71ef24e204b7abf7f0dcb558"
+      "sha256": "93b5914e9bc861eb67f18f07631fc1d6d5767e7842dc96e104210bbada5a5459"
     },
     {
       "path": "tests/core.test.mjs",
@@ -340,6 +341,18 @@
     {
       "path": "tests/provider-failure-integration.mjs",
       "sha256": "7f7d300e2b45a55395b249b51dfd2af8c67273996939c8e3730a474473aa5be8"
+    },
+    {
+      "path": "server/native/StorageGuard.cs",
+      "sha256": "ba6c4a1b172860e9cbc226f7225c0ef0a407d7ad39e2f3a47c8c6f2ad4aff236"
+    },
+    {
+      "path": "server/storage.mjs",
+      "sha256": "3e3a258f166e558021b16002e22a7e2e6dd64c13f787ab266e63fcf2f0df2994"
+    },
+    {
+      "path": "tests/storage.test.mjs",
+      "sha256": "201b08f777e82d3d15a7bbc23ae89bc882db4fe3bbf53c53f207c8a3044eca62"
     }
   ]
 }

@@ -69,6 +69,8 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
         if(closing&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Error('Desktop service is shutting down; no more actions are accepted.');
         if(request.expected_build_id!==BUILD_ID&&!['computer_status','computer_stop','computer_pause','computer_end','computer_shutdown'].includes(name))
           throw Object.assign(Error('This command belongs to a different build. Use the running release; do not silently mix runtime versions.'),{code:'version_mismatch'});
+        if(['standalone','host-managed'].includes(runtime.permissionMode)&&request.expected_permission_mode!==runtime.permissionMode&&!['computer_status','computer_stop','computer_pause','computer_end','computer_shutdown'].includes(name))
+          throw Object.assign(Error('This client and live service use different permission policies. Finish the owning task and shutdown before starting the intended policy.'),{code:'deployment_policy_mismatch'});
         const control=['computer_status','computer_stop','computer_pause','computer_shutdown'].includes(name);
         if(busy&&!control)throw Error('Desktop operation pending; send one action at a time.');
         if(name==='computer_shutdown'){
