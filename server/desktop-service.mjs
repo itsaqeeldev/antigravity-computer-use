@@ -8,6 +8,7 @@ import {call} from './desktop-tools.mjs';
 import {dataDir} from './build.mjs';
 import {BUILD_ID} from './version.mjs';
 import {Receipts} from './receipts.mjs';
+import {loadDeployment,applyDeployment} from './deployment.mjs';
 
 export function compact(result,dir){
   const value={...result};
@@ -94,7 +95,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime()}={
   fs.writeFileSync(file,JSON.stringify({pid:process.pid,pipe,secret}),{mode:0o600});
   expiry=setInterval(()=>{if(Date.now()-lastCall>15*60000)shutdown().catch(()=>{});},10000);expiry.unref();
   process.once('SIGTERM',()=>shutdown().catch(()=>{}));process.once('SIGINT',()=>shutdown().catch(()=>{}));
-  return {shutdown,server,file};
+  return {shutdown,server,file,status:()=>runtime.status()};
 }
 
-if(process.argv.includes('--serve'))await serveDesktop();
+if(process.argv.includes('--serve')){applyDeployment(loadDeployment());await serveDesktop();}

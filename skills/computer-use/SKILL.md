@@ -8,9 +8,11 @@ description: Operate and visually verify real desktop applications, including de
 Antigravity is the agent. The local Windows runtime supplies observation and input. Use the direct local command below through the host terminal tool. No MCP server is required. Cua Driver and Open Computer Use have different protocols; do not mix controllers.
 
 ```powershell
-{{DESKTOP_COMMAND}} start
+{{DESKTOP_COMMAND}} serve
 {{DESKTOP_COMMAND}} apps
 ```
+
+**Start `serve` as a background task owned by Antigravity**, not as an ordinary short-lived terminal command. In Agent Manager's `run_command`, use `IsDaemon: true` and `WaitMsBeforeAsync: 1000`; retain the returned `TaskId`. Run subsequent desktop commands normally, one at a time. `serve` prints readiness and intentionally remains running. Use `manage_task` status for that task when necessary. If the installed host lacks these controls, use its documented persistent background-task equivalent or report the limitation; do not repeatedly launch detached children. The ordinary `start` command is for terminals that preserve detached processes. Never use WMI/process-creation workarounds, change policy/environment, or read session capabilities/source code to keep the controller alive. An unreachable service means inspect the background task once and restart it only after confirming it exited; a live unresponsive controller must not be replaced.
 
 Use the command below directly; replace sample handles, frames, indexes and paths with observed values. **Do not create request/result files or copy screenshots for each step.** Automatic bounded local receipts include timings and delivery outcomes; their path/id are returned inline. Read receipts only for diagnosis or the final audit. Keep progress messages short.
 
@@ -31,7 +33,7 @@ Replies contain the current `observation_id`, compact indexed `tree` and, when r
 
 For unfamiliar commands fetch only the needed schemas in **one call**, e.g. `describe move drag scroll run`. `describe --all` is available if needed; do not interrogate the catalogue one command at a time before operating the app. `--help` supplies a short reference. JSON inline and `--request FILE` remain compatible fallbacks, and `--json` returns full metadata. Use UTF-8 `--text-file` for long text/quotes rather than shell interpolation. `query` is a case-insensitive literal substring, not a regex. Treat runtime scripts and historical artifacts as black boxes during normal operation; do not read implementation or old test scripts to operate the app.
 
-The native service persists across commands. Keep one session; `end` releases control normally, and `shutdown` closes the helper service. The installer pins the short launcher to the installed build. A version mismatch requires orderly end/shutdown of the old session; never silently mix versions.
+The native service persists across commands. Keep one session; `end` releases control normally, and `shutdown` closes the helper service and lets its background task exit. Do not kill the host task as ordinary cleanup before native input cleanup. The installer pins the short launcher to the installed build. A version mismatch requires orderly end/shutdown of the old session; never silently mix versions.
 
 
 ## Work toward the actual result

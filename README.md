@@ -52,12 +52,14 @@ The installer creates a short `cu.mjs` entrypoint with bundled `cu-node.exe`, pi
 
 ```text
 node scripts/desktop.mjs --help
-node scripts/desktop.mjs start
+node scripts/desktop.mjs serve
 node scripts/desktop.mjs apps
 node scripts/desktop.mjs snapshot --hwnd 123
 node scripts/desktop.mjs click --hwnd 123 --observation-id FRAME --index 7 --risk routine --reason "Open settings"
 node scripts/desktop.mjs end
 ```
+
+In Antigravity, run `serve` using its background-task controls (`run_command`, `IsDaemon: true`, `WaitMsBeforeAsync: 1000`) and keep the returned task ID. The service stays resident until `shutdown`. Short-lived terminal jobs can kill detached `start` children; do not recover with repeated launches or WMI. External persistent terminals can still use `start`.
 
 A snapshot returns an indexed accessibility tree and a local `image.path`. **Open the actual image in the host viewer** (`read_file` in the tested Agent Manager App). Subsequent actions need the fresh, one-use `observation_id`. Coordinates are returned-image pixels, mapped centrally to physical pixels. Prefer accessible controls; use screenshot coordinates for custom canvases. Named action flags return a fresh tree without an image by default; add `--image` at visual checkpoints. `--settle-ms` delays observation by at most 2seconds without repeating input. Fetch unfamiliar schemas together with `describe click drag scroll`; avoid a catalogue interrogation loop. Legacy JSON/UTF-8 request files remain supported; `--text-file` avoids shell interpolation for bulk text.
 

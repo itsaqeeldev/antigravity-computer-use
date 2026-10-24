@@ -9,9 +9,11 @@ import {VERSION,BUILD_ID} from '../server/version.mjs';
 import {TOOLS,validate} from '../server/desktop-tools.mjs';
 import {parseArguments} from './arguments.mjs';
 import {storageOperation} from '../server/storage.mjs';
+import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
+  {command:'serve',description:'Run the exact installed service in the foreground. In Antigravity use run_command IsDaemon:true and WaitMsBeforeAsync:1000 so the host owns its background task; keep the returned TaskId. No permission/data overrides. Reuses only a matching live build/policy.',inputSchema:EMPTY_INPUT},
   {command:'shutdown',description:'Shut down the native service after input cleanup. No arguments. Preserves emergency Stop for human re-arm.',inputSchema:EMPTY_INPUT},
   {command:'describe',description:'Read command descriptions or the exact argument schema for one command, without desktop access.',usage:'describe [COMMAND]',inputSchema:{type:'object',properties:{command:{type:'string'}},required:[],additionalProperties:false}}
 ];
@@ -47,7 +49,7 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
     socket.setTimeout(timeout,()=>done(Error('Desktop request timed out; session was cancelled. Observe status before continuing.')));
     socket.on('connect',()=>{connected=true;socket.write(JSON.stringify({secret:session.secret,command,args,expected_build_id:BUILD_ID,expected_permission_mode:expectedPermissionMode})+'\n');});
     socket.on('data',chunk=>{buffer+=chunk;if(Buffer.byteLength(buffer)>4*1024*1024)return done(Error('Desktop response too large'));if(buffer.includes('\n')){try{done(null,JSON.parse(buffer.slice(0,buffer.indexOf('\n'))));}catch(error){done(error);}}});
-    socket.on('error',error=>done(Object.assign(Error(connected?'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.':'The saved desktop service is unreachable. Run start to recover, then discover apps and observe again. Emergency Stop remains latched.'),{code:connected?'connection_lost':'session_unavailable',cause:error})));
+    socket.on('error',error=>done(Object.assign(Error(connected?'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.':'The saved desktop service is unreachable. In Antigravity run serve as a host-managed background daemon; an ephemeral terminal can kill detached start children. Then discover apps and observe again. Emergency Stop remains latched.'),{code:connected?'connection_lost':'session_unavailable',cause:error})));
     socket.on('end',()=>{if(!settled)done(Error('Desktop session disconnected; do not replay the action.'));});
   });
 }
@@ -61,18 +63,16 @@ export async function main(){
     else printReply(rest[0]?describeCommand(rest[0]):{commands:[...LIFECYCLE,...TOOLS.map(tool=>({command:tool.name.replace(/^computer_/,''),description:tool.description}))].map(({command,description})=>({command,description}))});return;
   }
   if(!command||command==='--help'){
-    console.log('Native desktop skill (no MCP)\nstart | shutdown | describe [COMMAND...] | describe --all | '+TOOLS.map(tool=>tool.name.replace(/^computer_/,'' )).join(' | ')+'\nFast path: snapshot --hwnd 123; click --hwnd 123 --observation-id FRAME --index 7 --reason "Open settings". Named action flags return a compact tree without a new image unless --image is requested. Open actual image.path at visual checkpoints. Use --text-file for generated bulk text and --steps for predictable batches. No per-action request/result files or JPEG copies are needed. One describe call can fetch multiple schemas; do not interrogate every command at startup. JSON inline and --request FILE remain supported; --json retains full output. Esc stops; only the human can re-arm.');return;
+    console.log('Native desktop skill (no MCP)\nserve | start | shutdown | describe [COMMAND...] | describe --all | '+TOOLS.map(tool=>tool.name.replace(/^computer_/,'' )).join(' | ')+'\nAntigravity: run serve with run_command IsDaemon:true, WaitMsBeforeAsync:1000; retain TaskId. Other terminals may use start. Fast path: snapshot --hwnd 123; click --hwnd 123 --observation-id FRAME --index 7 --reason "Open settings". Named action flags return a compact tree without a new image unless --image is requested. Open actual image.path at visual checkpoints. Use --text-file for generated bulk text and --steps for predictable batches. No per-action request/result files or JPEG copies are needed. One describe call can fetch multiple schemas; do not interrogate every command at startup. JSON inline and --request FILE remain supported; --json retains full output. Esc stops; only the human can re-arm.');return;
   }
   const jsonMode=rest[0]==='--json';if(jsonMode)rest.shift();
   replyMode=jsonMode||(rest.length&&(!rest[0].startsWith('--')||rest[0]==='--request'))?'json':'brief';
   const args=parseArguments(describeCommand(command).inputSchema,rest);
   if(TOOLS.some(tool=>tool.name==='computer_'+command))validate('computer_'+command,args);
   else if(Object.keys(args).length)throw Object.assign(Error('This lifecycle command takes no arguments.'),{code:'bad_arguments'});
-  const policyFile=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..','desktop-policy.json');
-  const policy=fs.existsSync(policyFile)?JSON.parse(fs.readFileSync(policyFile)):{permission_mode:'standalone'};
-  if(policy.data_dir&&!process.env.AGCU_DATA_DIR)process.env.AGCU_DATA_DIR=policy.data_dir;
+  const policy=applyDeployment(loadDeployment());
   const file=path.join(dataDir(),'desktop-session.json');
-  if(command==='start'){
+  if(command==='start'||command==='serve'){
     storageOperation('data',dataDir());
     let existing,saved;
     try{saved=JSON.parse(fs.readFileSync(file));existing=await request(saved,'status',{},1500,policy.permission_mode);}catch{}
@@ -87,6 +87,11 @@ export async function main(){
       let alive=true;try{process.kill(saved.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
       if(alive)throw Object.assign(Error('The existing desktop service is still running but did not answer. Do not start another controller. Wait for recovery or use the local Stop control; no replacement was launched.'),{code:'session_unresponsive'});
     }
+    if(command==='serve'){
+      const {serveDesktop}=await import('../server/desktop-service.mjs');
+      const service=await serveDesktop();
+      printReply({ok:true,...service.status(),service_mode:'foreground',requires_background_execution:true});return;
+    }
     // Fixed deployment policy: never accept permission overrides in an action.
     // Host-managed is opt-in at installation; default is local human dialogs.
     if(!['standalone','host-managed'].includes(policy.permission_mode))throw Error('Invalid installed desktop policy');
@@ -99,7 +104,7 @@ export async function main(){
   }
   if(!fs.existsSync(file)){
     if(command==='status'){printReply({ok:true,state:fs.existsSync(path.join(dataDir(),'emergency.stop'))?'stopped':'not_running',build_version:VERSION,build_id:BUILD_ID,reconnect_required:true});return;}
-    throw Object.assign(Error('No desktop session is running (it may have expired after15 idle minutes). Run start, then discover apps and take a fresh observation. Antigravity does not need to restart; emergency Stop remains latched.'),{code:'no_session'});
+    throw Object.assign(Error('No desktop session is running (it may have expired after15 idle minutes). Run serve as a host-owned background task (or start in a persistent terminal), then discover apps and take a fresh observation. Antigravity does not need to restart; emergency Stop remains latched.'),{code:'no_session'});
   }
   const session=JSON.parse(fs.readFileSync(file));
   if(command==='shutdown'){

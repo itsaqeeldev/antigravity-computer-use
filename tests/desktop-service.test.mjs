@@ -4,7 +4,7 @@ import {serveDesktop,compact} from '../server/desktop-service.mjs';
 import {request,describeCommand,encodeReply} from '../scripts/desktop.mjs';
 import net from 'node:net';
 import {BUILD_ID} from '../server/version.mjs';
-import {spawn,spawnSync} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';
 import {fileURLToPath} from 'node:url';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
@@ -25,6 +25,19 @@ test('one offline discovery call exposes multiple schemas and never creates a de
   }
   assert.deepEqual(fs.readdirSync(dir),[]);
  }finally{fs.rmdirSync(dir);}
+});
+
+test('foreground serve stays resident for host-owned background execution and shuts down normally',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-foreground-'));
+ const child=spawn(process.execPath,[fileURLToPath(new URL('../scripts/desktop.mjs',import.meta.url)),'serve'],{windowsHide:true,env:{...process.env,AGCU_DATA_DIR:dir,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']});
+ let stderr='';child.stderr.on('data',s=>stderr+=s);
+ try{
+  const ready=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Foreground startup timed out: '+stderr)),10000);child.once('error',reject);createInterface({input:child.stdout}).once('line',line=>{clearTimeout(timer);try{resolve(JSON.parse(line));}catch(error){reject(error);}});});
+  assert.equal(ready.service_mode,'foreground');assert.equal(ready.private_data_storage,true);assert.equal(ready.state,'idle');
+  await new Promise(resolve=>setTimeout(resolve,100));assert.equal(child.exitCode,null,'Do not exit after printing readiness');
+  const session=JSON.parse(fs.readFileSync(path.join(dir,'desktop-session.json')));
+  assert.equal((await request(session,'status')).state,'idle');const exited=new Promise(resolve=>child.once('exit',resolve));assert.equal((await request(session,'shutdown')).closed,true);assert.equal(await exited,0,stderr);
+ }finally{if(child.exitCode===null)child.kill();fs.rmSync(dir,{recursive:true,force:true});}
 });
 
 test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Unicode',()=>{
