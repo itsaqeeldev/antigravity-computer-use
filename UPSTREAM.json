@@ -436,7 +436,7 @@
     },
     {
       "path": "skills/computer-use/references/recovery.md",
-      "sha256": "80d2a35d30ac59557fe9a7ee4a62698bf866c7087d1ee01dee80f7aa8c3ba04b"
+      "sha256": "cad61fe647dfd728e8faf079ecfb9f61618067463687597398239af4480cb0b4"
     },
     {
       "path": "scripts/measure-run.mjs",
@@ -448,7 +448,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "21297567ed0eb350b41c0efa1067e1cefe39d5f4c6dd3a8fcc8590ce76b52d75"
+      "sha256": "387eea80f6d9261bc699deb35bf05f4882deb3395c2b8574368a1c5f7f12d043"
     }
   ]
 }
