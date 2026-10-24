@@ -256,11 +256,11 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "ebdeb89034ec88b5b6674a8bc0a4b85d5d44c3b02a731fcb6a52e85ee44f621a"
+      "sha256": "0f8da897c56c4b9af9d15607c359ebca97fd0282e7ae5e0dec9d64bf37eb4362"
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "f6d5bd31263f846c9434933f052d3917c42b13c959828c368a6e03621b2bb5dc"
+      "sha256": "360e2bc316dceaee08e6bd6c4a8718349c33812afd96dc15a88aa752ee298123"
     },
     {
       "path": "server/version.mjs",
@@ -288,7 +288,7 @@
     },
     {
       "path": "scripts/arguments.mjs",
-      "sha256": "2792527fd3f12eaef139024253e4d9ca0401f8775f42b6e652314c0931921dc6"
+      "sha256": "e23f79ced1b19fbb10f91a146431ee9887802bead2e2cdc0f3c227fc642b8a6a"
     },
     {
       "path": "server/receipts.mjs",
@@ -296,7 +296,7 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "f9fa93903ac9269b2dd02b22a897d62a8f4f29421f2432aea1825a08beac42ab"
+      "sha256": "e44f7e46befca2edc2e3890a8302a15d01b830a5ab7ae2a988166bd9e32f9259"
     },
     {
       "path": "tests/receipts.test.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/core.test.mjs",
-      "sha256": "9f0bb1a027b145c5b3e287f75b0f5ddc9db25d7a67391c9be443694f5e364925"
+      "sha256": "6358219c9a8033e0e0531d1910f54b513599900264aebcf0e406c2adbad1bfb1"
     },
     {
       "path": "tests/workflow.test.mjs",

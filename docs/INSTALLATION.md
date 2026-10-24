@@ -6,7 +6,7 @@ Version 0.3.0-beta.1 is a direct `/computer-use` candidate with bundled native h
 
 1. Once qualified, download the complete Windows ZIP and SHA256 checksums from [releases](https://github.com/shayann07/antigravity-computer-use/releases). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
 2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
-3. Run `install.cmd`. Direct integration is the default. The installer prints the release and exact backup paths.
+3. For App-managed startup, run `install.cmd --integration direct --sidecar`. Direct integration is the default; omitting `--sidecar` uses manual local startup. The installer prints the release and exact backup paths.
 4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
 
 ```powershell

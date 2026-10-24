@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {parseArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
+import {parseArguments,parseRunArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
+import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import {spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
 const parse=(command,words,options)=>{const name='computer_'+command;const args=parseArguments(TOOLS.find(t=>t.name===name).inputSchema,words,options);validate(name,args);return args;};
 test('named native action flags need no request file and preserve explicit frame/permission boundaries',()=>{
  const args=parse('click',['--hwnd','123','--observation-id','fresh','--index','7','--risk','routine','--reason','Open settings']);
@@ -38,4 +39,25 @@ test('file-picker clipboard entry is explicit and cannot manufacture confirmatio
  assert.equal(parse('file_dialog',[...words,'--entry-method','clipboard']).entry_method,'clipboard');
  for(const value of ['auto','confirmed','true'])assert.throws(()=>parse('file_dialog',[...words,'--entry-method',value]));
  assert.throws(()=>parse('file_dialog',[...words,'--entry-method','clipboard','--confirmed','true']));
+});
+
+const batchSchema=TOOLS.find(t=>t.name==='computer_run').inputSchema;
+const describe=name=>({inputSchema:TOOLS.find(t=>t.name==='computer_'+name).inputSchema});
+test('named batch groups need no plan file and retain fresh-frame and explicit image boundaries',()=>{
+ const a=parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','Import owned image','--step','click','--index','7','--risk','routine','--step','file_dialog','--path','D:/cat.png','--action','open','--entry-method','clipboard'],describe,{read(){throw Error('No file should be read');}});
+ validate('computer_run',a);assert.equal(a.steps.length,2);assert.equal(a.steps[0].observe.with_image,false);assert.equal(a.steps[1].observe.with_image,true);assert.equal(a.steps[1].entry_method,'clipboard');
+ for(const tail of [['--step'],['--step','click','--hwnd','999'],['--step','click','--confirmed','true']])assert.throws(()=>parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','No partial dispatch',...tail],describe));
+ assert.throws(()=>parseRunArguments(batchSchema,['--steps','[]','--step','click','--index','7'],describe),/Do not mix/);
+ assert.throws(()=>parseRunArguments(batchSchema,Array.from({length:9},()=>['--step','key','--keys','tab']).flat(),describe),/at most eight/);
+});
+
+test('named batches cross actual Windows PowerShell without JSON quoting or Unicode path loss',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-batch-')),file=path.join(dir,'parse.mjs');
+ try{
+  fs.writeFileSync(file,`import {parseRunArguments} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/arguments.mjs')).href)};import {describeCommand,encodeReply} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/desktop.mjs')).href)};console.log(encodeReply(parseRunArguments(describeCommand('run').inputSchema,process.argv.slice(2),describeCommand)));`);
+  const quote=s=>"'"+s.replaceAll("'","''")+"'",sample="D:/Samples/cat's 100% & اردو 😀.png";
+  const script=`& ${quote(process.execPath)} ${quote(file)} --hwnd 123 --observation-id fresh --reason 'Import sample' --step click --index 7 --risk routine --step file_dialog --path ${quote(sample)} --action open --entry-method clipboard`;
+  const ps=path.join(process.env.WINDIR||'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe');
+  const r=spawnSync(ps,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{windowsHide:true,encoding:'utf8'});assert.equal(r.status,0,r.stderr);const a=JSON.parse(r.stdout);assert.equal(a.steps[1].path,sample);assert.equal(a.steps[1].observe.with_image,true);assert.equal(a.hwnd,123);
+ }finally{fs.unlinkSync(file);fs.rmdirSync(dir);}
 });

@@ -76,10 +76,16 @@ test('batch stops on failure and never runs later actions',async()=>{
 
 test('batch preflight rejects invalid later steps and frame overrides before any input',async()=>{
  let delivered=0;const r={async action(){delivered++;}};
- for(const bad of [{kind:'launch',app:'x'},{kind:'click'},{kind:'click',index:2,x:3,y:4},{kind:'click',x:3},{kind:'type',text:'x'.repeat(401)},{kind:'key',keys:'enter',hwnd:2},{kind:'key',keys:'enter',observation_id:'other'}]){
+ for(const bad of [{kind:'launch',app:'x'},{kind:'clipboard',text:'window-free'},{kind:'click'},{kind:'click',index:2,x:3,y:4},{kind:'click',x:3},{kind:'type',text:'x'.repeat(401)},{kind:'key',keys:'enter',hwnd:2},{kind:'key',keys:'enter',observation_id:'other'}]){
   await assert.rejects(call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},bad]}));
  }
  assert.equal(delivered,0);
+});
+
+test('a focus batch respects its real schema and binds the following action to its fresh observation',async()=>{
+ const seen=[];const r={async action(op,args){seen.push({op,args});return {metadata:{observation_id:'frame'+seen.length}};}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'initial',reason:'Focus then select',steps:[{kind:'focus',risk:'routine'},{kind:'click',index:7,risk:'routine'}]});
+ assert.equal(seen.length,2);assert.equal(seen[0].op,'focus');assert(!Object.hasOwn(seen[0].args,'observation_id'));assert(!Object.hasOwn(seen[0].args,'observe'));assert.equal(seen[1].args.observation_id,'frame1');assert.equal(result.batch.completed.length,2);
 });
 
 test('batch returns final image by default and uses fresh internal observations without intermediate captures',async()=>{

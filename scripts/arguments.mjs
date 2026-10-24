@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 const bad=message=>{throw Object.assign(Error(message+' No desktop request was sent.'),{code:'bad_arguments'});};
 const readText=file=>fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'');
-export function parseArguments(schema,words,{read=readText}={}){
+export function parseArguments(schema,words,{read=readText,defaultImage=false}={}){
  if(!words.length)return {};
  if(words[0]==='--request'){
   if(words.length!==2)bad('Use --request FILE alone, or named flags.');
@@ -14,7 +14,7 @@ export function parseArguments(schema,words,{read=readText}={}){
   return JSON.parse(words[0]);
  }
  const properties=schema.properties||{};const result={};
- if(properties.observe?.type==='object')result.observe={with_image:false};
+ if(properties.observe?.type==='object')result.observe={with_image:defaultImage};
  const seen=new Set();
  for(let i=0;i<words.length;i++){
   const word=words[i];if(!word.startsWith('--'))bad('Expected a named flag, got '+word+'.');
@@ -52,4 +52,25 @@ export function parseArguments(schema,words,{read=readText}={}){
   else result[key]=key==='observe'&&type.type==='object'?{with_image:false,...value}:value;
  }
  return result;
+}
+
+// A shell-safe batch needs no JSON quoting or temporary plan-file tool call.
+// Owner/frame/reason precede the first --step; all later flags belong to steps.
+export function parseRunArguments(schema,words,describe,options={}){
+ const first=words.indexOf('--step');if(first<0)return parseArguments(schema,words,options);
+ const root=parseArguments(schema,words.slice(0,first),options);
+ if(Object.hasOwn(root,'steps'))bad('Do not mix --step groups with JSON/file steps.');
+ const groups=[];
+ for(let i=first;i<words.length;){
+  if(words[i]!=='--step')bad('Expected --step COMMAND.');
+  const kind=words[++i];if(!kind||kind.startsWith('--'))bad('--step needs an action name.');
+  const from=++i;while(i<words.length&&words[i]!=='--step')i++;
+  groups.push({kind,words:words.slice(from,i)});
+ }
+ if(groups.length>8)bad('A batch accepts at most eight steps.');
+ root.steps=groups.map(({kind,words},i)=>{
+  const step=parseArguments(describe(kind).inputSchema,words,{...options,defaultImage:i===groups.length-1});
+  if(Object.hasOwn(step,'hwnd')||Object.hasOwn(step,'observation_id'))bad('A batch step cannot replace its owner or frame.');
+  return {kind,...step};
+ });return root;
 }

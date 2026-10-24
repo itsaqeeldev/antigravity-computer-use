@@ -76,14 +76,18 @@ export async function call(r,name,a){
   // must not execute steps1-7 and then throw away their delivery evidence.
   const plan=a.steps.map(({kind,...rest},i)=>{
    const n='computer_'+kind;if(!OPS[n])throw new Error('Unsupported batch step '+kind);
+   const properties=TOOLS.find(t=>t.name===n).inputSchema.properties;
+   if(!Object.hasOwn(properties,'hwnd'))throw new Error('Batch steps must target their owner window; use explicit paste for text instead of a window-free clipboard step.');
    if(Object.hasOwn(rest,'hwnd')||Object.hasOwn(rest,'observation_id'))throw new Error('Batch steps cannot replace the owner window or frame.');
-   const args={hwnd:a.hwnd,observation_id:a.observation_id,reason:a.reason,...rest,observe:{with_image:i===a.steps.length-1,...rest.observe}};
-   validate(n,args);return {kind,n,args};
+   const args={hwnd:a.hwnd,reason:a.reason,...rest};
+   const framed=Object.hasOwn(properties,'observation_id');if(framed)args.observation_id=a.observation_id;
+   if(properties.observe)args.observe={with_image:i===a.steps.length-1,...rest.observe};
+   validate(n,args);return {kind,n,args,framed};
   });
   const completed=[];let last=null;let observation=a.observation_id;
   for(let i=0;i<plan.length;i++){
-   const {kind,n,args}=plan[i];
-   try{last=await call(r,n,{...args,observation_id:observation});completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};observation=last.metadata?.observation_id;}
+   const {kind,n,args,framed}=plan[i];
+   try{last=await call(r,n,framed?{...args,observation_id:observation}:args);completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};observation=last.metadata?.observation_id;}
    catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
