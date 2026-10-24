@@ -1,6 +1,12 @@
 import fs from 'node:fs';import path from 'node:path';
 const file=process.argv[2];if(!file)throw new Error('Pass the exact backups/<timestamp>/rollback.json to restore.');
 const data=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));
+const target=path.resolve(data.release,'..','..'),sessionFile=path.join(target,'data/desktop-session.json');
+if(fs.existsSync(sessionFile)){
+ const session=JSON.parse(fs.readFileSync(sessionFile,'utf8'));if(!Number.isSafeInteger(session.pid)||session.pid<=0)throw Error('Invalid live-session metadata; inspect before rollback.');
+ let alive=true;try{process.kill(session.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
+ if(alive)throw Error('A desktop service is still running. End and shutdown its task before rollback; no configuration was changed.');
+}
 for(const r of data.records){
  if(r.kind==='config'){
   const c=fs.existsSync(r.file)?JSON.parse(fs.readFileSync(r.file)):{};

@@ -147,3 +147,11 @@ test('global and project updates retain their own policies instead of the last i
  const global=install({bundle,target,home});assert.equal(JSON.parse(fs.readFileSync(path.join(global.release,'desktop-policy.json'))).permission_mode,'host-managed');
  const project=install({bundle,target,home,workspace});assert.equal(JSON.parse(fs.readFileSync(path.join(project.release,'desktop-policy.json'))).permission_mode,'standalone');
 });
+
+test('rollback refuses a live service before restoring configuration or launchers',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'rollback-live-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.writeFileSync(path.join(bundle,'node.exe'),'fixture');fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+ const installed=install({bundle,target,home});fs.mkdirSync(path.join(target,'data'));fs.writeFileSync(path.join(target,'data/desktop-session.json'),JSON.stringify({pid:process.pid}));
+ const before=fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8');const rolled=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(installed.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});
+ assert.equal(rolled.status,1);assert.match(rolled.stderr,/still running/);assert.equal(fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8'),before);assert(fs.existsSync(installed.launcher));
+});

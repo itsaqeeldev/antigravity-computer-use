@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "8de9dd51e688f5393cd50eeb7e24751b01dd789c287db0cb765f04ad6627b8d7"
+      "sha256": "7e81c35e00a92698edf0d72f0e7ad90fd7a3a838fc118f65d8ae6a55241588b4"
     },
     {
       "path": "scripts/verify-install.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "93b5914e9bc861eb67f18f07631fc1d6d5767e7842dc96e104210bbada5a5459"
+      "sha256": "a45330e5632fc516d923c7fcb224c6be80b3993ca01244ad8aa436409e8491f5"
     },
     {
       "path": "tests/core.test.mjs",
