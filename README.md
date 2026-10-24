@@ -1,6 +1,6 @@
 # Antigravity Computer Use
 
-Give Antigravity’s existing agent real Windows desktop control through **/computer-use**. Inspect applications, move the real cursor, use accessible controls, type, scroll, drag and work with native dialogs. A minimal control bar and breathing edge glow show when control is active.
+Give Antigravityâ€™s existing agent real Windows desktop control through **/computer-use**. Inspect applications, move the real cursor, use accessible controls, type, scroll, drag and work with native dialogs. A minimal control bar and breathing edge glow show when control is active.
 
 **Windows beta under final qualification.** The direct v0.3.0 bundle is not published yet. Public v0.2.0 uses the older MCP route. Remaining checks are listed below.
 
@@ -24,7 +24,7 @@ When qualified, the complete portable ZIP and SHA256 checksums will be available
 3. Allow a few seconds for Antigravity to load the Sidecar. Open a fresh **No Project** or project conversation and select **/computer-use** from slash autocomplete.
 4. Describe the application task and the result to verify.
 
-The installer pins the skill and Sidecar to the exact release, verifies the payload, preserves unrelated configuration and creates rollback backups. Its private per-user location defaults to **D:\AntigravityComputerUse-&lt;owner-hash&gt;** when available, otherwise LocalAppData. It does not change host security presets or register a Windows login task. Only this project’s old MCP entry is removed.
+The installer pins the skill and Sidecar to the exact release, verifies the payload, preserves unrelated configuration and creates rollback backups. Its private per-user location defaults to **D:\AntigravityComputerUse-&lt;owner-hash&gt;** when available, otherwise LocalAppData. It does not change host security presets or register a Windows login task. Only this projectâ€™s old MCP entry is removed.
 
 Use **--workspace "D:\Projects\Example"** for a project-local skill that can reuse the global companion, or **--target &lt;private-path&gt;** for another installation location. See [installation, updates, verification and rollback](docs/INSTALLATION.md).
 
@@ -40,9 +40,9 @@ An operator who wants host-managed execution review can explicitly install:
 .\install.cmd --integration direct --sidecar --permission-mode host-managed
 ~~~
 
-This trusts the host’s terminal execution permissions instead of duplicate native dialogs. **It does not inspect or authenticate Antigravity’s Turbo preset.** The agent must obtain the review required by the host/user for consequential actions. Broad terminal allow rules grant broad desktop authority. Native identity, frame, budget, ownership and watchdog checks stay active.
+This trusts the hostâ€™s terminal execution permissions instead of duplicate native dialogs. **It does not inspect or authenticate Antigravityâ€™s Turbo preset.** The agent must obtain the review required by the host/user for consequential actions. Broad terminal allow rules grant broad desktop authority. Native identity, frame, budget, ownership and watchdog checks stay active.
 
-- **Keep working** is the default. Ordinary physical mouse/keyboard input does not pause automation. Use the bar’s Pause control deliberately.
+- **Keep working** is the default. Ordinary physical mouse/keyboard input does not pause automation. Use the barâ€™s Pause control deliberately.
 - **Yield on input** is optional. Resume requires local human Resume or an explicitly authorized chat resume under host-managed policy. Observations are refreshed; interrupted input is not replayed.
 - **Esc / Ctrl+Alt+F12 / Stop** invalidates control and releases automation-held input. Emergency Stop requires local human re-arm; the model cannot clear it.
 - Normal tasks use **end**. The passive Sidecar remains available for another task without restarting Antigravity. **shutdown** performs cleanup and exits for updates/removal.
@@ -67,7 +67,7 @@ Real tasks in Antigravity App 2.26 on Windows exercised the global skill, actual
 
 Controlled native tests additionally cover provider exceptions without fallback replay, offscreen-window recovery, stale frames, input cleanup and ownership failures. These component tests do not replace actual application acceptance. Current Windows source checks report **137 passed and 5 explicitly skipped** locally and in CI. The skipped installation-ACL cases require trusted ancestors; parent permissions are never changed to force a pass; [validation](VALIDATION.md), [current status](PROJECT-STATUS.md) and [performance findings](docs/PERFORMANCE.md) record exact build boundaries.
 
-Remaining qualification includes physical Esc/re-arm on the final native build, real mixed-DPI/multiple-display hardware, broader application coverage and final visual feedback. The latest real High-effort tasks took **4m29s PNG** and **4m33s JPEG**. PNG improved from a previous5m26s witness and used15instead of25controller calls; JPEG was slower than an earlier3m56s witness. These individual runs include application GPU-profile repairs and do not establish a general speed guarantee. Host/model decision gaps remain the main latency problem. macOS/Linux are not release targets yet.
+Remaining qualification includes physical Esc/re-arm on the final native build, real mixed-DPI/multiple-display hardware, broader application coverage and final visual feedback. The latest real High-effort tasks took **4m29s PNG** and **4m33s JPEG**. PNG improved from a previous 5m26s witness and used15 instead of 25 controller calls; JPEG was slower than an earlier 3m56s witness. These individual runs include application GPU-profile repairs and do not establish a general speed guarantee. Host/model decision gaps remain the main latency problem. macOS/Linux are not release targets yet.
 
 ## Build and contribute
 
@@ -80,18 +80,18 @@ npm run bundle
 
 The output is **dist/AntigravityComputerUse-windows-x64**, including Node and prebuilt helpers. Use **node scripts/bundle.mjs --output &lt;new-empty-folder&gt;** to preserve previous artifacts. Do not run interactive native integration scripts while someone else controls the desktop.
 
-[Review guide](docs/review-guide.md) · [Contributing](CONTRIBUTING.md) · [Implementation log](IMPLEMENTATION_PROGRESS.md)
+[Review guide](docs/review-guide.md) Â· [Contributing](CONTRIBUTING.md) Â· [Implementation log](IMPLEMENTATION_PROGRESS.md)
 
 ## Historical demo and interface
 
 ![Historical real Antigravity v0.2.0 fixture recording](docs/media/real-demo.gif)
 
-[Real-time excerpt](docs/media/real-demo-realtime.mp4) · [4x recording](docs/media/real-demo-4x.mp4) · [Recording details](docs/media/REAL-DEMO.md). This is an actual older fixture task, not the current direct integration or Upscaly acceptance run.
+[Real-time excerpt](docs/media/real-demo-realtime.mp4) Â· [4x recording](docs/media/real-demo-4x.mp4) Â· [Recording details](docs/media/REAL-DEMO.md). This is an actual older fixture task, not the current direct integration or Upscaly acceptance run.
 
-[Minimal interface preview](docs/media/desktop-1.png) · [Actual text-cursor capture](docs/media/live-text-cursor.png) · [Visual design](docs/visual-design.md). Renderer previews are labelled separately from live application evidence.
+[Minimal interface preview](docs/media/desktop-1.png) Â· [Actual text-cursor capture](docs/media/live-text-cursor.png) Â· [Visual design](docs/visual-design.md). Renderer previews are labelled separately from live application evidence.
 
 ## License and provenance
 
-MIT. The foundation is the published MIT native implementation from **ridelink0/claude-computer-use**, with attributed adaptations from OpenAI’s MIT sample and Anthropic’s MIT quickstarts. [UPSTREAM.json](UPSTREAM.json) records exact revisions, local hashes and modifications; [third-party notices](THIRD_PARTY_NOTICES.md) retain the licenses. No private vendor implementation is included. Development binaries are unsigned.
+MIT. The foundation is the published MIT native implementation from **ridelink0/claude-computer-use**, with attributed adaptations from OpenAIâ€™s MIT sample and Anthropicâ€™s MIT quickstarts. [UPSTREAM.json](UPSTREAM.json) records exact revisions, local hashes and modifications; [third-party notices](THIRD_PARTY_NOTICES.md) retain the licenses. No private vendor implementation is included. Development binaries are unsigned.
 
-[LICENSE](LICENSE) · [SECURITY.md](SECURITY.md)
+[LICENSE](LICENSE) Â· [SECURITY.md](SECURITY.md)
