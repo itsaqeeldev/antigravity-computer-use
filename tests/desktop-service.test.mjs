@@ -27,6 +27,14 @@ test('one offline discovery call exposes multiple schemas and never creates a de
  }finally{fs.rmdirSync(dir);}
 });
 
+test('importing the service library never treats an unrelated --serve argument as activation',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-import-only-'));
+ try{
+  const script=`await import(${JSON.stringify(new URL('../server/desktop-service.mjs',import.meta.url).href)});console.log('import only');`;
+  const result=spawnSync(process.execPath,['--input-type=module','-e',script,'--','--serve'],{windowsHide:true,encoding:'utf8',timeout:4000,env:{...process.env,AGCU_DATA_DIR:dir}});assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.trim(),'import only');assert.deepEqual(fs.readdirSync(dir),[]);
+ }finally{fs.rmdirSync(dir);}
+});
+
 test('foreground serve stays resident for host-owned background execution and shuts down normally',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agcu-foreground-'));
  const child=spawn(process.execPath,[fileURLToPath(new URL('../scripts/desktop.mjs',import.meta.url)),'serve'],{windowsHide:true,env:{...process.env,AGCU_DATA_DIR:dir,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']});

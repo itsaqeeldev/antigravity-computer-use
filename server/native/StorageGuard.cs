@@ -10,6 +10,7 @@ using System.Security.Principal;
 using System.Web.Script.Serialization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading;
 
 internal static class StorageGuard {
     static readonly SecurityIdentifier Me=WindowsIdentity.GetCurrent().User;
@@ -17,6 +18,41 @@ internal static class StorageGuard {
     static readonly SecurityIdentifier AdminSid=new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid,null);
     static readonly SecurityIdentifier TrustedInstallerSid=new SecurityIdentifier("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
     const string Marker=".agcu-private-storage";
+    [StructLayout(LayoutKind.Sequential)]struct FileIdentity {internal uint Attributes,CreateLow,CreateHigh,AccessLow,AccessHigh,WriteLow,WriteHigh,Volume,SizeHigh,SizeLow,Links,IndexHigh,IndexLow;}
+    [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern IntPtr CreateFileW(string path,uint access,uint share,IntPtr security,uint disposition,uint flags,IntPtr template);
+    [DllImport("kernel32.dll",SetLastError=true)]static extern bool GetFileInformationByHandle(IntPtr file,out FileIdentity info);
+    [DllImport("kernel32.dll")]static extern bool CloseHandle(IntPtr handle);
+    // Kernel ownership disappears on process death; no stale lock-file deletion
+    // race. Global scope also covers another Windows session using this profile.
+    static int Lease(string root){
+        // Claim ownership before the parent initializes data ACLs/markers, so
+        // simultaneous first starts cannot race that initialization either.
+        string ancestor=root;while(!String.IsNullOrEmpty(ancestor)){if(Directory.Exists(ancestor))NoLink(ancestor);ancestor=Path.GetDirectoryName(ancestor);}
+        if(Directory.Exists(root))Owner(root);
+        // A filesystem identity also covers 8.3/case aliases. Keep the directory
+        // handle without DELETE sharing so it cannot be replaced under a lease.
+        IntPtr directory=CreateFileW(root,0x81,3,IntPtr.Zero,3,0x02200000,IntPtr.Zero); // LIST_DIRECTORY | READ_ATTRIBUTES
+        if(directory==new IntPtr(-1))Refuse("service_ownership_unavailable",root,"Cannot open the controller data directory for ownership.");
+        try{
+            FileIdentity info;if(!GetFileInformationByHandle(directory,out info)||(info.Attributes&0x10)==0||(info.Attributes&0x400)!=0)Refuse("service_ownership_unavailable",root,"Controller ownership requires a real directory, not a link.");
+            var volume=new StringBuilder(512);if(!GetVolumeNameForVolumeMountPoint(Path.GetPathRoot(root),volume,volume.Capacity))Refuse("service_ownership_unavailable",root,"Cannot identify the controller volume.");
+            string identity=volume.ToString().ToUpperInvariant()+"|"+info.Volume.ToString("X8")+"|"+info.IndexHigh.ToString("X8")+info.IndexLow.ToString("X8"),name;
+            using(var sha=SHA256.Create())name="Global\\AGCU.Service."+BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(Me.Value+"|"+identity))).Replace("-","");
+            var acl=new MutexSecurity();
+            foreach(var sid in new SecurityIdentifier[]{Me,SystemSid,AdminSid})acl.AddAccessRule(new MutexAccessRule(sid,MutexRights.FullControl,AccessControlType.Allow));
+            bool created,owned=false;
+            using(var mutex=new Mutex(false,name,out created,acl)){
+                try{
+                    if(!Trusted(mutex.GetAccessControl().GetOwner(typeof(SecurityIdentifier))))Refuse("service_ownership_untrusted",root,"The controller ownership object has an unrelated owner.");
+                    try{owned=mutex.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
+                    if(!owned)Refuse("service_already_running",root,"Another controller owns this private data directory. Reconnect to it; no competing runtime was started.");
+                    Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,lease_acquired=true,pid=System.Diagnostics.Process.GetCurrentProcess().Id}));Console.Out.Flush();
+                    while(Console.In.ReadLine()!=null){}
+                    return 0;
+                }finally{if(owned)mutex.ReleaseMutex();}
+            }
+        }finally{CloseHandle(directory);}
+    }
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool GetVolumeNameForVolumeMountPoint(string mount,StringBuilder name,int length);
     sealed class Refusal : Exception {
         internal string Code,Target;
@@ -152,11 +188,13 @@ internal static class StorageGuard {
         return file;
     }
     public static int Main(string[] args){
+        try{Console.OutputEncoding=new UTF8Encoding(false);}catch{}
         Console.OutputEncoding=new UTF8Encoding(false);
         try {
             if(args.Length==1&&args[0]=="identity"){Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,owner_sid=Me.Value}));return 0;}
             if(args.Length!=2)throw new ArgumentException("Pass install/data/legacy/verify/verify-tree/verify-data-tree and one dedicated folder.");
             string mode=args[0],root=Canonical(args[1]);
+            if(mode=="lease")return Lease(root);
             if(mode!="install"&&mode!="data"&&mode!="legacy"&&mode!="verify"&&mode!="verify-tree"&&mode!="verify-data-tree")throw new ArgumentException("Unknown storage operation.");
             if(mode=="install"||mode=="verify-tree")Ancestors(root);
             else {string parent=Path.GetDirectoryName(root);while(!String.IsNullOrEmpty(parent)){if(Directory.Exists(parent))NoLink(parent);parent=Path.GetDirectoryName(parent);}}

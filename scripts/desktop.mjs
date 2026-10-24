@@ -99,7 +99,7 @@ export async function main(){
     const child=spawn(process.execPath,[fileURLToPath(new URL('../server/desktop-service.mjs',import.meta.url)),'--serve'],{detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,AGCU_PERMISSION_MODE:policy.permission_mode}});child.unref();
     for(let i=0;i<100;i++){
       await new Promise(resolve=>setTimeout(resolve,100));
-      try{const session=JSON.parse(fs.readFileSync(file));if(session.pid===child.pid){printReply(await request(session,'status',{},100000,policy.permission_mode));return;}}catch{}
+      try{const session=JSON.parse(fs.readFileSync(file));const found=await request(session,'status',{},1500,policy.permission_mode);if(found.ok&&found.build_id===BUILD_ID&&found.permission_mode===policy.permission_mode){printReply(found);return;}}catch{}
     }
     throw Error('Native session did not start; run the service in foreground for diagnostics.');
   }

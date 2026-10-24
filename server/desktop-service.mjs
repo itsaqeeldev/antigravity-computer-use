@@ -9,6 +9,8 @@ import {dataDir} from './build.mjs';
 import {BUILD_ID} from './version.mjs';
 import {Receipts} from './receipts.mjs';
 import {loadDeployment,applyDeployment} from './deployment.mjs';
+import {acquireServiceLease} from './service-lease.mjs';
+import {fileURLToPath} from 'node:url';
 
 export function compact(result,dir){
   const value={...result};
@@ -31,13 +33,26 @@ export function compact(result,dir){
   return value;
 }
 
-export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),idlePolicy='shutdown',idleTimeoutMs=15*60000,idleCheckMs=10000}={}){
+export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shutdown',idleTimeoutMs=15*60000,idleCheckMs=10000}={}){
   if(!['release','shutdown'].includes(idlePolicy))throw Error('Invalid listener idle policy.');
   fs.mkdirSync(directory,{recursive:true});
-  await runtime.prepare?.();
+  const ownership=await acquireServiceLease(directory);let ownershipLost=false,initialized=false;
+  ownership.on('lost',()=>{ownershipLost=true;Promise.resolve().then(()=>runtime?.stop?.()).catch(()=>{});});
+  const file=path.join(directory,'desktop-session.json');
+  try{
+    ownership.assertHeld();
+    // Also respect an older controller that predates kernel ownership leases.
+    if(fs.existsSync(file)){
+      const previous=JSON.parse(fs.readFileSync(file,'utf8'));
+      if(!Number.isSafeInteger(previous.pid)||previous.pid<=0)throw Object.assign(Error('Invalid saved controller metadata; inspect it before recovery.'),{code:'invalid_session_metadata'});
+      let alive=true;try{process.kill(previous.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
+      if(alive)throw Object.assign(Error('A live controller already owns the saved session. No replacement was created.'),{code:'service_already_running'});
+    }
+    runtime??=new Runtime();initialized=true;await runtime.prepare?.();
+    if(ownership.lost)throw Object.assign(Error('Controller ownership was lost during startup.'),{code:'service_ownership_lost'});
+  }catch(error){if(initialized)await Promise.resolve().then(()=>runtime.close?.()).catch(()=>{});await ownership.release();throw error;}
   const secret=randomBytes(32).toString('hex');
   const pipe=process.platform==='win32'?`\\\\.\\pipe\\agcu-${randomBytes(18).toString('hex')}`:path.join(directory,`desktop-${process.pid}.sock`);
-  const file=path.join(directory,'desktop-session.json');
   let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending,idleReleased=false;
   const sockets=new Set();
   const receipts=new Receipts(directory);
@@ -47,7 +62,8 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),id
     try{await runtime.close();}catch(error){closing=false;throw error;}
     clearInterval(expiry);
     for(const socket of sockets)socket.end();server.close();
-    try{if(JSON.parse(fs.readFileSync(file)).pid===process.pid)fs.unlinkSync(file);}catch{}
+    try{const saved=JSON.parse(fs.readFileSync(file));if(saved.pid===process.pid&&saved.secret===secret)fs.unlinkSync(file);}catch{}
+    await ownership.release();
     })().catch(error=>{shutdownPending=null;throw error;});
     return shutdownPending;
   };
@@ -68,6 +84,8 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),id
         lastCall=Date.now();idleReleased=false;
         const name=request.command?.startsWith('computer_')?request.command:'computer_'+request.command;
         ticket=receipts.begin(name,request.args);
+        if(!closing)try{ownership.assertHeld();}catch{ownershipLost=true;}
+        if(ownershipLost&&!['computer_status','computer_stop','computer_end','computer_shutdown'].includes(name))throw Object.assign(Error('Controller ownership was lost. Control is stopped; do not send or replay input.'),{code:'service_ownership_lost',hint:'End/shutdown for cleanup, then restart the App sidecar. A latched Stop still needs local human re-arm. Do not repeat the interrupted action.'});
         if(closing&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Error('Desktop service is shutting down; no more actions are accepted.');
         if(request.expected_build_id!==BUILD_ID&&!['computer_status','computer_stop','computer_pause','computer_end','computer_shutdown'].includes(name))
           throw Object.assign(Error('This command belongs to a different build. Use the running release; do not silently mix runtime versions.'),{code:'version_mismatch'});
@@ -84,7 +102,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),id
         if(!control){busy=true;executing=true;}
         try{
           const raw=await call(runtime,name,request.args||{});
-          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy}:raw,directory);
+          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
@@ -93,8 +111,11 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),id
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));
-  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(pipe,resolve);});
-  fs.writeFileSync(file,JSON.stringify({pid:process.pid,pipe,secret}),{mode:0o600});
+  const temporary=path.join(directory,`desktop-session-${process.pid}-${randomBytes(6).toString('hex')}.tmp`);
+  try{
+    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(pipe,resolve);});
+    ownership.assertHeld();fs.writeFileSync(temporary,JSON.stringify({pid:process.pid,pipe,secret}),{mode:0o600});fs.renameSync(temporary,file);
+  }catch(error){try{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}catch{}await shutdown();throw error;}
   expiry=setInterval(()=>{
     if(busy||closing||Date.now()-lastCall<=idleTimeoutMs)return;
     if(idlePolicy==='shutdown'){shutdown().catch(()=>{});return;}
@@ -105,7 +126,7 @@ export async function serveDesktop({directory=dataDir(),runtime=new Runtime(),id
     Promise.resolve().then(()=>runtime.finish()).catch(()=>runtime.stop()).catch(()=>{}).finally(()=>{busy=false;});
   },idleCheckMs);expiry.unref();
   process.once('SIGTERM',()=>shutdown().catch(()=>{}));process.once('SIGINT',()=>shutdown().catch(()=>{}));
-  return {shutdown,server,file,status:()=>({...runtime.status(),listener_idle_policy:idlePolicy})};
+  return {shutdown,server,file,ownership,status:()=>({...runtime.status(),listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost})};
 }
 
-if(process.argv.includes('--serve')){const policy=applyDeployment(loadDeployment());await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)&&process.argv[2]==='--serve'){const policy=applyDeployment(loadDeployment());await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});}

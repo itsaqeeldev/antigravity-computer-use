@@ -252,7 +252,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "715a2abd5555621b7079230083538f1d2cb0ac14f1372e84192fba9dece22a54"
+      "sha256": "a16b3e07a26a35ff023c838c662d9628e8d3d9317bc70f8abeac1f7abdb562e4"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -260,7 +260,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "360e2bc316dceaee08e6bd6c4a8718349c33812afd96dc15a88aa752ee298123"
+      "sha256": "2f3261f468c5e287244872fd36c10d21c93b0be2b23352649b220dea8bfd387b"
     },
     {
       "path": "server/version.mjs",
@@ -268,7 +268,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "92ddb1dedcc6f3bd6649faa3432d00df4031eba355bb1217394e20f18b40a6b5"
+      "sha256": "a890eb374cedc5538573f4fbd095c84d440aaf801671162f679c432484b6bd9a"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -300,7 +300,7 @@
     },
     {
       "path": "tests/receipts.test.mjs",
-      "sha256": "be671948d96e3729f3fdff4377a359fc8b119ec5a1d98a989a83f0fc228d357c"
+      "sha256": "7e74f6e3da4c23b29f5fb44f368d7922a5d895f546114230af6fc303c8eb2dbb"
     },
     {
       "path": "tests/launch-observe.test.mjs",
@@ -320,7 +320,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "f7315312ed81b2cef5c6f64b026aa85e651e550b5d74ec7ecbc6d6e0b051bffd"
+      "sha256": "e2952ff59a23613a9686f74a6ac8357b3fa8f2d4a5d21302cff52cc1c949e517"
     },
     {
       "path": "tests/install.test.mjs",
@@ -344,7 +344,7 @@
     },
     {
       "path": "server/native/StorageGuard.cs",
-      "sha256": "755d32b74f266bc2c173971a196cbc9fdf0338eb11449e96622d98323dd4ec22"
+      "sha256": "de26e60e6633866291b82da534cdc66b76c86fdb008977c2e2dde496b33dc16f"
     },
     {
       "path": "server/storage.mjs",
@@ -381,6 +381,14 @@
     {
       "path": "tests/sidecar.test.mjs",
       "sha256": "0a048dd0b6ea837f0e0fcf0021f5bab930d25b2039f4c6683934e07def0d0ada"
+    },
+    {
+      "path": "server/service-lease.mjs",
+      "sha256": "42879949694737214fff01e428aead6215fee9a15e3a3732c52026e289a71607"
+    },
+    {
+      "path": "tests/service-lease.test.mjs",
+      "sha256": "74d8eeff1b6007b252f0cb37d1eb588bbfa12a1b1be4016c9120b23a953cf81b"
     }
   ]
 }
