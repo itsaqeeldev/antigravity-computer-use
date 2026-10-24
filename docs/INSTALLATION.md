@@ -59,7 +59,7 @@ End/shutdown control. Remove only this project's MCP entry if present and its gl
 - Missing slash command: verify the intended App global/project skill path, then open a fresh conversation.
 - Missing screenshots: open the returned actual `image.path` with the host image viewer. Text alone is not visual verification.
 - Animation/old frame: use a fresh snapshot with `settle_ms:600` or wait for expected visible text. Never repeat the preceding input merely because its first image was transitional.
-- Refused filename: `file_dialog_path_mismatch` means the tool sent no Save/Open confirmation. Inspect the actual dialog; the work-branch explicit `entry_method: clipboard` uses temporary clipboard-preserving filename paste when authorized. It is not a model approval flag or silent fallback. That new mode is still in qualification.
+- Refused filename: `file_dialog_path_mismatch` means the tool sent no Save/Open confirmation. Inspect the actual dialog; explicit `entry_method: clipboard` uses temporary clipboard-preserving filename paste when authorized. It is not a model approval flag or silent fallback. Unicode/emoji Save, longer ASCII/space Save As and Unicode-path Open passed on native3d; retain the original keyboard-stream failure as a separate result.
 - Wrong desktop/minimized: discover with `include_hidden:true`, focus only the intended app and inspect fresh pixels.
 - Different running build: end/shutdown the old owned session before starting the new build; do not interrupt someone else's task.
 - Elevated app/UAC/security surface: human handoff. No normal-user bypass is supported.

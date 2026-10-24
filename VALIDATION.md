@@ -16,6 +16,7 @@
 | Physical Stop/re-arm | Owner performed both re-arms and physical Esc on dev7; fresh observation afterward | Held drag interrupted and seven queued actions skipped; service replacement did not clear Stop |
 | Speed1 native candidate | Exact build8d9d8082 real Upscaly batched import, no leftover picker; actual Notepad pause/refusal/resume/stale frame and exact1319-unit saved Unicode | Direct timings are not host wall-time improvement. Windows Notepad's launcher returned observe_pending; apps/snapshot recovered without duplicate launch. Later source launcher hardening still needs refreshed packaging |
 | Provider exception replay | Exact old nativea2: after-effect1dispatch/2effects/1physical; before-effect1/1/1. Candidate2abe/nativea2fd:1/1/0 and1/0/0, both input_outcome_unknown | Real owned WPF accessibility provider, same reusable harness, old exit1/new exit0. This qualifies the fault path, not real Upscaly export, host speed or new physical Esc |
+| Explicit filename entry | Native3d/build9f0 real Notepad Unicode/emoji Save, longer ASCII/space Save As, Unicode Open; exact74-unit file bodies, all clipboard restoration flags true | Bypasses the observed incremental keyboard filename loss when clipboard access is explicitly authorized; no claim keyboard entry is globally lossless. Provider regression also passed on exact3d |
 
 ## Retained failures and recovery
 
