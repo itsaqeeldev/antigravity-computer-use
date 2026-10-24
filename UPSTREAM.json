@@ -308,7 +308,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "00421fb9a5f4ad75533fa4afcee635a2849c905b0a8e1a3430a351f128100b4a"
+      "sha256": "a92474b4c58a8e58aa160e1cc974420a243f0db9f27249b45a4fe28d8ab3130e"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -316,7 +316,7 @@
     },
     {
       "path": "scripts/verify-install.mjs",
-      "sha256": "37918b4c33d092dba103e6c9f6758cce515453e7e39143fe8e540cd596251cc8"
+      "sha256": "5e81fa12faccd58a34d143e57e17e98c2d06b36147238d476b47489d8118c616"
     },
     {
       "path": "scripts/bundle.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "bbde382f81b0c2c3d568253d38f4918af92b246fdee7431d8b74309408b547a6"
+      "sha256": "97c0332b8cdc76beba91e98f62b0fd9e61c22961a3b4aea5283216ec2f7abe9a"
     },
     {
       "path": "tests/core.test.mjs",

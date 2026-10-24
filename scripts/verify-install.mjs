@@ -19,7 +19,7 @@ for(const [file,hash] of Object.entries(manifest.files))assert.equal(sha(path.jo
 const actual=[];function inventory(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name),name=path.relative(install.release,file).replaceAll('\\','/');assert(!entry.isSymbolicLink(),'Installed payload contains a link: '+name);if(entry.isDirectory())inventory(file);else if(!['bundle-manifest.json','desktop-policy.json'].includes(name))actual.push(name);}}inventory(install.release);assert.deepEqual(actual.sort(),Object.keys(manifest.files).sort(),'Installed payload has missing/unsealed files');
 storageOperation('verify-tree',target,{helper:path.join(install.release,'bin/StorageGuard.exe')});
 const policy=JSON.parse(fs.readFileSync(path.join(install.release,'desktop-policy.json'),'utf8'));assert.equal(policy.permission_mode,install.permission_mode);assert.equal(path.resolve(policy.data_dir),path.join(target,'data'));
-if(install.sidecar){assert.deepEqual(JSON.parse(fs.readFileSync(install.sidecar.definition)),sidecarDefinition(install.launcher_node,install.launcher));assert.equal(typeof JSON.parse(fs.readFileSync(install.sidecar.config)).sidecars?.[SIDECAR_ID]?.enabled,'boolean');}
+if(install.sidecar){assert.deepEqual(JSON.parse(fs.readFileSync(install.sidecar.definition)),sidecarDefinition(path.join(install.release,'node.exe'),path.join(install.release,'scripts/desktop.mjs')));assert.equal(typeof JSON.parse(fs.readFileSync(install.sidecar.config)).sidecars?.[SIDECAR_ID]?.enabled,'boolean');}
 for(const file of install.configs){
  const cfg=JSON.parse(fs.readFileSync(file));
  if(install.integration==='direct')assert(!cfg.mcpServers?.['antigravity-computer-use']);

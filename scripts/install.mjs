@@ -138,7 +138,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  fs.renameSync(launcher+'.agcu.tmp',launcher);
  fs.renameSync(controllerStart+'.agcu.tmp',controllerStart);
  for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}
- if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(launcherNode,launcher),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
+ if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(path.join(release,'node.exe'),path.join(release,'scripts/desktop.mjs')),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
  for(const file of skillDirs){
   fs.mkdirSync(file,{recursive:true});fs.cpSync(path.join(release,'skills','computer-use'),file,{recursive:true});
   const instructions=path.join(file,'SKILL.md');
