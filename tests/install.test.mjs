@@ -4,7 +4,8 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 const root=path.resolve('.localdata/test-install');fs.mkdirSync(root,{recursive:true});
-const install=options=>productionInstall({...options,prepareStorage(){return {private_storage:true,test_fixture:true};}});
+// Fixture profiles must never discover or alter the developer's real install.
+const install=options=>productionInstall({home:path.join(options.target,'inert-home'),...options,prepareStorage(){return {private_storage:true,test_fixture:true};}});
 function seal(bundle,version='9.1.2-test'){
  if(!fs.existsSync(path.join(bundle,'bin/StorageGuard.exe')))fs.writeFileSync(path.join(bundle,'bin/StorageGuard.exe'),'inert ACL fixture; never executed');
  const files={};const walk=dir=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name),name=path.relative(bundle,file).replaceAll('\\','/');if(entry.isDirectory())walk(file);else if(name!=='bundle-manifest.json')files[name]=createHash('sha256').update(fs.readFileSync(file)).digest('hex');}};walk(bundle);

@@ -324,7 +324,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "621aafec1d42d65c020b35f27c967000e5f21d4e7648cac7c2b81eff5350704d"
+      "sha256": "d2ce25e1db2ea532bb494614d32ef38c96818a56a83b0cb757e572609f939d75"
     },
     {
       "path": "tests/core.test.mjs",
