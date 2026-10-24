@@ -66,3 +66,9 @@ End/shutdown control. Remove only this project's MCP entry if present and its gl
 - Cursor roles: common arrow/link/text/app-starting roles are temporary custom cursors; app-owned and resize shapes remain app-controlled.
 
 Specific real Agent Manager tasks and installed human Stop/re-arm checks now have records. Broader application, hardware and release qualification remain open. See VALIDATION.md; passing an installer or fixture test does not prove ordinary-task reliability.
+
+## Windows desktop startup
+
+After installation, double-click the printed `controller_start` file (**Start Computer Use.cmd**) from the normal Windows desktop, then invoke `/computer-use`. It uses only the installed pinned Node/runtime and accepts no forwarded arguments. It does not add a login task, change security settings, or grant approval. End/shutdown still cleans up normally; start it again after service expiry or reboot.
+
+Actual Agent Manager terminal jobs were attached to an isolated `exebox` desktop while the visible input desktop was `Default`, even with Turbo selected. Their detached children were also retired between commands. Host-owned `serve` fixed lifetime but could not supply visible-desktop access. The native preflight now returns `desktop_context_unavailable` rather than creating hidden app windows or failing later in UI Automation. A local companion started on the normal desktop is the supported bridge; do not use WMI or desktop-switching recovery. Background startup at login is not enabled by this build.

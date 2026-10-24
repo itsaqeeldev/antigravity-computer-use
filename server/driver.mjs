@@ -91,6 +91,10 @@ export class Driver {
       }, 45000);
       this.ready = info => {
         if (settled || this.proc !== proc) return;
+        if(info.desktop_context?.interactive===false){
+          fail(new HostError('desktop_context_unavailable','The native controller is not attached to the visible input desktop. No app action was executed.','Start the installed local controller from your normal Windows desktop, then reconnect through the skill. A host-isolated terminal cannot supply interactive desktop control. Do not switch desktops, use WMI or relax host security as recovery. Locked/secure desktops require the human.'));
+          try{proc.kill();}catch{}return;
+        }
         settled = true; clearTimeout(bootTimer);
         this.info = info; this.ready = null;
         resolve(info);

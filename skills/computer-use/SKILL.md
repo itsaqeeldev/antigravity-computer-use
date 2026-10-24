@@ -8,11 +8,13 @@ description: Operate and visually verify real desktop applications, including de
 Antigravity is the agent. The local Windows runtime supplies observation and input. Use the direct local command below through the host terminal tool. No MCP server is required. Cua Driver and Open Computer Use have different protocols; do not mix controllers.
 
 ```powershell
-{{DESKTOP_COMMAND}} serve
+{{DESKTOP_COMMAND}} status
 {{DESKTOP_COMMAND}} apps
 ```
 
-**Start `serve` as a background task owned by Antigravity**, not as an ordinary short-lived terminal command. In Agent Manager's `run_command`, use `IsDaemon: true` and `WaitMsBeforeAsync: 1000`; retain the returned `TaskId`. Run subsequent desktop commands normally, one at a time. `serve` prints readiness and intentionally remains running. Use `manage_task` status for that task when necessary. If the installed host lacks these controls, use its documented persistent background-task equivalent or report the limitation; do not repeatedly launch detached children. The ordinary `start` command is for terminals that preserve detached processes. Never use WMI/process-creation workarounds, change policy/environment, or read session capabilities/source code to keep the controller alive. An unreachable service means inspect the background task once and restart it only after confirming it exited; a live unresponsive controller must not be replaced.
+Reuse the installed local controller if running. **Windows Agent Manager can run terminal jobs on an isolated `exebox` desktop even in Turbo.** Those jobs cannot directly drive the visible desktop. If no controller is running, the human starts **`{{CONTROLLER_START}}`** from their normal Windows desktop. It launches the pinned local runtime; Antigravity then sends its ordinary commands through private IPC. This remains a direct skill, with no MCP or extra model. Do not open the starter inside an isolated terminal and expect it to escape. `desktop_context_unavailable` requires this local startup (or human unlock), not repeated commands, WMI, desktop switching, policy/environment changes or capability/source reads. Defer human-only startup while the human is unavailable and continue independent work.
+
+For hosts whose terminal actually shares the visible input desktop, `serve` can run under `run_command` with `IsDaemon:true`, `WaitMsBeforeAsync:1000`; retain its `TaskId`. It prints readiness and intentionally stays running. Ordinary external terminals may use detached `start`. A live unresponsive service must not be replaced. Use `shutdown` for native cleanup before retiring a task, never a blind process kill.
 
 Use the command below directly; replace sample handles, frames, indexes and paths with observed values. **Do not create request/result files or copy screenshots for each step.** Automatic bounded local receipts include timings and delivery outcomes; their path/id are returned inline. Read receipts only for diagnosis or the final audit. Keep progress messages short.
 

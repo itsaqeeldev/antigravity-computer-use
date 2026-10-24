@@ -445,6 +445,7 @@ namespace Axon
             if (Array.IndexOf(argv, "--guardian") >= 0) SetDpiAwareness();
             if (Array.IndexOf(argv, "--guardian") >= 0) { int code=0; var ui=new System.Threading.Thread(delegate(){ code=Guardian.Run(); }); ui.SetApartmentState(System.Threading.ApartmentState.STA); ui.Start(); ui.Join(); return code; }
             if (Array.IndexOf(argv, "--release-inputs") >= 0) { ControlFence.Recover(); return InputLedger.HasHeld()?2:0; }
+            if(argv.Length==1 && argv[0]=="--desktop-context") {Console.Out.WriteLine(new JavaScriptSerializer().Serialize(DesktopContext.Inspect()));return 0;}
             ControlFence.WatchParent();
             // Build-time warm-up: touch the expensive machinery once so the
             // antivirus scan and the JIT are paid for before Claude ever waits
@@ -522,6 +523,7 @@ namespace Axon
             ready["event"] = "ready";
             ready["dpi_mode"] = _dpiMode;
             ready["pid"] = System.Diagnostics.Process.GetCurrentProcess().Id;
+            ready["desktop_context"] = DesktopContext.Inspect();
             ready["clr"] = Environment.Version.ToString();
             ready["presence"] = Presence.HooksOk;
             ready["overlay"] = Overlay.Enabled;

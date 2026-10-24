@@ -1,5 +1,5 @@
 import fs from 'node:fs';import path from 'node:path';import os from 'node:os';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
-import {launcherSource} from './install.mjs';
+import {launcherSource,controllerStartSource} from './install.mjs';
 import {storageOperation} from '../server/storage.mjs';
 const target=path.resolve(process.argv[2]||'D:/Tools/AntigravityComputerUse');
 const install=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));
@@ -12,6 +12,7 @@ if(install.launcher){
  assert.equal(fs.readFileSync(install.launcher,'utf8'),launcherSource(install.release),'short launcher differs from installed build pin');
  assert.equal(path.resolve(install.launcher_node),path.join(target,scope?`cu-${scope}-node.exe`:'cu-node.exe'));
  assert.equal(sha(install.launcher_node),manifest.files['node.exe'],'launcher Node differs from bundled Node');
+ if(install.controller_start){assert.equal(path.resolve(install.controller_start),path.join(target,scope?`Start Computer Use-${scope}.cmd`:'Start Computer Use.cmd'));assert.equal(fs.readFileSync(install.controller_start,'utf8'),controllerStartSource(scope));}
 }
 for(const [file,hash] of Object.entries(manifest.files))assert.equal(sha(path.join(install.release,file)),hash,file+' differs from bundle');
 const actual=[];function inventory(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name),name=path.relative(install.release,file).replaceAll('\\','/');assert(!entry.isSymbolicLink(),'Installed payload contains a link: '+name);if(entry.isDirectory())inventory(file);else if(!['bundle-manifest.json','desktop-policy.json'].includes(name))actual.push(name);}}inventory(install.release);assert.deepEqual(actual.sort(),Object.keys(manifest.files).sort(),'Installed payload has missing/unsealed files');
@@ -25,7 +26,7 @@ for(const file of install.configs){
 for(const dir of install.skills){
  const template=fs.readFileSync(path.join(install.release,'skills/computer-use/SKILL.md'),'utf8');
  const command=install.launcher?`& '${install.launcher_node.replaceAll("'","''")}' '${install.launcher.replaceAll("'","''")}'`:`& '${path.join(install.release,'node.exe').replaceAll("'","''")}' '${path.join(install.release,'scripts','desktop.mjs').replaceAll("'","''")}'`;
- assert.equal(fs.readFileSync(path.join(dir,'SKILL.md'),'utf8'),template.replaceAll('{{DESKTOP_COMMAND}}',command));
+ assert.equal(fs.readFileSync(path.join(dir,'SKILL.md'),'utf8'),template.replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',install.controller_start||''));
  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'deployment.json'),'utf8')),{target,release:install.release,workspace:install.workspace,permission_mode:install.permission_mode});
 }
 console.log(JSON.stringify({verified:true,release:install.release,build_id:manifest.build_id,files:Object.keys(manifest.files).length,skill_matches:true},null,2));

@@ -25,6 +25,7 @@ test('direct installation removes only its legacy MCP entry and pins the script 
  const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(result.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);
  assert.equal(JSON.parse(fs.readFileSync(cfg)).mcpServers['antigravity-computer-use'].command,'old');
  assert(!fs.existsSync(result.launcher));
+ assert(!fs.existsSync(result.controller_start),'Rollback removes the newly introduced human starter');
 });
 test('configuration merge preserves unrelated servers/settings',()=>{
  const f=path.join(root,'merge.json');fs.writeFileSync(f,JSON.stringify({custom:7,mcpServers:{keep:{command:'keep'}}}));

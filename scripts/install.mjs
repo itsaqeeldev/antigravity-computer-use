@@ -75,6 +75,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  // A project-local update must not repoint an already installed global skill.
  const launcher=path.join(target,scope?`cu-${scope}.mjs`:'cu.mjs');
  const launcherNode=path.join(target,scope?`cu-${scope}-node.exe`:'cu-node.exe');
+ const controllerStart=path.join(target,scope?`Start Computer Use-${scope}.cmd`:'Start Computer Use.cmd');
  if(!fs.existsSync(path.join(bundle,'bin','AxonHost.exe'))||!fs.existsSync(path.join(bundle,'node.exe')))throw new Error('Run the bundle build first; prebuilt native host and Node are required.');
  const base=workspace?path.join(path.resolve(workspace),'.agents'):path.join(home,'.gemini','config');
  const configs=workspace?[path.join(base,'mcp_config.json')]:[...new Set([path.join(base,'mcp_config.json'),...(legacyProfiles?['antigravity','antigravity-ide','antigravity-cli'].filter(p=>fs.existsSync(path.join(home,'.gemini',p))).map(p=>path.join(home,'.gemini',p,'mcp_config.json')):[])])];
@@ -105,7 +106,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  records.push({file:installationFile,saved:savedInstallation,existed:installedBefore,kind:'installation'});
  const savedRegistry=path.join(backup,'prior-deployments.json'),registryExisted=fs.existsSync(registryFile);if(registryExisted)fs.copyFileSync(registryFile,savedRegistry);
  records.push({file:registryFile,saved:savedRegistry,existed:registryExisted,kind:'deployment-registry'});
- for(const [file,label] of [[launcher,'prior-cu.mjs'],[launcherNode,'prior-cu-node.exe']]){
+ for(const [file,label] of [[launcher,'prior-cu.mjs'],[launcherNode,'prior-cu-node.exe'],[controllerStart,'prior-controller-start.cmd']]){
   const saved=path.join(backup,label),existed=fs.existsSync(file);if(existed)fs.copyFileSync(file,saved);
   records.push({file,saved,existed,kind:'launcher'});
  }
@@ -114,6 +115,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  // No batch wrapper: CMD would reparse percent signs and shell metacharacters
  // in model-supplied text. A Node entrypoint preserves the actual argv.
  fs.writeFileSync(launcher+'.agcu.tmp',launcherSource(release));
+ fs.writeFileSync(controllerStart+'.agcu.tmp',controllerStartSource(scope));
  try{fs.linkSync(path.join(release,'node.exe'),launcherNode+'.agcu.tmp');}catch{fs.copyFileSync(path.join(release,'node.exe'),launcherNode+'.agcu.tmp');}
  // File copying can carry security attributes. Seal the actual copied tree,
  // not merely the top directory, before changing the host's configuration.
@@ -126,19 +128,22 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  }
  fs.renameSync(launcherNode+'.agcu.tmp',launcherNode);
  fs.renameSync(launcher+'.agcu.tmp',launcher);
+ fs.renameSync(controllerStart+'.agcu.tmp',controllerStart);
  for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}
  for(const file of skillDirs){
   fs.mkdirSync(file,{recursive:true});fs.cpSync(path.join(release,'skills','computer-use'),file,{recursive:true});
   const instructions=path.join(file,'SKILL.md');
   const command=`& '${launcherNode.replaceAll("'","''")}' '${launcher.replaceAll("'","''")}'`;
-  fs.writeFileSync(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command));
+  fs.writeFileSync(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',controllerStart));
   fs.writeFileSync(path.join(file,'deployment.json'),JSON.stringify({target,release,workspace:resolvedWorkspace,permission_mode:permissionMode},null,2));
  }
  registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace};
  fs.writeFileSync(registryFile+'.agcu.tmp',JSON.stringify(registry,null,2));fs.renameSync(registryFile+'.agcu.tmp',registryFile);
- const manifest={release,launcher,launcher_node:launcherNode,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};fs.writeFileSync(path.join(backup,'rollback.json'),JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(target,'installation.json'),JSON.stringify({...manifest,backup},null,2));
- return {target,release,launcher,launcher_node:launcherNode,configs,skills:skillDirs,backup};
+ const manifest={release,launcher,launcher_node:launcherNode,controller_start:controllerStart,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};fs.writeFileSync(path.join(backup,'rollback.json'),JSON.stringify(manifest,null,2));fs.writeFileSync(path.join(target,'installation.json'),JSON.stringify({...manifest,backup},null,2));
+ return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,configs,skills:skillDirs,backup};
 }
+// Fixed, argument-free human entrypoint; no model text or command forwarding.
+export function controllerStartSource(scope){const stem=scope?`cu-${scope}`:'cu';return `@echo off\r\n"%~dp0${stem}-node.exe" "%~dp0${stem}.mjs" start\r\nif errorlevel 1 pause\r\n`;}
 export function launcherSource(release){return `import {main,encodeReply} from ${JSON.stringify(pathToFileURL(path.join(release,'scripts','desktop.mjs')).href)};\nawait main().catch(error=>{console.log(encodeReply({ok:false,error:{code:error.code||'refused',message:error.message}}));process.exitCode=1;});\n`;}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const args=process.argv.slice(2);const take=k=>{const i=args.indexOf(k);return i<0?undefined:args[i+1];};

@@ -202,6 +202,8 @@ export class Runtime {
     if(!fs.existsSync(app)||path.extname(app).toLowerCase()!=='.exe')fail('invalid_application','Supply an existing .exe path.');
     if(/^(?:AxonHost|StorageGuard)(?:-[0-9a-f]+)?\.exe$/i.test(path.basename(app)))fail('protected_app','Cannot launch internal runtime helpers as target applications.');
     if(classify({process:path.basename(app),path:app}).tier===TIER.BLOCKED)fail('protected_app','Cannot launch a protected application.');
+    // Validate the execution desktop before showing controls or launching apps.
+    await this.driver.start();
     await this.guardian.start();
     if(this.state==='stopped'||this.state==='paused')this.check();
     if(!this.token){this.token=randomUUID();this.deadline=Date.now()+10*60000;this.remaining=200;}

@@ -24,6 +24,13 @@ test('copied/untrusted payload rights are detected and the actual tree is repair
  assert.throws(()=>storageOperation('verify-tree',root),e=>e.code==='storage_not_private');
  storageOperation('install',root);assert.equal(storageOperation('verify-tree',root).private_storage,true);assert.equal(fs.readFileSync(file,'utf8'),'owned ACL probe');
 });
+test('human starter staging is recognized without accepting unrelated lookalike files',()=>{
+ for(const name of ['Start Computer Use.cmd','Start Computer Use-012345abcdef.cmd.agcu.tmp'])fs.writeFileSync(path.join(root,name),'inert starter fixture');
+ assert.equal(storageOperation('install',root).private_storage,true);
+ const unknown=path.join(root,'Start Computer Use evil.cmd');fs.writeFileSync(unknown,'unrelated');const before=sddl(root);
+ try{assert.throws(()=>storageOperation('install',root),e=>e.code==='storage_not_dedicated');assert.equal(sddl(root),before);}finally{fs.unlinkSync(unknown);}
+});
+
 test('unsafe ancestors and unrelated nonempty folders refuse before changing them',()=>{
  const parent=path.join(root,'releases','unsafe-parent');fs.mkdirSync(parent);broaden(parent);const before=sddl(parent);
  assert.throws(()=>storageOperation('install',path.join(parent,'new-install')),e=>e.code==='insecure_storage_ancestor');assert(!fs.existsSync(path.join(parent,'new-install')));assert.equal(sddl(parent),before);
