@@ -31,3 +31,11 @@ test('legacy JSON requests remain unchanged; duplicate/unknown/ambiguous flags r
  for(const flags of [['--observe','{}','--query','x'],['--query','x','--observe','{}']])assert.throws(()=>parse('click',['--hwnd','123','--observation-id','f','--reason','test',...flags]),/not both/);
  assert.throws(()=>parse('drag',['--hwnd','123','--observation-id','f','--reason','test','--from','1,','--to','2,3']),/empty array/);
 });
+
+test('file-picker clipboard entry is explicit and cannot manufacture confirmation',()=>{
+ const words=['--hwnd','123','--observation-id','fresh','--path','D:/Tests/new.txt','--action','save','--reason','Save with explicit temporary clipboard'];
+ const plain=parse('file_dialog',words);assert(!Object.hasOwn(plain,'entry_method'));
+ assert.equal(parse('file_dialog',[...words,'--entry-method','clipboard']).entry_method,'clipboard');
+ for(const value of ['auto','confirmed','true'])assert.throws(()=>parse('file_dialog',[...words,'--entry-method',value]));
+ assert.throws(()=>parse('file_dialog',[...words,'--entry-method','clipboard','--confirmed','true']));
+});

@@ -4150,6 +4150,9 @@ namespace Axon
         {
             string path = Str(Get(a, "path"));
             if (string.IsNullOrEmpty(path)) throw new AxonError("bad_path", "file_dialog needs path.", null);
+            string entry = Str(Get(a,"entry_method")) ?? "keyboard";
+            if(entry!="keyboard" && entry!="clipboard")throw new AxonError("bad_entry_method","Filename entry_method must be keyboard or explicit clipboard.",null);
+            bool clipboardEntry=entry=="clipboard";
             string full;
             try { full = Path.GetFullPath(path); }
             catch (Exception ex) { throw new AxonError("bad_path", "Not a usable path: " + ex.Message, null); }
@@ -4200,7 +4203,7 @@ namespace Axon
                 // Modern Notepad's save dialog echoes a ValuePattern write
                 // while retaining its old IFileDialog filename. Real keyboard
                 // editing supplies the change/commit notifications it needs.
-                if(save)break;
+                if(save || clipboardEntry)break;
                 if (target == null || set) continue;
                 if (!target.TryGetCurrentPattern(ValuePattern.Pattern, out vp)) continue;
                 ControlFence.CheckOwnedDialog();
@@ -4251,15 +4254,23 @@ namespace Axon
                 Native.KeyDown(VkOf("ctrl"));
                 Native.KeyTap(VkOf("a"));
                 Native.KeyUp(VkOf("ctrl"));
-                Native.TypeUnicode(full);
+                if(clipboardEntry) {
+                    // Opt-in only: reuse the existing lossless clipboard gate.
+                    // The owned-dialog scope continues to revalidate BOTH keys;
+                    // PasteCore's foreground/focus target is the actual dialog.
+                    var pasteArgs=new Dictionary<string,object>(a);
+                    pasteArgs["hwnd"]=Hwnd(dlgHwnd);
+                    foreach(string key in new string[]{"index","selector","point","x","y","snapshot_id"})pasteArgs.Remove(key);
+                    PasteCore(pasteArgs,res,delegate { Clipboard.SetText(full); });
+                } else Native.TypeUnicode(full);
                 Native.KeyTap(VkOf("tab"));
                 string committed=null;object committedPattern;
                 AutomationElement committedEdit=edit??box;
                 if(committedEdit.TryGetCurrentPattern(ValuePattern.Pattern,out committedPattern))try {committed=((ValuePattern)committedPattern).Current.Value;}catch {}
                 if(committed==null||!string.Equals(committed.Trim().Trim('"'),full,StringComparison.OrdinalIgnoreCase))
-                    throw new AxonError("file_dialog_path_mismatch","The filename did not match the requested path; Save/Open was not confirmed.","Inspect the dialog before continuing; do not repeat a possibly completed save.");
+                    throw new AxonError("file_dialog_path_mismatch","The filename did not match the requested path; no Save/Open confirmation was sent.","Inspect the dialog and obtain a fresh owner observation. Explicit entry_method clipboard can avoid packet loss when temporary clipboard use is authorized.");
                 set = true;
-                method = "typed";
+                method = clipboardEntry ? "explicit clipboard" : "typed";
             }
             System.Threading.Thread.Sleep(60);
             // Confirm with the dialog's own button so a relabelled "Upload" or
@@ -4292,6 +4303,7 @@ namespace Axon
             res["path"] = full;
             res["closed"] = closed;
             res["button"] = okLabel;
+            res["entry_method"] = entry;
             res["method"] = (invoked ? "button \"" + (okLabel ?? "") + "\"" : "enter") + ", path by " + method;
             if (!closed)
             {

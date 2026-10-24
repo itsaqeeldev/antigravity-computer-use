@@ -21,6 +21,7 @@ Use the command below directly; replace sample handles, frames, indexes and path
 {{DESKTOP_COMMAND}} set_value --hwnd 123 --observation-id FRAME --index 8 --text 'PNG' --risk routine --reason 'Choose PNG'
 {{DESKTOP_COMMAND}} key --hwnd 123 --observation-id FRAME --keys ctrl+a --reason 'Select test text'
 {{DESKTOP_COMMAND}} file_dialog --hwnd 123 --observation-id FRAME --path 'D:\Samples\cat.jpg' --action open --reason 'Import the test image'
+{{DESKTOP_COMMAND}} file_dialog --hwnd 123 --observation-id FRAME --path 'D:\Tests\out.txt' --action save --entry-method clipboard --reason 'Save the test document using temporary clipboard-preserving filename entry'
 {{DESKTOP_COMMAND}} paste --hwnd 123 --observation-id FRAME --index 9 --text-file 'D:\Tests\sample.txt' --reason 'Paste generated test text'
 {{DESKTOP_COMMAND}} wait --hwnd 123 --until Completed --timeout-ms 30000 --reason 'Wait for the export'
 {{DESKTOP_COMMAND}} end
@@ -48,6 +49,10 @@ The native service persists across commands. Keep one session; `end` releases co
 For text entry, native `type` is intentionally bounded to 400 UTF-16 units and paced for Windows text services. For larger text use explicit `paste` (up to 20,000 units) with a fresh observation and observed editor index. It temporarily uses the local clipboard, preserves supported formats and refuses when any format cannot be preserved; it will not overwrite a new human copy during cleanup. This is a sensitive clipboard operation and requires its normal permission review. Verify the resulting text or saved bytes. Never replay a partial type or paste blindly. `clipboard` is still available when you explicitly intend to read or leave new contents on the clipboard.
 
 Click the observed Choose files/Open/Browse button first. Then call `computer_file_dialog` with the **owner application's hwnd**, the fresh post-click `observation_id`, the exact `path`, and `action: "open"` or `"save"`. This tool fills and confirms an already-open picker; it does not open one. A closed picker proves selection only. Wait for the imported item or resulting file and verify it. A folder-only or custom picker may need its own observed controls instead.
+
+For Save, prefer explicit `--entry-method clipboard` when temporary clipboard use is authorized: the runtime pastes the whole filename through its existing preservation gate, commits it and refuses confirmation unless readback matches. It refuses unpreservable clipboard formats rather than silently switching methods. The compatibility default is keyboard entry; real testing found that text services can drop a character even when paced, so `file_dialog_path_mismatch` means **Save/Open was not confirmed**. Inspect before recovery; never merely press Enter or replay a possibly completed confirmation. Clipboard use remains a sensitive operation under the installed policy.
+
+The owner screenshot can omit its separate modal even when the accessibility tree shows it. If needed, discover the actual returned dialog with `apps`, then `snapshot` that dialog directly; do not claim the owner image showed it. Keep `file_dialog` bound to the owner and a fresh **owner** observation. After a Save input, obtain fresh state and allow a bounded wait for the expected file: dialog closure can precede asynchronous disk writing. Never repeat Save just because an immediate file read found nothing.
 
 ## Recover deliberately
 

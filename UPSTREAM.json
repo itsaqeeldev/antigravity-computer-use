@@ -60,7 +60,7 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "87007ba3ed68016c2edc9f7795f31bb5e875381d59959961554d1e5771aebcd2",
+      "local_sha256": "08ae6afc04bec5916bd7778ea329e91fb68c88b52eacc5aae81fc9d2bbbe8d07",
       "modified": true
     },
     {
@@ -209,12 +209,13 @@
     "Speed candidate: strict named CLI flags and brief output, automatic bounded private timing receipts, exact-process launch/observe, short installer launcher with rollback, batch preflight and final-checkpoint capture. Actual Agent Manager latency rerun is pending.",
     "Speed hardening: direct Node entrypoint preserves literal argv instead of a CMD forwarding wrapper; scoped project launchers cannot repoint global, live-service install refuses before writes, and ambiguous/incomplete batch target shapes refuse before input. Exact1319-unit real Notepad save and Upscaly batched import witnessed on speed1; actual App comparison awaits human window restoration.",
     "Owned WPF provider baseline reproduced dispatch-then-error followed by duplicate physical input and before-effect refusal followed by physical input. Native click/MSAA/file-dialog confirmation now refuse automatic alternate actions after dispatch errors and return input_outcome_unknown. Qualification pending. Also track file-dialog held-input recovery, register first-launch/window-free workers with guardian and preserve worker epoch, and refuse unsealed bundle extras.",
-    "Reusable native WPF provider regression fails olda2 and passes candidatea2fd with exactly one dispatch, correct effect counters and no physical replay. Clarify host-managed comment for direct terminal integration. Ordinary-app and host acceptance still pending."
+    "Reusable native WPF provider regression fails olda2 and passes candidatea2fd with exactly one dispatch, correct effect counters and no physical replay. Clarify host-managed comment for direct terminal integration. Ordinary-app and host acceptance still pending.",
+    "Work branch: actual reviewed2 Save filename stream dropped a character; exact-path guard refused confirmation. Add explicit clipboard filename entry reusing preserved-format PasteCore within the owned-dialog fence; default keyboard and Native confirmation authority remain unchanged. New mode native qualification pending."
   ],
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "d34293a5fc15f2b164cbcc29489103085128815c0cebb32725cd22ad233bd85b"
+      "sha256": "52ffd0d8ad6d1dd30a31b6445a19c1d0e058e0c7c0be991782dd627da58ac3a5"
     },
     {
       "path": "server/mcp.mjs",
@@ -254,7 +255,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "222a19d01f5f73b33e4fffc20cfacdf3f45a3ff72a0547cb3a12e023e4689bd0"
+      "sha256": "ebdeb89034ec88b5b6674a8bc0a4b85d5d44c3b02a731fcb6a52e85ee44f621a"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -294,7 +295,7 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "da05970811f5f3d596b3b9788b8345f8185809c86314662e91bbae2499239a64"
+      "sha256": "f9fa93903ac9269b2dd02b22a897d62a8f4f29421f2432aea1825a08beac42ab"
     },
     {
       "path": "tests/receipts.test.mjs",

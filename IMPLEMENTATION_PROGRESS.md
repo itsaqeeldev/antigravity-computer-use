@@ -1,5 +1,11 @@
 # Implementation progress
 
+## 24 October2026 - filename-entry follow-up in qualification
+
+Exact installed reviewed2 builda241/native096a passed the native provider regression, real AI PNG/JPEG1920x1320 with independent NCNN/output witnesses, actual drag/wheel, second-session pause/refusal/resume/stale-frame checks,1319-unit paste and23-unit native typing. The default Save filename keyboard stream then lost one character midpath; exact readback refused confirmation. The failure is retained. Explicit paste into the actual observed owned dialog, Tab commit and one Save recovered the document with exact1342-unit saved content. Immediate file checking initially raced asynchronous writing; a fresh observation found the completed file, without another Save. This is not a clean whole-run pass.
+
+The work branch adds opt-in file_dialog entry_method clipboard using the existing preservation implementation inside the revalidated owned-dialog scope. Keyboard remains the compatibility default; no silent clipboard fallback or approval flag is introduced. New filename mode and full native qualification are pending; pure argument/core/workflow46 tests pass. Global/project still use the reviewed2 candidate. Agent Manager speed acceptance remains pending human restoration; the release stays draft.
+
 ## 24 October2026 - provider replay and cleanup repair
 
 An owned WPF provider reproduced a consequential controller error on nativea2: a semantic action changed its counter and threw, then the controller sent a physical fallback, producing two effects. A provider refusal before its effect also caused a physical click. The repaired nativea2fd helper reports input_outcome_unknown after dispatched pattern/MSAA errors and sends no alternate click; a file-dialog confirmation exception similarly gets no Enter fallback. The reusable native regression fails old and passes candidate2abe, with one dispatch and zero physical retries in both cases. Direct IPC and batches preserve unknown delivery and guidance to observe without replay.

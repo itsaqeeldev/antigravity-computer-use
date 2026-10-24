@@ -158,8 +158,9 @@ export class Runtime {
     if(payload.__worker_epoch==null)payload.__worker_epoch=this.driver.epoch;
     const preview=(await this.driver.call('authorize',{action_op:op,action_args:payload})).result;
     if(preview.sensitive){
+      const filenameClipboard=op==='file_dialog'&&args.entry_method==='clipboard'?'\r\nFilename entry explicitly uses the local clipboard temporarily and restores preservable formats.\r\n':'';
       const answer=await this.guardian.prompt({kind:'action',hwnd:w?.hwnd,host_pid:this.driver.info?.pid,action_op:op,args:payload,label:preview.label||'',
-        message:`Approve ONE sensitive operation?\r\n\r\n${args.reason||'No effect explanation supplied — deny if unclear.'}\r\n\r\nApplication: ${w?.path||'Clipboard / desktop'}\r\nControl: ${preview.label||'(pixel/keyboard operation)'}\r\n\r\n${JSON.stringify({operation:op,args},null,2)}\r\n\r\nCheck the actual target. Never let an agent approve this dialog. Deny if the result is unclear.`});
+        message:`Approve ONE sensitive operation?\r\n\r\n${args.reason||'No effect explanation supplied — deny if unclear.'}\r\n${filenameClipboard}\r\nApplication: ${w?.path||'Clipboard / desktop'}\r\nControl: ${preview.label||'(pixel/keyboard operation)'}\r\n\r\n${JSON.stringify({operation:op,args},null,2)}\r\n\r\nCheck the actual target. Never let an agent approve this dialog. Deny if the result is unclear.`});
       if(!answer.allowed)fail('permission_denied','Human denied the sensitive operation.');payload.__permit=answer.permit;
     }
     this.check();if(generation!==this.generation)fail('control_changed','Control state changed; observe again.');
