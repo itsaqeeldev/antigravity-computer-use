@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {Runtime,savedTakeoverMode,appKey} from '../server/runtime.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {Runtime,savedTakeoverMode,appKey,queryNodes} from '../server/runtime.mjs';
 import {Driver} from '../server/driver.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
 import path from 'node:path';import {dataDir} from '../server/build.mjs';
@@ -52,6 +52,13 @@ test('queries search a bounded larger hierarchy before compacting results',async
  let requested;const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args){assert.equal(op,'snapshot');requested=args.max_nodes;return {result:{snapshot_id:'s',nodes:[{i:1,name:'Toolbar',role:'Button'},{i:300,name:'Export PNG',role:'Button'}]}};}}};
  const result=await Runtime.prototype.observe.call(r,{hwnd:1,query:'PNG',with_image:false});
  assert.equal(requested,500);assert.match(result.metadata.tree,/Export PNG/);assert(!result.metadata.tree.includes('Toolbar'));
+});
+
+test('a section query includes its real child controls without unrelated siblings or invented labels',()=>{
+ const nodes=[{i:0,depth:0,role:'Window',name:'App'},{i:1,depth:1,role:'Group',name:'Export format'},{i:2,depth:2,role:'Button',name:'PNG'},{i:3,depth:2,role:'Button',name:'JPEG',offscreen:true},{i:4,depth:1,role:'Group',name:'Security'},{i:5,depth:2,role:'Button',name:'Delete'}];
+ const selected=queryNodes(nodes,'FORMAT');assert.deepEqual(selected.map(n=>n.i),[1,2,3]);assert.equal(selected[2],nodes[3]);assert.equal(selected[2].offscreen,true);assert.deepEqual(queryNodes(nodes,'JPEG').map(n=>n.i),[3]);
+ assert.deepEqual(queryNodes([{i:1,role:'Slider',value:0},{i:2,name:'Other'}],'0').map(n=>n.i),[1]);
+ assert.deepEqual(queryNodes(nodes,'missing'),[]);
 });
 
 test('an older helper cannot return covering-window pixels to the agent',async()=>{

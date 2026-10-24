@@ -8,7 +8,7 @@ import {Guardian} from './guardian.mjs';
 import {Sessions} from './sessions.mjs';
 import {dataDir} from './build.mjs';
 import {classify,TIER} from './policy.mjs';
-import {renderSnapshot} from './render.mjs';
+import {renderSnapshot,subtreeNodes} from './render.mjs';
 import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
@@ -29,6 +29,21 @@ export function imagePoint(image,x,y){
   if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=image.width||y>=image.height)fail('bad_point','Point is outside the screenshot.');
   const r=image.source;
   return [r[0]+Math.floor(x*r[2]/image.width),r[1]+Math.floor(y*r[3]/image.height)];
+}
+
+// Keep the controls belonging to a matching named section. Returning only its
+// label made "Export format" hide PNG/JPEG and forced another full-tree read.
+// Reuse the foundation's bounded, depth-first subtree traversal; all indexes
+// still come from this same observation and retain their offscreen state.
+export function queryNodes(nodes,query){
+ const needle=String(query||'').trim().toLowerCase();if(!needle)return nodes;
+ const selected=new Set();
+ for(const node of nodes){
+  if(![node.name,node.text,node.value,node.role].some(v=>String(v??'').toLowerCase().includes(needle)))continue;
+  const context=Number.isInteger(node.depth)&&node.depth>=0?subtreeNodes(nodes,node.i):null;
+  for(const entry of context||[node])selected.add(entry.i);
+ }
+ return nodes.filter(node=>selected.has(node.i));
 }
 
 export class Runtime {
@@ -109,7 +124,7 @@ export class Runtime {
     // Query the larger bounded tree before filtering; a compact reply must not
     // prevent discovery of controls late in a real application's hierarchy.
     const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500)})).result;
-    const nodes=query?tree.nodes.filter(n=>[n.name,n.text,n.value,n.role].some(v=>String(v||'').toLowerCase().includes(query))):tree.nodes;
+    const nodes=queryNodes(tree.nodes,query);
     const rendered=renderSnapshot(tree,{maxRows:Math.min(args.max_nodes||80,500),textLimit:160,nodes})
       .replaceAll('raise max_nodes or use interactive_only','use query or raise max_nodes up to 500')
       .replace(/\[~\d+ tokens\. Re-read[^\]]+\]/g,'[Use query to return matching controls, or max_nodes up to 500 for more rows.]');

@@ -216,7 +216,7 @@
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "3db9ae9ac69525add54d749727e48de0cda2dfa580feae2fd3e0f3bd66f49751"
+      "sha256": "efa560d35732420232d4540aa188bf1d7865fcb223cccf33d7c7092a5bbd5e99"
     },
     {
       "path": "server/mcp.mjs",
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "0f8da897c56c4b9af9d15607c359ebca97fd0282e7ae5e0dec9d64bf37eb4362"
+      "sha256": "009de0bba9acba55c170a017cdad8e9d2d46790efff024993b402eb19d260616"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -332,7 +332,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "1cf189860464a745c85e485584cbf159fc92bb589da21f9dcac17168328ec2be"
+      "sha256": "a22792660caf0932bd7f77cfbf4aa9d76db82392321fe8c60b68816579288d76"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
