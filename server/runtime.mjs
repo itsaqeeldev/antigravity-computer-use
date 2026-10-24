@@ -13,7 +13,7 @@ import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
 
-const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','close_window','paste','paste_files','clipboard','open','file_dialog']);
+const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
 export function savedTakeoverMode(file,fallback){
   try {const mode=JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')).takeover_mode;if(['manual','smart'].includes(mode))return mode;}catch{}
@@ -147,12 +147,13 @@ export class Runtime {
     if('confirmed' in args||'preapprove' in args)fail('model_approval_forbidden','Model-supplied approval flags are not accepted.');
     const w=args.hwnd!=null?await this.grant(Number(args.hwnd),args.reason):null;
     this.check();if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
+    if(op==='fit_window'){if(w?.other_desktop)fail('other_desktop','Bring the approved window to the current virtual desktop before fitting it. No desktop switch was performed.');this.frames.clear();}
     const generation=this.generation;
     const payload={...args,...this.stamp(),mode:'take',__risk:args.risk==='routine'?'routine':'sensitive'};
     delete payload.risk;delete payload.reason;delete payload.observation_id;delete payload.observe;
     if(w){
       payload.hwnd=Number(w.hwnd);payload.__pid=w.pid;payload.__started=w.started;
-      if(op!=='focus'&&op!=='close_window'){
+      if(!['focus','fit_window','close_window'].includes(op)){
         const f=requireObservation(this.frames,args.observation_id,w.hwnd);
         if(f.workerEpoch!==this.driver.epoch)fail('stale_observation','The native worker restarted. Observe again; old element indexes cannot be reused.');
         payload.__worker_epoch=f.workerEpoch;

@@ -61,6 +61,13 @@ test('a section query includes its real child controls without unrelated sibling
  assert.deepEqual(queryNodes(nodes,'missing'),[]);
 });
 
+test('explicit window fitting invalidates old frames and refuses a different virtual desktop before input',async()=>{
+ const window={hwnd:1,pid:5,started:'one',path:'app.exe'};let delivered=0,observed=0;
+ const r={frames:new Map([['old',{}]]),deadline:Date.now()+10000,remaining:10,generation:1,async grant(){return window;},check(){},stamp(){return {};},async app(){return window;},guardian:{send(){}},driver:{epoch:1,info:{pid:10},async start(){},async call(op){if(op==='authorize')return{result:{sensitive:false}};assert.equal(op,'fit_window');delivered++;return{result:{fully_visible:true}};}},sessions:{async withInput(_op,_meta,fn){return fn();}},async observe(){assert(!r.frames.has('old'));observed++;return{metadata:{observation_id:'fresh'}};}};
+ const result=await Runtime.prototype.action.call(r,'fit_window',{hwnd:1,risk:'routine',reason:'Fit approved app'});assert.equal(delivered,1);assert.equal(observed,1);assert.equal(result.metadata.observation_id,'fresh');
+ window.other_desktop=true;await assert.rejects(Runtime.prototype.action.call(r,'fit_window',{hwnd:1,risk:'routine',reason:'Must refuse'}),e=>e.code==='other_desktop');assert.equal(delivered,1);
+});
+
 test('an older helper cannot return covering-window pixels to the agent',async()=>{
  const r={generation:1,frames:new Map(),async grant(){return {pid:1,started:'one',path:'app.exe',rect:[0,0,100,100]};},check(){},guardian:{send(){},async request(){}},stamp(){return {};},driver:{epoch:1,async call(op){return op==='snapshot'?{result:{snapshot_id:'s',nodes:[]}}:{result:{capture:'screen_occluded',data:'private-cover-pixels'}};}}};
  await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1}),error=>error.code==='window_capture_unavailable');assert.equal(r.frames.size,0);

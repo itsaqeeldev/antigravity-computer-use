@@ -17,6 +17,7 @@ export const TOOLS=[
  tool('computer_scroll','Scroll element or screenshot point. Negative amount scrolls down.',{...target,amount:{...num,minimum:-20,maximum:20},horizontal:bool,into_view:bool},['hwnd','observation_id','reason']),
  tool('computer_drag','Drag real cursor; from/to are screenshot pixels.',{...target,from:{type:'array',items:num,minItems:2,maxItems:2},to:{type:'array',items:num,minItems:2,maxItems:2},steps:{...num,minimum:2,maximum:120},button:str},['hwnd','observation_id','from','to','reason']),
  tool('computer_focus','Activate an approved app.',{hwnd:num,reason:str,risk:{type:'string',enum:['routine','sensitive']}},['hwnd','reason']),
+ tool('computer_fit_window','Explicitly restore and fit an approved window onto its nearest display working area, shrinking only as needed. Clears old observations and returns fresh state. Never moves between virtual desktops.',{hwnd:num,reason:str,risk:{type:'string',enum:['routine','sensitive']},observe:target.observe},['hwnd','reason']),
  tool('computer_close_window','Ask window to close under the host permission policy. Can discard unsaved work.',{hwnd:num,reason:str},['hwnd','reason']),
  tool('computer_clipboard','Explicit clipboard read/write. Explain the data and effect under the host permission policy.',{text:str,reason:str},['reason']),
  tool('computer_launch','Launch an existing GUI executable under the host permission policy. Optional observe returns the first unambiguous visible window of that exact launched PID and executable; never relaunch on observe_pending or verification_error.',{app:str,args:{type:'array',items:str},observe:bool,reason:str},['app','reason']),
@@ -30,7 +31,7 @@ export const TOOLS=[
  tool('computer_stop','Emergency stop, release inputs; HUMAN re-arm required.'),
  tool('computer_status','Read status without permission prompts or screenshots.')
 ];
-const OPS={computer_move:'move',computer_click:'click',computer_type:'type',computer_paste:'paste',computer_key:'key',computer_scroll:'scroll',computer_drag:'drag',computer_focus:'focus',computer_close_window:'close_window',computer_set_value:'set_value',computer_clipboard:'clipboard',computer_open:'open',computer_file_dialog:'file_dialog'};
+const OPS={computer_move:'move',computer_click:'click',computer_type:'type',computer_paste:'paste',computer_key:'key',computer_scroll:'scroll',computer_drag:'drag',computer_focus:'focus',computer_fit_window:'fit_window',computer_close_window:'close_window',computer_set_value:'set_value',computer_clipboard:'clipboard',computer_open:'open',computer_file_dialog:'file_dialog'};
 export function validate(name,args){
  const s=TOOLS.find(t=>t.name===name)?.inputSchema;if(!s)throw new Error('Unknown tool');
  const visit=(t,v,k)=>{

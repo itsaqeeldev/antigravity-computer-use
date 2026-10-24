@@ -64,3 +64,10 @@ Two independent inert server processes reproduced simultaneous ownership of one 
 All123 local checks pass, including six real Windows ownership/failure tests with inert runtimes. They send no desktop input and do not replace real App qualification. The latest installed named-batch2 build separately completed actual AI JPEG1920x1320 through Antigravity in235796ms with17controllercalls; independently decoded bytes, DB publication and native NCNN21414ms were verified. Its executed no-file --step command was inspected in the actual host tool record. Native input helper bytes are unchanged; the new ownership/storage helper still needs final packaged App checks.
 
 Use one active desktop task at a time. The shared local companion serializes commands and protects its own startup; it does not provide independent desktop isolation for simultaneous conversations or virtual desktops. Do not mix the optional legacy adapter with direct control.
+
+
+## Window reachability candidate
+
+The reported partially offscreen window placement is handled by explicit `fit_window`, scoped to the approved app identity. It restores normal placement and fits the nearest display work area, preserves valid negative origins, clears earlier frames and reports actual applied bounds/minimum-size limits. It does not switch virtual desktops or change display settings. Physical move/click/scroll endpoints are checked before pointer travel; drag validates both endpoints before holding a button. Display gaps return `point_off_desktop` with recovery guidance.
+
+All126 source checks pass. A manual native component test moved an owned window from[525,-787,473,1053] to[525,0,473,1053] within1920x1080, refused an unreachable move/drag without cursor movement or mouse-down, invalidated pre-fit frames and invoked the fresh control once. The exact native helper also passed the provider-exception no-replay regression. Initial hidden-fixture discovery and shared-hotkey refusals are retained; exclusive visible-fixture retries passed. These component results do not replace actual application or hardware acceptance. Physical mixed-DPI/multiple-display testing remains open.

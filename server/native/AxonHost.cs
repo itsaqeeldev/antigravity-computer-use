@@ -39,11 +39,16 @@ namespace Axon
             input.u.mi.dx=absolute.X;input.u.mi.dy=absolute.Y;Presence.NoteSelfInput();Inject(new INPUT[]{input});return true;
         }
         internal static Dictionary<string,object> MoveCursorTo(int x,int y) {
+            ControlFence.Check();RequirePhysicalPoint(x,y);
             POINT p;if(!GetCursorPos(out p))throw new AxonError("cursor_unavailable","Cannot read the cursor position.",null);
             CursorPath path=new CursorPath(new Point(p.X,p.Y),new Point(x,y),Overlay.ScreenScale(Screen.FromPoint(new Point(x,y))),DesktopVisuals.MotionEnabled);
             int frames=path.Run(delegate(Point point) {SetCursorPos(point.X,point.Y);},ControlFence.Check);
             System.Threading.Thread.Sleep(16);ControlFence.Check();
             return new Dictionary<string,object>{{"frames",frames},{"duration_ms",path.DurationMs},{"animated",path.DurationMs>0}};
+        }
+        internal static void RequirePhysicalPoint(int x,int y) {
+            Screen[] screens=Screen.AllScreens;Rectangle[] bounds=new Rectangle[screens.Length];for(int i=0;i<screens.Length;i++)bounds[i]=screens[i].Bounds;
+            if(!WindowGeometry.Reachable(new Point(x,y),bounds))throw new AxonError("point_off_desktop","The requested point is outside the physical displays. No cursor movement or button press was sent.","Use fit_window on the approved app, then inspect a fresh screenshot. Negative monitor origins are supported; a gap between displays is not a reachable pixel.");
         }
         [DllImport("user32.dll")] internal static extern bool GetCursorPos(out POINT p);
         [DllImport("user32.dll")] internal static extern IntPtr WindowFromPoint(POINT p);
@@ -59,6 +64,7 @@ namespace Axon
         [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr h);
         [DllImport("user32.dll")] internal static extern bool ShowWindow(IntPtr h, int cmd);
+        [DllImport("user32.dll",SetLastError=true)] internal static extern bool SetWindowPos(IntPtr h,IntPtr after,int x,int y,int width,int height,uint flags);
         [DllImport("user32.dll")] internal static extern bool IsIconic(IntPtr h);
         [DllImport("user32.dll")] internal static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
         [DllImport("user32.dll", EntryPoint = "GetWindow")] internal static extern IntPtr GetWindowRel(IntPtr h, uint cmd);
@@ -625,6 +631,7 @@ namespace Axon
                 case "key": return OpKey(a);
                 case "scroll": return OpScroll(a);
                 case "focus": return OpFocus(a);
+                case "fit_window": return OpFitWindow(a);
                 case "close_window": return OpCloseWindow(a);
                 case "wait_for": return OpWaitFor(a);
                 case "screenshot": return OpScreenshot(a);
@@ -2421,6 +2428,8 @@ namespace Axon
             if (from == null || to == null)
                 throw new AxonError("bad_points", "drag needs from:[x,y] and to:[x,y] in screen coordinates.",
                     "Read the window with with_rects:true to find the points.");
+            // Validate BOTH endpoints before moving or holding a button.
+            Native.RequirePhysicalPoint(from[0],from[1]);Native.RequirePhysicalPoint(to[0],to[1]);
             string button = Str(Get(a, "button"));
             if (button == null || button.Length == 0) button = "left";
             int steps = Int(Get(a, "steps"), 12);
@@ -3674,6 +3683,23 @@ namespace Axon
             return res;
         }
 
+        static object OpFitWindow(Dictionary<string, object> a)
+        {
+            IntPtr h=HwndArg(a);if(h==IntPtr.Zero||Native.GetAncestor(h,2)!=h)throw new AxonError("invalid_window","Choose a top-level application window from apps.",null);
+            ControlFence.Check();Native.RECT before;if(!Native.GetWindowRect(h,out before))throw new AxonError("window_gone","The selected window closed.",null);
+            Rectangle work=Screen.FromHandle(h).WorkingArea;
+            // Restore minimized/maximized placement before fitting the complete
+            // outer rectangle. This is an explicit window action, not input.
+            Native.ShowWindow(h,9);ControlFence.Check();
+            Native.RECT current;if(!Native.GetWindowRect(h,out current))throw new AxonError("window_gone","The selected window closed during restoration.",null);
+            Rectangle target=WindowGeometry.Fit(Rectangle.FromLTRB(current.Left,current.Top,current.Right,current.Bottom),work);
+            if(!Native.SetWindowPos(h,IntPtr.Zero,target.X,target.Y,target.Width,target.Height,0x14))throw new AxonError("window_placement_failed","Windows refused the requested application placement.","Observe again; do not repeat an uncertain operation.");
+            System.Threading.Thread.Sleep(120);ControlFence.Check();
+            Native.RECT applied;if(!Native.GetWindowRect(h,out applied))throw new AxonError("window_gone","The window closed after placement.",null);
+            Rectangle actual=Rectangle.FromLTRB(applied.Left,applied.Top,applied.Right,applied.Bottom);
+            return new Dictionary<string,object>{{"before",new int[]{before.Left,before.Top,before.Right-before.Left,before.Bottom-before.Top}},{"rect",new int[]{actual.X,actual.Y,actual.Width,actual.Height}},{"work_area",new int[]{work.X,work.Y,work.Width,work.Height}},{"fully_visible",work.Contains(actual)},{"fresh_observation_required",true},{"hint",work.Contains(actual)?"Inspect the new layout before acting.":"The app may enforce a minimum size larger than this display. Use accessible controls or an app-supported layout; do not click an unreachable point."}};
+        }
+
         static object OpCloseWindow(Dictionary<string, object> a)
         {
             GuardStopped();
@@ -4636,7 +4662,7 @@ namespace Axon
             switch (op)
             {
                 case "move": case "click": case "type": case "set_value": case "key": case "scroll":
-                case "focus": case "close_window": case "drag": case "paste":
+                case "focus": case "fit_window": case "close_window": case "drag": case "paste":
                     return true;
             }
             return false;

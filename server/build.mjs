@@ -27,6 +27,7 @@ const WIN_SOURCES = [
   path.join(HERE, 'native', 'SnapshotText.cs'),
   path.join(HERE, 'native', 'KeyboardTargetPolicy.cs'),
   path.join(HERE, 'native', 'DesktopContext.cs'),
+  path.join(HERE, 'native', 'WindowGeometry.cs'),
 ];
 const MAC_SOURCES = [path.join(HERE, 'native', 'AxonHost.swift')];
 

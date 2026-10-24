@@ -23,6 +23,7 @@ Use the command below directly; replace sample handles, frames, indexes and path
 ```powershell
 {{DESKTOP_COMMAND}} launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'
 {{DESKTOP_COMMAND}} snapshot --hwnd 123 --reason 'Observe an existing app or a new visual checkpoint'
+{{DESKTOP_COMMAND}} fit_window --hwnd 123 --risk routine --reason 'Restore and fit the approved window on its display' --image
 {{DESKTOP_COMMAND}} click --hwnd 123 --observation-id FRAME --index 7 --risk routine --reason 'Open settings'
 {{DESKTOP_COMMAND}} set_value --hwnd 123 --observation-id FRAME --index 8 --text 'PNG' --risk routine --reason 'Choose PNG'
 {{DESKTOP_COMMAND}} key --hwnd 123 --observation-id FRAME --keys ctrl+a --reason 'Select test text'
@@ -64,6 +65,7 @@ The owner screenshot can omit its separate modal even when the accessibility tre
 ## Recover deliberately
 
 - Stale observation or moved window: observe again, reconsider the target and retry only an unexecuted action.
+- `point_off_desktop`: no pointer travel/button press was sent for that unreachable endpoint. Use explicit `fit_window` on the approved top-level app, inspect its fresh state and choose a reachable point. It restores/fits the nearest physical work area without changing desktops, clears old frames, and reports if an app minimum size still prevents full visibility. Do not clamp a bad coordinate onto another app or use Windows-key recovery.
 - `service_already_running`: another direct controller owns this data folder. Reconnect to the exact matching build/policy; never create a competing runtime. `service_ownership_lost` stops control and blocks further input: end/shutdown for cleanup, restart the App sidecar, and leave any latched Stop for local human re-arm. Do not replay the interrupted action.
 - If a reply says `input_completed:true` with `verification_error`, the input already ran. Obtain a fresh observation and verify its effect; never repeat that input merely to recover its screenshot. Native worker restarts invalidate all earlier element references.
 - `delivery_unknown:true` / `input_outcome_unknown` means a provider failed after dispatch and the effect may already have happened. No alternate click or Enter was sent. Observe the actual app and any output before continuing; never repeat a possibly completed submission as error recovery.
