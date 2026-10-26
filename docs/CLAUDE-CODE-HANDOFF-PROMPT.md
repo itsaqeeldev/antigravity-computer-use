@@ -9,6 +9,17 @@ Current handoff: https://github.com/shayann07/antigravity-computer-use/blob/main
 Release: https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2
 Local checkout: D:\Work\AntigravityComputerUse
 
+This brief is for Claude Code. Use its available filesystem/shell tools and this
+repository's documented native CLI; do not assume Codex-only tools or @oai/sky
+exist. The controller deliberately blocks assistant/host application windows,
+including Antigravity itself. Do not weaken that policy to drive its host. Use a
+separate supported UI integration if available and authorized; otherwise prepare
+the exact bounded Antigravity benchmark prompt and hand only its launch/re-arm to
+the human, then verify actual receipts and outputs independently. A direct CLI
+test is useful component evidence, not an Antigravity orchestration benchmark.
+At the 26 October fix checkpoint the owner's Sidecar setting was disabled and
+was preserved, and the controller was left closed with Stop still latched.
+
 Read AGENTS.md and HANDOFF.md completely, then PROJECT-STATUS.md, VALIDATION.md,
 docs/PERFORMANCE.md, the installed skill and relevant implementation/tests.
 Verify current Git, installed pins, release identity and CI; recorded evidence
