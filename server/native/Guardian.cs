@@ -216,6 +216,8 @@ namespace Axon {
         readonly object stateLock=new object();
         readonly HashSet<string> grants = new HashSet<string>();
         Form activePrompt; bool captureHidden; bool captureExcluded;
+        bool controlsRequested, initialized; DateTime controlsUntil=DateTime.MaxValue;
+        long visibilityEpoch;
         readonly List<Process> workers=new List<Process>();
         readonly object workerLock=new object();
         readonly bool hostManaged=Environment.GetEnvironmentVariable("AGCU_PERMISSION_MODE")=="host-managed";
@@ -228,7 +230,11 @@ namespace Axon {
             Console.InputEncoding = new UTF8Encoding(false); Console.OutputEncoding = new UTF8Encoding(false);
             ControlFence.WatchParent();
             Application.EnableVisualStyles();
-            Application.Run(new Guardian()); return 0;
+            using(Guardian guardian=new Guardian()) {
+                if(!guardian.Initialize())return 1;
+                Application.Run(guardian);
+            }
+            return 0;
         }
         Guardian() {
             Text = "Antigravity Computer Use"; TopMost = true; FormBorderStyle = FormBorderStyle.None;
@@ -249,27 +255,39 @@ namespace Axon {
                     deadline=DateTime.UtcNow.AddMinutes(10).Ticks;SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
                 }
             };
-            stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate { Emergency("button"); };
+            stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate {
+                if(state=="stopped")DismissControls();else Emergency("button");
+            };
             modeButton=ButtonAt(3,DesktopVisuals.ModeRect);modeButton.Click+=delegate {OpenModeMenu();};
             LoadTakeoverMode();
             tips.SetToolTip(stopButton,"Stop immediately · Esc or Ctrl+Alt+F12");
             tips.SetToolTip(toggle,"Pause, resume, or re-arm control. Resuming requires a fresh observation.");
-            FormClosing += delegate(object sender, FormClosingEventArgs e) { if(!normalClose&&state!="idle")SetState("stopped"); };
-            Shown += delegate {
-                ShowWindow(Handle,4); Mark(this); captureExcluded=SetWindowDisplayAffinity(Handle,0x11);
+            FormClosing += delegate(object sender, FormClosingEventArgs e) { if(!normalClose&&state!="idle")SetState("stopped",null,false);DismissControls(); };
+            timer.Interval = 70; timer.Tick += Tick; timer.Start();
+        }
+        // Initialize the message handle/hooks without ever showing a window.
+        // Application.Run(Form) asks to show its MainForm; SetVisibleCore keeps
+        // that implicit startup request hidden until a task explicitly needs it.
+        bool Initialize() {
+                Mark(this); captureExcluded=SetWindowDisplayAffinity(Handle,0x11);
                 registered = RegisterHotKey(Handle, 1, 0x4003, 0x7B);
-                if (!registered) { Emit(new { ev="error", message="Ctrl+Alt+F12 is unavailable; refusing control" }); Close(); return; }
+                if (!registered) { Emit(new { ev="error", message="Ctrl+Alt+F12 is unavailable; refusing control" }); return false; }
                 Presence.Start();
                 Presence.OnPanic = delegate { if(state=="active"||state=="paused"||prompting)Emergency("escape"); };
-                if (!Presence.HooksOk) { Emit(new { ev="error", message="Physical-input monitoring unavailable" }); Close(); return; }
+                if (!Presence.HooksOk) { Emit(new { ev="error", message="Physical-input monitoring unavailable" }); UnregisterHotKey(Handle,1);Presence.Stop();return false; }
                 Overlay.Configure(1, "Antigravity", 0); Overlay.Start(true);
                 SetState(!String.IsNullOrEmpty(StopLatch)&&File.Exists(StopLatch)?"stopped":"idle");
+                DismissControls();
+                initialized=true;
                 Emit(new {ev="settings",takeover_mode=takeover.Mode});
                 Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true });
                 Thread reader = new Thread(Read); reader.IsBackground = true; reader.Start();
-            };
-            timer.Interval = 70; timer.Tick += Tick; timer.Start();
+                return true;
         }
+        protected override void SetVisibleCore(bool value) {base.SetVisibleCore(value && initialized && controlsRequested && !captureHidden);}
+        void SyncVisibility() {if(controlsRequested&&!captureHidden){if(!Visible)Show();}else if(Visible)Hide();}
+        void ShowControls(int milliseconds) {Interlocked.Increment(ref visibilityEpoch);controlsRequested=true;controlsUntil=milliseconds>0?DateTime.UtcNow.AddMilliseconds(milliseconds):DateTime.MaxValue;SyncVisibility();}
+        void DismissControls() {Interlocked.Increment(ref visibilityEpoch);controlsRequested=false;SyncVisibility();}
         protected override bool ShowWithoutActivation { get { return true; } }
         protected override CreateParams CreateParams { get { CreateParams p=base.CreateParams;p.ExStyle|=0x08000080;return p; } }
         protected override void OnPaint(PaintEventArgs e) {
@@ -293,7 +311,8 @@ namespace Axon {
         }
         void RefreshHud() {
             toggle.AccessibleName=state=="active"?"Pause computer use":state=="paused"?"Resume computer use":"Re-arm computer use";
-            stopButton.AccessibleName="Stop computer use immediately";
+            stopButton.AccessibleName=state=="stopped"?"Dismiss stopped computer use controls":"Stop computer use immediately";
+            tips.SetToolTip(stopButton,state=="stopped"?"Dismiss controls. Emergency Stop stays latched.":"Stop immediately · Esc or Ctrl+Alt+F12");
             modeButton.AccessibleName="Control settings. Takeover mode: "+takeover.Mode;
             tips.SetToolTip(modeButton,takeover.Mode=="manual"?"Manual pause: mouse and keyboard do not interrupt. Click for control settings.":"Smart takeover: ignores jitter; deliberate input pauses. Click for control settings.");
             AccessibleName="Antigravity computer use: "+state;
@@ -318,6 +337,7 @@ namespace Axon {
             ToolStripMenuItem smart=new ToolStripMenuItem("Yield on input — deliberate input pauses");smart.Checked=takeover.Mode=="smart";smart.Click+=delegate {ChangeTakeoverMode("smart");};
             modeMenu.Items.Add(manual);modeMenu.Items.Add(smart);modeMenu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem hint=new ToolStripMenuItem("Esc always stops immediately");hint.Enabled=false;modeMenu.Items.Add(hint);
+            ToolStripMenuItem dismiss=new ToolStripMenuItem("Dismiss controls and keep stopped");dismiss.Click+=delegate {if(state!="stopped")Emergency("dismiss");DismissControls();};modeMenu.Items.Add(dismiss);
             modeMenu.Show(modeButton,new Point(0,modeButton.Height));
             SetPropW(modeMenu.Handle,"ComputerUseOverlayWindow",new IntPtr(1));SetWindowDisplayAffinity(modeMenu.Handle,0x11);
         }
@@ -343,20 +363,27 @@ namespace Axon {
             File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants))));
             if (File.Exists(f)) File.Replace(temp, f, null); else File.Move(temp,f);
         } }
-        void SetState(string next,string reason=null) {
+        void SetState(string next,string reason=null,bool updateVisibility=true) {
             if (state == "stopped" && next == "active") return;
             if(next=="stopped")ControlFence.LatchStop();
             state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture()); WriteState();
             RefreshHud();
             if (state != "active") { CursorSafety.Restore(); StopWorkers(); ControlFence.Recover(); Overlay.HideAll(); }
             else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
+            if(updateVisibility) {
+                if(state=="active"||state=="paused")ShowControls(0);
+                else if(state=="stopped")ShowControls(8000);
+                else DismissControls();
+            }
             Emit(new { ev="state", state=state, reason=reason, custom_cursor=CursorSafety.Applied });
         }
         void Emergency(string reason="request") {
             // Hook thread invalidates the native fence BEFORE waiting for the UI thread.
             state="stopped"; ControlFence.LatchStop(); try { WriteState(); } catch { }
             StopWorkers(); ControlFence.Recover(); Emit(new { ev="state", state="stopped", reason=reason });
-            try { BeginInvoke((MethodInvoker)delegate { if(activePrompt!=null) activePrompt.Close(); grants.Clear(); SetState("stopped"); }); } catch { }
+            long emergencyEpoch=Interlocked.Increment(ref visibilityEpoch);
+            MethodInvoker cleanup=delegate { if(activePrompt!=null) activePrompt.Close(); grants.Clear(); SetState("stopped",null,Interlocked.Read(ref visibilityEpoch)==emergencyEpoch); };
+            try {if(InvokeRequired)BeginInvoke(cleanup);else cleanup();} catch { }
         }
         void StopWorkers() {
             lock(workerLock) { foreach(Process p in workers) try { if(!p.HasExited)p.Kill(); } catch { } workers.Clear(); }
@@ -368,6 +395,7 @@ namespace Axon {
             if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);
         }
         void Tick(object sender, EventArgs e) {
+            if(controlsRequested && DateTime.UtcNow>=controlsUntil)DismissControls();
             if (prompting || captureHidden) return;
             if(activity!="" && (DateTime.UtcNow-activityAt).TotalMilliseconds>1200) {activity="";RefreshHud();}
             if(++visualTick%3==0 && state=="active" && DesktopVisuals.MotionEnabled) {phase+=.14f;Invalidate();}
@@ -387,11 +415,13 @@ namespace Axon {
                     if (msg != null) BeginInvoke((MethodInvoker)delegate { Receive(msg); });
                 }
             } catch { }
-            try { BeginInvoke((MethodInvoker)delegate {normalClose=state=="idle";if(!normalClose)SetState("stopped"); Close(); }); } catch { }
+            try { BeginInvoke((MethodInvoker)delegate {normalClose=state=="idle";if(!normalClose)SetState("stopped",null,false);DismissControls();Close(); }); } catch { }
         }
         void Receive(Dictionary<string, object> m) {
             string op = Convert.ToString(m["op"]); object id=m.ContainsKey("id")?m["id"]:null;
-            if(op=="visual_status") {Emit(new {id=id,state=state,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode});return;}
+            if(op=="visual_status") {Emit(new {id=id,state=state,controls_visible=Visible,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode});return;}
+            if(op=="show_controls") {ShowControls(state=="stopped"||state=="idle"?30000:0);Emit(new {id=id,state=state,controls_visible=Visible,human_rearm_required=state=="stopped"});return;}
+            if(op=="dismiss_controls") {if(state=="active"||state=="paused")Emergency("dismiss");DismissControls();Emit(new {id=id,state=state,controls_visible=Visible});return;}
             if(op=="activity" && state=="active") {
                 string action=Convert.ToString(m["action"]);
                 switch(action) {case "move":activity="Moving";break;case "click":activity="Clicking";break;case "drag":activity="Dragging";break;case "scroll":activity="Scrolling";break;case "type":case "set_value":case "key":activity="Typing";break;default:activity="Checking";break;}
@@ -418,13 +448,13 @@ namespace Axon {
             if (op == "pause") { SetState("paused","requested_pause"); return; }
             if (op == "stop") { Emergency(); return; }
             if (op == "shutdown") { normalClose=state=="idle";Close();return; }
-            if (op == "end") { grants.Clear(); SetState(state=="stopped"||state=="paused"?state:"idle"); return; }
+            if (op == "end") { grants.Clear(); SetState(state=="stopped"||state=="paused"?state:"idle");DismissControls();Emit(new {id=id,state=state,controls_visible=Visible});return; }
             if (op == "capture") {
                 captureHidden=true;
                 if(!captureExcluded || !Overlay.CaptureExcluded) { Overlay.HideImmediate(); Hide(); }
                 Emit(new {id=id,allowed=true}); return;
             }
-            if (op == "capture_end") { captureHidden=false; if(!Visible)Show(); return; }
+            if (op == "capture_end") { captureHidden=false;SyncVisibility();return; }
             if (op == "activate") {
                 if (state != "stopped" && state != "paused" && !InputLedger.HasHeld()) {
                     token=Convert.ToString(m["token"]); deadline=Convert.ToInt64(m["deadline"]); SetState("active");

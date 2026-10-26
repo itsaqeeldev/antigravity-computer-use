@@ -1,3 +1,7 @@
+# Startup control-bar fix — 26 October 2026
+
+26 October 2026 startup bar repair: v0.3.0-beta.2. Passive startup/status/End/shutdown do not start the guardian; native startup is hidden; End hides controls; Stop dismisses after8seconds; explicit controls reveals human re-arm without clearing Stop. Actual native visibility regression passed for idle and latched startup, active/End, capture cleanup, dismissal and refused activation while stopped. Source139pass/0fail/5ACLskips. The changed helper requires fresh real-app and physical/hardware qualification; earlier AI speed figures remain historical. General orchestration latency is still unfinished.
+
 # Latest validation — 24 October 2026
 
 | Check | Current evidence | Boundary |

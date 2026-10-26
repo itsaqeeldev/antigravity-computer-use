@@ -4,6 +4,33 @@ import {Driver} from '../server/driver.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
 import path from 'node:path';import {dataDir} from '../server/build.mjs';
 
+test('passive startup, status, End and shutdown preserve Stop without opening controls',async()=>{
+ const folder=fs.mkdtempSync(path.join(testDirectory('tmp'),'passive-stop-'));
+ const latch=path.join(folder,'emergency.stop');fs.writeFileSync(latch,'owner-stop');
+ const guardian=new EventEmitter();let starts=0,requests=0,aborts=0;
+ Object.assign(guardian,{async start(){starts++;},async request(){requests++;},send(){},async close(){}});
+ const r=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){},close(){}},latchFile:latch});
+ try {
+  await r.prepare();assert.equal(r.status().state,'stopped');
+  await r.finish();assert.equal(r.status().state,'stopped');
+  await r.close();assert.equal(r.status().state,'stopped');
+  assert.equal(starts,0);assert.equal(requests,0);assert(aborts>0);
+  assert(fs.existsSync(latch));assert.equal(r.frames.size,0);assert.equal(r.grants.size,0);
+ }finally{fs.unlinkSync(r.guardFile);fs.rmSync(folder,{recursive:true,force:true});}
+});
+
+test('blocked control request explicitly reveals human re-arm without granting or launching',async()=>{
+ for(const operation of ['grant','launch']){
+  const sent=[];const guardian=new EventEmitter();Object.assign(guardian,{async request(m){sent.push(m);return {state:'stopped',human_rearm_required:true};}});
+  const r=new Runtime({guardian,driver:{async abort(){},async call(){assert.fail('No desktop input or discovery while stopped');}},sessions:{register(){}}});
+  try{
+   r.state='stopped';
+   await assert.rejects(operation==='grant'?r.grant(1,'Explicit task'):r.launch({app:'unused.exe',reason:'Explicit task'}),e=>e.code==='control_inactive');
+   assert.deepEqual(sent,[{op:'show_controls'}]);assert.equal(r.state,'stopped');assert.equal(r.grants.size,0);
+  }finally{fs.unlinkSync(r.guardFile);}
+ }
+});
+
 test('unconfirmed held-input recovery requests Stop and returns an actionable failure',async()=>{
  for(const recovery of [async()=>false,async()=>{throw Error('helper missing');}]){
   const events=[];const driver={epoch:1,proc:null,pending:new Map(),inputMayBeHeld:true,info:null,ready:null,

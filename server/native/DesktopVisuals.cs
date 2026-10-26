@@ -115,8 +115,10 @@ namespace Axon {
                 else {g.DrawPolygon(icon,new Point[]{new Point(266,16),new Point(266,28),new Point(275,22)});}
             }
             using(Pen divider=new Pen(Color.FromArgb(40,180,193,202)))g.DrawLine(divider,290,13,290,31);
-            using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(245,159,165):Color.FromArgb(192,202,211)))g.FillRectangle(b,306,19,6,6);
-            Label(g,"Stop",8.5f,FontStyle.Regular,Color.FromArgb(212,219,225),new RectangleF(320,6,42,32));
+            if(state=="stopped") {
+                using(Pen close=new Pen(Color.FromArgb(192,202,211),1.4f)){g.DrawLine(close,306,19,312,25);g.DrawLine(close,312,19,306,25);}
+            } else using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(245,159,165):Color.FromArgb(192,202,211)))g.FillRectangle(b,306,19,6,6);
+            Label(g,state=="stopped"?"Hide":"Stop",8.5f,FontStyle.Regular,Color.FromArgb(212,219,225),new RectangleF(320,6,42,32));
         }
         internal static void Export(string directory) {
             Directory.CreateDirectory(directory);

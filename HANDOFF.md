@@ -1,6 +1,32 @@
 # Antigravity Computer Use: handoff
 
-Updated **24 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.1**, Windows x64 prerelease.
+Updated **26 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
+
+## 26 October startup control-bar fix
+
+The owner reported the stopped bar appearing on ordinary Antigravity startup,
+despite not invoking computer use. Reproduced cause: passive service preparation
+started the guardian whenever an old emergency latch existed; the native form
+also showed itself at startup and never dismissed its stopped state.
+
+The fix keeps passive startup, status, End and shutdown free of guardian startup.
+The native guardian starts hidden, shows controls during an active/paused task,
+and hides them at End. Stopped controls dismiss after eight seconds; the stopped
+button and menu can dismiss them sooner. `controls` explicitly reveals controls
+for human re-arm for30seconds, without changing state, grants or the latch.
+Blocked grant/snapshot/launch requests reveal controls but refuse input until
+the human re-arms. Late screenshot completion cannot resurrect a hidden bar.
+
+`tests/guardian-visibility.mjs` exercises actual native visibility in both idle
+and persisted-Stop startup, explicit reveal, active/End, capture cleanup,
+dismissal, refused activation while stopped and automatic Stop dismissal.
+It sends no target-app clicks/keys and does not qualify physical Stop. The new
+helper changes the native binary: the older real Upscaly/physical evidence below
+remains evidence for that older helper, not an automatic pass for this revision.
+Source tests: **139 passed, 0 failed, 5 explicit ACL skips**.
+
+The continuation prompt is [docs/CLAUDE-CODE-HANDOFF-PROMPT.md](docs/CLAUDE-CODE-HANDOFF-PROMPT.md).
+Remaining speed/hardware/physical queued-input work below is still open.
 
 ## Read this first
 
@@ -15,7 +41,7 @@ does not turn skipped or incomplete checks into passes. The release page and its
 manifest/checksums are authoritative for the published asset identity:
 
 - [Controller repository](https://github.com/shayann07/antigravity-computer-use)
-- [Windows beta and downloads](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1)
+- [Windows beta and downloads](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2)
 - [Installation](README.md#install-on-windows), [security](SECURITY.md),
   [validation history](VALIDATION.md), [performance](docs/PERFORMANCE.md)
 

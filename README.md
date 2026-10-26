@@ -2,9 +2,9 @@
 
 Give Antigravity’s existing agent real Windows desktop control through **/computer-use**. Inspect applications, move the real cursor, use accessible controls, type, scroll, drag and work with native dialogs. A minimal control bar and breathing edge glow show when control is active.
 
-**Windows beta / preview.** The direct v0.3.0-beta.1 bundle is available with the performance and qualification limits below. Public v0.2.0 is the older MCP integration.
+**Windows beta / preview.** The direct v0.3.0-beta.2 bundle is available with the performance and qualification limits below. Public v0.2.0 is the older MCP integration.
 
-**[Handoff, TODOs and next steps](HANDOFF.md)** · [Windows beta release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.1)
+**[Handoff, TODOs and next steps](HANDOFF.md)** · [Windows beta release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2)
 
 ## How it works
 
@@ -14,7 +14,7 @@ No MCP is required. No separate LLM, model subscription, browser extension or ad
 
 ## Install on Windows
 
-Download the [complete Windows ZIP](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.1/AntigravityComputerUse-0.3.0-beta.1-windows-x64.zip) and [SHA256 checksums](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.1/SHA256SUMS.txt). Normal bundle installation needs no compiler or Python. Use Windows x64 with the standard .NET Framework runtime.
+Download the [complete Windows ZIP](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.2/AntigravityComputerUse-0.3.0-beta.2-windows-x64.zip) and [SHA256 checksums](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.2/SHA256SUMS.txt). Normal bundle installation needs no compiler or Python. Use Windows x64 with the standard .NET Framework runtime.
 
 1. Extract the complete Windows bundle.
 2. Run the following from its folder:
@@ -47,6 +47,7 @@ This trusts the host’s terminal execution permissions instead of duplicate nat
 - **Keep working** is the default. Ordinary physical mouse/keyboard input does not pause automation. Use the bar’s Pause control deliberately.
 - **Yield on input** is optional. Resume requires local human Resume or an explicitly authorized chat resume under host-managed policy. Observations are refreshed; interrupted input is not replayed.
 - **Esc / Ctrl+Alt+F12 / Stop** invalidates control and releases automation-held input. Emergency Stop requires local human re-arm; the model cannot clear it.
+- Opening Antigravity or reading status stays silent. Stopped controls dismiss after eight seconds; an explicit **controls** request reveals human re-arm controls for30seconds without clearing Stop. End hides the bar.
 - Normal tasks use **end**. The passive Sidecar remains available for another task without restarting Antigravity. **shutdown** performs cleanup and exits for updates/removal.
 
 Use one active desktop task at a time. One physical Windows desktop has one cursor and keyboard; this does not provide independent virtual-desktop or concurrent-conversation isolation. Authentication, security surfaces, UAC and secure desktop are human handoffs. See [SECURITY.md](SECURITY.md).
@@ -67,7 +68,7 @@ Only one direct controller can own a private data folder. OS-owned synchronizati
 
 Real tasks in Antigravity App 2.26 on Windows exercised the global skill, actual screenshot viewing, native file pickers, Upscaly AI PNG/JPEG export, settings restoration, Unicode Notepad saves and repeat sessions. Independent file, database and NCNN checks distinguished actual AI inference from software resizing. The managed Sidecar survived a real fifteen-minute idle interval and recovered from an idle parent crash.
 
-Controlled native tests additionally cover provider exceptions without fallback replay, offscreen-window recovery, stale frames, input cleanup and ownership failures. These component tests do not replace actual application acceptance. Current Windows source checks report **137 passed and 5 explicitly skipped** locally and in CI. The skipped installation-ACL cases require trusted ancestors; parent permissions are never changed to force a pass; [validation](VALIDATION.md), [current status](PROJECT-STATUS.md) and [performance findings](docs/PERFORMANCE.md) record exact build boundaries.
+Controlled native tests additionally cover provider exceptions without fallback replay, offscreen-window recovery, stale frames, input cleanup and ownership failures. These component tests do not replace actual application acceptance. Current Windows source checks report **139 passed and 5 explicitly skipped** locally and in CI. The skipped installation-ACL cases require trusted ancestors; parent permissions are never changed to force a pass; [validation](VALIDATION.md), [current status](PROJECT-STATUS.md) and [performance findings](docs/PERFORMANCE.md) record exact build boundaries.
 
 The owner reported physical Esc/re-arm and the runtime recorded human resume. Live queued/held-input interruption on the final helper, real mixed-DPI/multiple-display hardware, broader application coverage and final visual feedback remain open. The latest real High-effort tasks took **4m29s PNG** and **4m33s JPEG**. PNG improved from a previous 5m26s witness and used15 instead of 25 controller calls; JPEG was slower than an earlier 3m56s witness. These individual runs include application GPU-profile repairs and do not establish a general speed guarantee. Host/model decision gaps remain the main latency problem. macOS/Linux are not release targets yet.
 

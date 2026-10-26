@@ -216,7 +216,7 @@
   "authored_files": [
     {
       "path": "server/runtime.mjs",
-      "sha256": "8b8005619acdba16294309c654394a3662503cc202283d5b40d0893ce7955bad"
+      "sha256": "1dd6f9e42e0ca87c2bb09edda6e7bb26319b112c576d3e9c4fd339f19c07b808"
     },
     {
       "path": "server/mcp.mjs",
@@ -224,11 +224,11 @@
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "e4f401948d6bfaa30668100084c22b5b9ad565f25688045e172b2156cdc6c8d5"
+      "sha256": "878195656d2436e4a4bb3ffc52cc392fbd9bd382e9b337e04272bf88ab0c12fe"
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "8596ec9e2f81e94e7a8fe6475f623655e0c7c5e1feb2d243657ff9bde86d59ee"
+      "sha256": "b4b7dd9d705b3dbd5caa701919fc2003e0b03a0161840306f916071f7792f833"
     },
     {
       "path": "server/native/CursorSafety.cs",
@@ -236,7 +236,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "48bca6697a8e55e35cb38014d13a7c191cb92e0036a9f747ef2e6780d47f62ef"
+      "sha256": "b2d4d3b3bc693de5b4e5abd23a7755b617d6d7df3a581f6cd8438f1017d2f117"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "bb4dc33fbf6167fd89d06ea1636b4eb71bea6f08aeb3ab4deaec05637eb2d4b5"
+      "sha256": "284c8e5ebd22e41af59bdd9472f24c1b76a33ac3f00a821e638b29a9ba555b6d"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -332,7 +332,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "9b4e2d49ef422a61ed8c5206bf88ce7680d29791f96092750a495b18ea84dea4"
+      "sha256": "a801f45bd9099b9e432aafea075f4ffab0077f3997f74b4357661f87d083b173"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -436,7 +436,7 @@
     },
     {
       "path": "skills/computer-use/references/recovery.md",
-      "sha256": "cad61fe647dfd728e8faf079ecfb9f61618067463687597398239af4480cb0b4"
+      "sha256": "f0d7c4d976ed967cf6e1449a2497e04e31e5d8f0568c247409e7454f69825c4a"
     },
     {
       "path": "scripts/measure-run.mjs",
@@ -452,7 +452,15 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "ff0f7bd4b21843ed08bea81128bb9a1e9b1405212b32ab10ba2f06eecca22240"
+      "sha256": "5a60c2a466b8e7ec6404fb84bc03d07cdda117ccf983eb0260ffce56bc2fcd91"
+    },
+    {
+      "path": "tests/guardian-visibility.mjs",
+      "sha256": "f27c68b15cc5ddf48031470be13aeae84580c8c643f32415a6dccbb78b241825"
+    },
+    {
+      "path": "docs/CLAUDE-CODE-HANDOFF-PROMPT.md",
+      "sha256": "8d354d72bd21e5318af64199e68152be67e3084c15e3e8ee9362f13324b72095"
     }
   ]
 }

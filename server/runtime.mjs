@@ -86,7 +86,10 @@ export class Runtime {
     this.guardian.on('resume',(_state,source)=>{this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+10*60000;});
   }
   stamp(){return {__session:this.token};}
-  async prepare(){if(this.state==='stopped')await this.guardian.start?.();}
+  // A passive App sidecar must not open a HUD, install input hooks or acquire
+  // cursor ownership just because a previous task left an emergency latch.
+  async prepare(){}
+  async showControls(){return this.guardian.request({op:'show_controls'});}
   check(){if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);}
   async identity(hwnd){
     if(!Number.isSafeInteger(Number(hwnd))||Number(hwnd)<=0)fail('no_target','Select an HWND from computer_apps.');
@@ -104,7 +107,8 @@ export class Runtime {
     return w;
   }
   async grant(hwnd,purpose='Operate this app for the requested desktop task'){
-    if(this.state==='stopped'||this.state==='paused')this.check();
+    if(this.state==='stopped'){await this.showControls();this.check();}
+    if(this.state==='paused')this.check();
     const w=await this.app(hwnd);const key=appKey(w);
     if(this.grants.has(key)&&this.state==='active')return w;
     const answer=await this.guardian.prompt({kind:'app',hwnd:Number(hwnd),host_pid:this.driver.info?.pid,
@@ -225,7 +229,8 @@ export class Runtime {
   }
   async finish(){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();return {ended:true,state:this.state,restart_required:false};}
   async launch(args){
-    if(this.state==='stopped'||this.state==='paused')this.check();
+    if(this.state==='stopped'){await this.showControls();this.check();}
+    if(this.state==='paused')this.check();
     const app=path.resolve(args.app);
     if(!fs.existsSync(app)||path.extname(app).toLowerCase()!=='.exe')fail('invalid_application','Supply an existing .exe path.');
     if(/^(?:AxonHost|StorageGuard)(?:-[0-9a-f]+)?\.exe$/i.test(path.basename(app)))fail('protected_app','Cannot launch internal runtime helpers as target applications.');
@@ -282,7 +287,7 @@ export class Runtime {
     this.state='active';this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+10*60000;
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
-  async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch(error){this.lastControlReason='stop_persistence_failed: '+error.message;}await this.driver.abort?.();await this.prepare();return {stopped:true,human_rearm_required:true};}
+  async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch(error){this.lastControlReason='stop_persistence_failed: '+error.message;}await this.driver.abort?.();return {stopped:true,human_rearm_required:true};}
   status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:'native-windows',build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }

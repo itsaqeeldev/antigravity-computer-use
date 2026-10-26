@@ -15,6 +15,8 @@ Check status once, then choose **either** `apps` for an existing/unknown window 
 
 The installed App sidecar keeps a passive listener across tasks. Finish with `end`; use `shutdown` only for updates/removal. The pinned launcher's build must match the listener. Windows Agent Manager terminal jobs can run on an isolated `exebox` desktop, even in Turbo. If the sidecar is unavailable, the human starts **`{{CONTROLLER_START}}`** on the normal desktop or restarts the App's Computer Use sidecar. Do not use WMI, switch desktops, change policy or restart a live unresponsive controller to get around this boundary.
 
+Passive startup/status never opens the control bar. After Stop, the bar dismisses after eight seconds; `controls` explicitly shows it for human re-arm (30 seconds) without granting permission, sending input or clearing Stop. `end` hides it even while Stop remains latched. Do not leave controls open during unrelated code work.
+
 ## Observe, act, verify
 
 These common command shapes are complete; use them directly without schema setup. H/F/N are observed handle/frame/index values. Optional flags are in brackets; replace placeholders, not the command names.

@@ -27,6 +27,7 @@ export const TOOLS=[
  tool('computer_run','Run 1-8 predictable actions or observed-text waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:8,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
  tool('computer_wait','Wait for expected UI text without repeating input, then return a fresh observation.',{hwnd:num,until:selectorText,timeout_ms:{...num,minimum:100,maximum:30000},query:str,reason:str},['hwnd','until','reason']),
  tool('computer_end','Finish normally; no Antigravity restart needed.'),
+ tool('computer_controls','Explicitly show local controls for human re-arm or pause/stop. Showing controls never clears an emergency Stop, grants an app or sends input. Stopped controls dismiss automatically after30seconds.'),
  tool('computer_pause','Pause for human takeover. Do not replay interrupted input.'),
  tool('computer_resume','Resume a soft pause ONLY after the user explicitly says to continue under the host permission policy. Clears observations; never clears emergency Stop.'),
  tool('computer_stop','Emergency stop, release inputs; HUMAN re-arm required.'),
@@ -69,6 +70,7 @@ export function validate(name,args){
 export async function call(r,name,a){
  validate(name,a);
  if(name==='computer_status')return r.status();
+ if(name==='computer_controls')return r.showControls();
  if(name==='computer_apps')return {windows:(await r.driver.call('list_apps',{include_hidden:a.include_hidden===true})).result.windows.filter(w=>![r.guardian.pid,r.driver.info?.pid,process.pid,process.ppid].includes(w.pid))};
  if(name==='computer_grant')return {approved:await r.grant(a.hwnd,a.reason)};
  if(name==='computer_snapshot')return r.observe(a);

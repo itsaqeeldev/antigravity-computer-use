@@ -7,6 +7,7 @@ export class Guardian extends EventEmitter {
   constructor(env) { super(); this.env=env; this.pending=new Map(); this.seq=0; this.state='idle'; }
   async start() {
     if(this.proc) return;
+    this.expectedIdleExit=false;
     const {exe}=ensureHost();
     this.proc=spawn(exe,['--guardian'],{windowsHide:true,env:{...process.env,...this.env,AGCU_GUARDIAN:'1'},stdio:['pipe','pipe','pipe']});
     this.proc.stderr.on('data',d=>process.stderr.write(d));
@@ -44,6 +45,6 @@ export class Guardian extends EventEmitter {
     const proc=this.proc;if(!proc)return;
     this.expectedIdleExit=normal;
     this.send({op:'shutdown'});proc.stdin.end();
-    await new Promise(resolve=>{const timer=setTimeout(()=>{try{proc.kill();}catch{}resolve();},3000);proc.once('exit',()=>{clearTimeout(timer);resolve();});});
+    await new Promise(resolve=>{const timer=setTimeout(()=>{try{proc.kill();}catch{}resolve();},3000);proc.once('close',()=>{clearTimeout(timer);resolve();});});
   }
 }

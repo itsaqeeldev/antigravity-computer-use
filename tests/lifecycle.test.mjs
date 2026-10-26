@@ -3,7 +3,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {Eve
 import {Runtime} from '../server/runtime.mjs';
 import fs from 'node:fs';import path from 'node:path';
 function fixture(){
- const guardian=new EventEmitter();guardian.messages=[];guardian.send=m=>guardian.messages.push(m);guardian.close=()=>{};guardian.pid=998;
+ const guardian=new EventEmitter();guardian.messages=[];guardian.send=m=>guardian.messages.push(m);guardian.request=async m=>{guardian.messages.push(m);return {state:'stopped',controls_visible:true};};guardian.close=()=>{};guardian.pid=998;
  const driver={abortCalls:0,async abort(){this.abortCalls++;},info:{pid:999}};
  const sessions={register(){},close(){}};
  return new Runtime({guardian,driver,sessions});
@@ -62,7 +62,7 @@ test('emergency Stop survives service replacement; ordinary idle shutdown does n
  try {
   const ordinary=make();await ordinary.close();assert(!fs.existsSync(file));
   const stopped=make();await stopped.stop();assert(fs.existsSync(file));await stopped.finish();assert(fs.existsSync(file));
-  const guardian=new EventEmitter();guardian.send=()=>{};
+  const guardian=new EventEmitter();guardian.send=()=>{};guardian.request=async()=>({state:'stopped',controls_visible:true});
   const replacement=new Runtime({latchFile:file,guardian,driver:{abort:async()=>{}},sessions:{register(){}}});
   assert.equal(replacement.state,'stopped');await assert.rejects(replacement.grant(1),e=>e.code==='control_inactive');
   replacement.permissionMode='host-managed';await assert.rejects(replacement.resume(),e=>e.code==='human_resume_required');
