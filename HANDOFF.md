@@ -5,25 +5,40 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
 ## 28 October orchestration latency and reliability engineering
 
 - Instrumented high-resolution timing harness in `scripts/time-call.mjs` and
-  `scripts/benchmark-baseline.mjs`, covering Node init, imports, session lookup,
-  pipe connect, service execution, and transport. 12 dedicated tests pass.
-- Measured empirical per-call CLI invocation at 35–45 ms (sub-50 ms), > 10× below
-  the 500 ms threshold where a persistent client daemon would be beneficial.
-  Confirmed that model deliberation gaps (~9,500 ms median) and round-trip count
-  are the actual latency bottlenecks.
-- Optimized observation queries in `server/runtime.mjs`: query-filtered
-  observations default to tree-only, skipping screenshot capture and disk writing
-  when checking controls. Shaves ~1.0–1.5s per query while retaining `--image` for
-  visual checkpoints. 9 dedicated tests pass in `tests/observation-optimization.test.mjs`.
-- Added fast reconnect (`start --quick`) in `scripts/desktop.mjs`, skipping
-  redundant storage checks on warm running services.
-- Added multi-step batching patterns to `skills/computer-use/SKILL.md` (combining
-  open + file dialog, settings changes, and export + wait), targeting reduction
-  from 15 calls down to ~9–10 (~50–60s projected savings).
-- Built run comparison tool `scripts/compare-runs.mjs` (3 tests passing) to
-  evaluate matched before/after runs with call count, service time, and wall time deltas.
-- Test suite expanded to 178 tests: 177 passed, 0 failed, 1 explicit ACL skip.
-- Provenance checks pass with 104 files clean; native C# compilation succeeds.
+  `scripts/benchmark-baseline.mjs`, covering external process wall time (`external_wall_ms`, ~110–180 ms),
+  output delivery & teardown (`teardown_and_delivery_ms`, ~40–120 ms), and internal milestones
+  (`entry_timestamp_ms`, `module_load_ms`, `session_read_ms`, `pipe_connect_ms`, `service_ms`,
+  `transport_ms`, `internal_cli_ms`). Instrumentation runs the real CLI (`scripts/desktop.mjs`)
+  directly under `AGCU_TIMING=1`. 14 dedicated tests pass in `tests/time-call.test.mjs`.
+- Quantified maximum plausible benefit of a persistent client daemon at ~100–150 ms per invocation
+  (saving process launch and teardown). Demonstrated that persistent daemons cannot resolve
+  host terminal scheduling (~200–500 ms) or model deliberation gaps (~8,000–15,000 ms), making
+  round-trip elimination the primary optimization target.
+- Qualified observation query optimization: direct JSON/IPC callers omitting `with_image`
+  default to tree-only in `server/runtime.mjs` (named CLI queries were already tree-only via
+  `scripts/arguments.mjs`). Regressions in `tests/observation-optimization.test.mjs` prove
+  tree-only frames refuse pixel click, move, and drag with code `no_image` before input, and
+  recover with fresh `--image`. 13 dedicated tests pass.
+- Added fast reconnect (`start --quick`) in `scripts/desktop.mjs` with compact status (~1–3 ms
+  saving on status payload size). Preserved private storage ACL validation (`storageOperation`)
+  before session file read. Added `validateSchema` in `server/desktop-tools.mjs` to strictly
+  validate types and forbid unknown fields or non-boolean `quick` values for both named flags
+  and inline JSON.
+- Documented multi-step batching patterns in `skills/computer-use/SKILL.md` (combining open +
+  file dialog, settings changes, and export + wait). Labelled the projected ~50–60s saving from
+  reducing 15 calls to ~9–10 as a **Hypothesis** pending matched real-host verification.
+- Rebuilt run comparison tool `scripts/compare-runs.mjs` (9 tests passing in
+  `tests/compare-runs.test.mjs`) to strictly validate report metrics, require task completion
+  and independent output verification, disqualify failed-but-shorter runs, flag mismatched
+  workloads, and reject unbounded raw receipts.
+- Revised baseline runner `scripts/benchmark-baseline.mjs` to eliminate arbitrary window
+  selection (`windows[0]`), require explicit `--hwnd` targets, defer/refuse when another task
+  owns active control, enforce bounded child process timeouts, and isolate failed runs from
+  timing summaries.
+- Test suite expanded to **190 tests**: 189 passed, 0 failed, 1 skip on C: drive / 5 skips on
+  D: drive with replaceable ancestor ACLs. Skip reasons are preserved and never converted to passes.
+- Provenance checks pass with **111 files clean** in `scripts/check-provenance.mjs`; native C#
+  compilation succeeds with `csc.exe`.
 
 ## 28 October stable Upscaly demo and remaining problems
 

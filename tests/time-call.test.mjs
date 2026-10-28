@@ -60,7 +60,12 @@ function assertValidMetrics(metrics, { requireService = false } = {}) {
   assert.equal(typeof metrics.service_ms, 'number');
   assert.equal(typeof metrics.transport_ms, 'number');
   assert.equal(typeof metrics.total_cli_ms, 'number');
+  assert.equal(typeof metrics.external_wall_ms, 'number');
+  assert.equal(typeof metrics.teardown_and_delivery_ms, 'number');
+  assert.equal(typeof metrics.ok, 'boolean');
+  assert.equal(typeof metrics.exit_code, 'number');
   assert(metrics.total_cli_ms > 0, 'total_cli_ms must be positive');
+  assert(metrics.external_wall_ms >= 0, 'external_wall_ms must be non-negative');
   assert(metrics.node_startup_ms >= 0, 'node_startup_ms must be non-negative');
   assert(metrics.module_load_ms >= 0, 'module_load_ms must be non-negative');
   if (requireService) {
@@ -73,6 +78,7 @@ test('time-call --help outputs usage on stdout and timing metrics on stderr with
   assert.equal(res.status, 0, res.rawStderr);
   assert(res.rawStdout.includes('Native desktop skill') || res.rawStdout.includes('time-call'), 'Stdout must contain help');
   assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
 });
 
 test('time-call describe outputs command schema on stdout and timing metrics on stderr', async () => {
@@ -81,6 +87,28 @@ test('time-call describe outputs command schema on stdout and timing metrics on 
   assert.equal(res.stdoutJson.command, 'click');
   assert.equal(res.stdoutJson.inputSchema.properties.button.type, 'string');
   assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
+});
+
+test('time-call describe --all outputs all tools and lifecycle commands with timing metrics', async () => {
+  const res = await runTimeCall(['describe', '--all']);
+  assert.equal(res.status, 0, res.rawStderr);
+  assert(Array.isArray(res.stdoutJson.commands));
+  assert(res.stdoutJson.commands.some(c => c.command === 'start'));
+  assert(res.stdoutJson.commands.some(c => c.command === 'click'));
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
+});
+
+test('time-call describe multiple commands outputs array of requested schemas', async () => {
+  const res = await runTimeCall(['describe', 'click', 'move']);
+  assert.equal(res.status, 0, res.rawStderr);
+  assert(Array.isArray(res.stdoutJson.commands));
+  assert.equal(res.stdoutJson.commands.length, 2);
+  assert.equal(res.stdoutJson.commands[0].command, 'click');
+  assert.equal(res.stdoutJson.commands[1].command, 'move');
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
 });
 
 test('time-call unknown command reports unknown_command error and exits with code 1 while emitting metrics', async () => {
@@ -89,6 +117,8 @@ test('time-call unknown command reports unknown_command error and exits with cod
   assert.equal(res.stdoutJson.ok, false);
   assert.equal(res.stdoutJson.error.code, 'unknown_command');
   assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, false);
+  assert.equal(res.stderrJson.exit_code, 1);
 });
 
 test('time-call missing or invalid arguments reports bad_arguments and exits with code 1', async () => {
@@ -97,6 +127,8 @@ test('time-call missing or invalid arguments reports bad_arguments and exits wit
   assert.equal(res.stdoutJson.ok, false);
   assert.equal(res.stdoutJson.error.code, 'bad_arguments');
   assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, false);
+  assert.equal(res.stderrJson.exit_code, 1);
 });
 
 test('time-call status when no session exists succeeds with state not_running and exit code 0', async () => {

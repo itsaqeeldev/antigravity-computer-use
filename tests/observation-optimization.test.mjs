@@ -56,8 +56,8 @@ function createMockRuntime({nodes = null} = {}) {
       };
     },
     async close() {},
-    async grant() {
-      return { pid: 100, started: 'fixture', path: 'C:/app.exe', rect: [0, 0, 800, 600] };
+    async grant(hwnd) {
+      return { hwnd: Number(hwnd), pid: 100, started: 'fixture', path: 'C:/app.exe', rect: [0, 0, 800, 600] };
     },
     guardian: {
       send() {},
@@ -295,3 +295,137 @@ test('start rejects unrecognized flags and lifecycle rejects invalid quick argum
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('tree-only observation frame refuses pixel click, move and drag with no_image before input', async () => {
+  const { r } = createMockRuntime();
+  r.action = Runtime.prototype.action.bind(r);
+  let actionAuthorized = false;
+  r.driver.call = async op => {
+    if (op === 'snapshot') return { result: { snapshot_id: 'snap-fixture', nodes: [{ i: 0, depth: 0, role: 'Window', name: 'App' }] } };
+    if (op === 'screenshot') return { result: { width: 800, height: 600, source: [0,0,800,600], capture: 'window_foreground', data: 'ZmFrZQ==' } };
+    if (op === 'authorize') { actionAuthorized = true; return { result: { sensitive: false } }; }
+    throw Error(`Unexpected driver op: ${op}`);
+  };
+
+  // 1. Observe with query -> tree-only frame (no image)
+  const obsClick = await r.observe({ hwnd: 123, query: 'App' });
+  assert.equal(obsClick.image, undefined);
+  await assert.rejects(
+    () => r.action('click', { hwnd: 123, observation_id: obsClick.metadata.observation_id, x: 100, y: 100, reason: 'pixel click test' }),
+    err => err.code === 'no_image' && err.message.includes('with_image')
+  );
+  assert.equal(actionAuthorized, false, 'No authorization or input should occur on tree-only click');
+
+  // 2. Move must refuse with no_image before authorizing or sending input
+  const obsMove = await r.observe({ hwnd: 123, query: 'App' });
+  await assert.rejects(
+    () => r.action('move', { hwnd: 123, observation_id: obsMove.metadata.observation_id, x: 200, y: 200, reason: 'pointer move test' }),
+    err => err.code === 'no_image'
+  );
+  assert.equal(actionAuthorized, false);
+
+  // 3. Drag must refuse with no_image before authorizing or sending input
+  const obsDrag = await r.observe({ hwnd: 123, query: 'App' });
+  await assert.rejects(
+    () => r.action('drag', { hwnd: 123, observation_id: obsDrag.metadata.observation_id, from: [10, 10], to: [50, 50], reason: 'drag test' }),
+    err => err.code === 'no_image'
+  );
+  assert.equal(actionAuthorized, false);
+
+  // 4. Fresh observation recovery with with_image: true restores pixel capability
+  const freshObs = await r.observe({ hwnd: 123, with_image: true });
+  assert(freshObs.image, 'Fresh observation with with_image: true must capture image');
+  assert(r.frames.get(freshObs.metadata.observation_id)?.image, 'Cached frame must retain image');
+});
+
+test('lifecycle validation checks types for inline JSON and rejects string or object quick', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-json-types-'));
+  const runtime = {
+    status: () => ({ state: 'idle', build_id: BUILD_ID, build_version: VERSION, permission_mode: 'standalone' }),
+    async close() {}
+  };
+  const service = await serveDesktop({ directory: dir, runtime });
+
+  try {
+    // 1. String supplied as quick in inline JSON must be rejected
+    const resString = await runDesktop(['start', JSON.stringify({ quick: 'yes' })], { AGCU_DATA_DIR: dir });
+    assert.equal(resString.code, 1);
+    const jsonString = JSON.parse(resString.stdout);
+    assert.equal(jsonString.error.code, 'bad_arguments');
+
+    // 2. Object supplied as quick in inline JSON must be rejected
+    const resObj = await runDesktop(['start', JSON.stringify({ quick: { nested: true } })], { AGCU_DATA_DIR: dir });
+    assert.equal(resObj.code, 1);
+    const jsonObj = JSON.parse(resObj.stdout);
+    assert.equal(jsonObj.error.code, 'bad_arguments');
+
+    // 3. Number supplied as quick in inline JSON must be rejected
+    const resNum = await runDesktop(['start', JSON.stringify({ quick: 1 })], { AGCU_DATA_DIR: dir });
+    assert.equal(resNum.code, 1);
+    const jsonNum = JSON.parse(resNum.stdout);
+    assert.equal(jsonNum.error.code, 'bad_arguments');
+
+    // 4. Unknown property in inline JSON must be rejected
+    const resUnknown = await runDesktop(['start', JSON.stringify({ unrecognized_field: true })], { AGCU_DATA_DIR: dir });
+    assert.equal(resUnknown.code, 1);
+    const jsonUnknown = JSON.parse(resUnknown.stdout);
+    assert.equal(jsonUnknown.error.code, 'bad_arguments');
+
+    // 5. Valid boolean quick: true in inline JSON succeeds
+    const resValidTrue = await runDesktop(['start', JSON.stringify({ quick: true })], { AGCU_DATA_DIR: dir });
+    assert.equal(resValidTrue.code, 0);
+    const jsonValidTrue = JSON.parse(resValidTrue.stdout);
+    assert.equal(jsonValidTrue.ok, true);
+    assert.equal(jsonValidTrue.state, 'idle');
+
+    // 6. Valid boolean quick: false in inline JSON succeeds
+    const resValidFalse = await runDesktop(['start', JSON.stringify({ quick: false })], { AGCU_DATA_DIR: dir });
+    assert.equal(resValidFalse.code, 0);
+    const jsonValidFalse = JSON.parse(resValidFalse.stdout);
+    assert.equal(jsonValidFalse.ok, true);
+  } finally {
+    await service.shutdown();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start refuses to replace live unresponsive service and preserves capability file', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-unresponsive-'));
+  const sessionFile = path.join(dir, 'desktop-session.json');
+  // Write a session referencing current process PID (alive) but a dummy pipe that does not answer
+  const deadPipe = process.platform === 'win32' ? '\\\\.\\pipe\\agcu-unresponsive-test-' + Date.now() : path.join(dir, 'dead.sock');
+  const dummySession = { pid: process.pid, pipe: deadPipe, secret: 'test-secret' };
+  fs.writeFileSync(sessionFile, JSON.stringify(dummySession));
+
+  try {
+    const res = await runDesktop(['start'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.code, 1);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.error.code, 'session_unresponsive');
+    assert.match(json.error.message, /still running but did not answer/);
+
+    // Ensure session file was not overwritten or destroyed
+    const sessionAfter = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+    assert.equal(sessionAfter.pid, process.pid);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start preserves emergency stop state without clearing it', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-stop-preserve-'));
+  const stopFile = path.join(dir, 'emergency.stop');
+  fs.writeFileSync(stopFile, 'stopped');
+
+  try {
+    // When no service is running, start returns not_running or stopped state without removing emergency.stop
+    const res = await runDesktop(['status'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.code, 0);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.state, 'stopped');
+    assert(fs.existsSync(stopFile), 'emergency.stop must be strictly preserved');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+

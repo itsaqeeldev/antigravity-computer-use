@@ -34,8 +34,8 @@ export const TOOLS=[
  tool('computer_status','Read status without permission prompts or screenshots.')
 ];
 const OPS={computer_move:'move',computer_click:'click',computer_type:'type',computer_paste:'paste',computer_key:'key',computer_scroll:'scroll',computer_drag:'drag',computer_focus:'focus',computer_fit_window:'fit_window',computer_close_window:'close_window',computer_set_value:'set_value',computer_clipboard:'clipboard',computer_open:'open',computer_file_dialog:'file_dialog'};
-export function validate(name,args){
- const s=TOOLS.find(t=>t.name===name)?.inputSchema;if(!s)throw new Error('Unknown tool');
+export function validateSchema(s,args,context='arguments'){
+ if(!s)throw new Error('Schema is required for validation');
  const visit=(t,v,k)=>{
   if(t.type==='integer'&&!Number.isSafeInteger(v))throw new Error(k+' must be integer');
   if((t.type==='integer'||t.type==='number')&&(!Number.isFinite(v)||(t.minimum!=null&&v<t.minimum)||(t.maximum!=null&&v>t.maximum)))throw new Error(k+' is outside the allowed range');
@@ -55,7 +55,11 @@ export function validate(name,args){
    }
   }
  };
- visit(s,args,'arguments');
+ visit(s,args,context);
+}
+export function validate(name,args){
+ const s=TOOLS.find(t=>t.name===name)?.inputSchema;if(!s)throw new Error('Unknown tool');
+ validateSchema(s,args,'arguments');
  if(name==='computer_set_value'&&(Object.hasOwn(args,'text')===Object.hasOwn(args,'value')))throw new Error('Supply exactly one of text or value');
  const pixel=Object.hasOwn(args,'x')||Object.hasOwn(args,'y');
  const named=['name','role','automation_id'].some(k=>Object.hasOwn(args,k));

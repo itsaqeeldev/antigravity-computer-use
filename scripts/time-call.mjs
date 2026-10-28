@@ -1,217 +1,150 @@
-// Adapted stdio dispatch and tool vocabulary from ridelink0/claude-computer-use (MIT).
 // Diagnostic timing wrapper for desktop CLI commands.
-// Measures Node bootstrap, module loading, session lookup, IPC connect,
-// service execution, transport overhead, and total CLI wall time.
+// Measures external process wall time (before spawn until process close),
+// internal milestones (entry timestamp, module load, session read, pipe connect,
+// service execution, transport), teardown/output delivery, and process/delivery status.
+//
+// Timing Definitions:
+// - external_wall_ms: Parent-observed wall time from immediately before spawn
+//   until the child process exits and all stdio streams close. Complete invocation wall time.
+// - entry_timestamp_ms: Timestamp recorded at the first script statement of the CLI.
+//   Includes OS process initialization, V8 runtime startup, and script compilation.
+//   (Retained with backward-compatible alias node_startup_ms).
+// - module_load_ms: Elapsed time to resolve and evaluate local CLI modules.
+//   Excludes Node built-in module initialization.
+// - session_read_ms: Elapsed time to read and parse desktop-session.json.
+// - pipe_connect_ms: Elapsed time from net.createConnection() until socket connect event.
+// - service_ms: Service execution time reported by the native controller receipt.
+// - transport_ms: Roundtrip minus service execution time.
+// - internal_cli_ms: Internal CLI runtime up to output emission (alias: total_cli_ms).
+// - teardown_and_delivery_ms: Difference between external_wall_ms and internal_cli_ms,
+//   accounting for output buffering, stdio flush, and process teardown.
 
 import { performance } from 'node:perf_hooks';
-const tEntry = performance.now();
-
-import net from 'node:net';
-import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export async function timedRequest(session, command, args = {}, timeout = 100000, expectedPermissionMode, buildId) {
+export { request as timedRequest } from './desktop.mjs';
+
+export function runTimedCommand(args, { env = {}, stdout = process.stdout, stderr = process.stderr, timeout = 30000 } = {}) {
   return new Promise((resolve, reject) => {
-    let buffer = '', settled = false, connected = false;
-    const tConnect0 = performance.now();
-    let tConnected = 0, tWriteDone = 0, tReceived = 0;
-
-    const socket = net.createConnection(session.pipe);
-    socket.setEncoding('utf8');
-
-    const done = (error, result, meta = {}) => {
-      if (settled) return;
-      settled = true;
-      socket.destroy();
-      if (error) reject(Object.assign(error, meta));
-      else resolve({ result, meta });
-    };
-
-    socket.setTimeout(timeout, () => {
-      done(Object.assign(Error('Desktop request timed out; session was cancelled. Observe status before continuing.'), { code: 'request_timeout' }), null, { timed_out: true });
+    const desktopScript = fileURLToPath(new URL('./desktop.mjs', import.meta.url));
+    const t0 = performance.now();
+    const child = spawn(process.execPath, [desktopScript, ...args], {
+      windowsHide: true,
+      env: { ...process.env, ...env, AGCU_TIMING: '1' },
+      stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    socket.on('connect', () => {
-      connected = true;
-      tConnected = performance.now();
-      const payload = JSON.stringify({
-        secret: session.secret,
-        command,
-        args,
-        expected_build_id: buildId,
-        expected_permission_mode: expectedPermissionMode
-      }) + '\n';
-      socket.write(payload);
-      tWriteDone = performance.now();
+    let rawStdout = '';
+    let rawStderr = '';
+    let internalMetrics = null;
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+
+    child.stdout.on('data', chunk => {
+      rawStdout += chunk;
+      if (stdout) stdout.write(chunk);
     });
 
-    socket.on('data', chunk => {
-      buffer += chunk;
-      if (Buffer.byteLength(buffer) > 4 * 1024 * 1024) return done(Error('Desktop response too large'));
-      if (buffer.includes('\n')) {
-        tReceived = performance.now();
-        try {
-          const parsed = JSON.parse(buffer.slice(0, buffer.indexOf('\n')));
-          const pipe_connect_ms = Math.round((tConnected - tConnect0) * 10) / 10;
-          const service_ms = parsed.receipt?.elapsed_ms ?? 0;
-          const roundtrip_ms = Math.round((tReceived - tWriteDone) * 10) / 10;
-          const transport_ms = Math.max(0, Math.round((roundtrip_ms - service_ms) * 10) / 10);
-          done(null, parsed, { pipe_connect_ms, service_ms, transport_ms, roundtrip_ms });
-        } catch (err) {
-          done(err);
+    child.stderr.on('data', chunk => {
+      rawStderr += chunk;
+    });
+
+    let timer = null;
+    if (timeout > 0) {
+      timer = setTimeout(() => {
+        child.kill('SIGTERM');
+      }, timeout);
+    }
+
+    child.on('error', err => {
+      if (timer) clearTimeout(timer);
+      reject(err);
+    });
+
+    child.on('close', (status, signal) => {
+      if (timer) clearTimeout(timer);
+      const tClose = performance.now();
+      const external_wall_ms = Math.round((tClose - t0) * 10) / 10;
+
+      // Extract internal timing JSON from stderr
+      const stderrLines = rawStderr.split('\n');
+      const forwardStderrLines = [];
+      for (const line of stderrLines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (!internalMetrics && trimmed.startsWith('{') && trimmed.includes('"timing_schema"')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (parsed && typeof parsed.internal_cli_ms === 'number') {
+              internalMetrics = parsed;
+              continue;
+            }
+          } catch {}
         }
+        forwardStderrLines.push(line);
       }
-    });
 
-    socket.on('error', error => {
-      const pipe_connect_ms = connected ? Math.round((tConnected - tConnect0) * 10) / 10 : Math.round((performance.now() - tConnect0) * 10) / 10;
-      done(Object.assign(Error(connected
-        ? 'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.'
-        : 'The saved desktop service is unreachable. Inspect/restart the installed Computer Use App sidecar or use its human starter from the normal Windows desktop, then discover apps and observe again. Isolated exebox terminals cannot start visible-desktop control. Do not use WMI or bypass host security. Emergency Stop remains latched.'),
-        { code: connected ? 'connection_lost' : 'session_unavailable', cause: error }), null, { pipe_connect_ms });
-    });
-
-    socket.on('end', () => {
-      if (!settled) {
-        const pipe_connect_ms = connected ? Math.round((tConnected - tConnect0) * 10) / 10 : 0;
-        done(Object.assign(Error('Desktop session disconnected; do not replay the action.'), { code: 'connection_lost' }), null, { pipe_connect_ms });
+      // Forward any non-timing stderr to stderr output
+      if (stderr && forwardStderrLines.length > 0) {
+        stderr.write(forwardStderrLines.join('\n') + '\n');
       }
-    });
 
-    socket.on('close', () => {
-      if (!settled) {
-        const pipe_connect_ms = connected ? Math.round((tConnected - tConnect0) * 10) / 10 : 0;
-        done(Object.assign(Error(connected ? 'Desktop connection lost; input delivery may be unknown.' : 'The saved desktop service is unreachable.'), { code: connected ? 'connection_lost' : 'session_unavailable' }), null, { pipe_connect_ms });
+      let stdoutJson = null;
+      try { stdoutJson = JSON.parse(rawStdout.trim()); } catch {}
+
+      const internal_cli_ms = internalMetrics?.internal_cli_ms ?? external_wall_ms;
+      const teardown_and_delivery_ms = Math.max(0, Math.round((external_wall_ms - internal_cli_ms) * 10) / 10);
+
+      const isSuccess = status === 0 && (stdoutJson?.ok !== false);
+      const delivery_uncertain = stdoutJson?.delivery_unknown === true || internalMetrics?.delivery_uncertain === true;
+
+      const metrics = {
+        // External parent-observed timing (complete wall time)
+        external_wall_ms,
+        teardown_and_delivery_ms,
+
+        // Internal milestone timings
+        entry_timestamp_ms: internalMetrics?.entry_timestamp_ms ?? 0,
+        module_load_ms: internalMetrics?.module_load_ms ?? 0,
+        session_read_ms: internalMetrics?.session_read_ms ?? 0,
+        pipe_connect_ms: internalMetrics?.pipe_connect_ms ?? 0,
+        service_ms: internalMetrics?.service_ms ?? 0,
+        transport_ms: internalMetrics?.transport_ms ?? 0,
+        internal_cli_ms,
+
+        // Backward compatibility aliases
+        node_startup_ms: internalMetrics?.entry_timestamp_ms ?? 0,
+        total_cli_ms: internal_cli_ms,
+
+        // Execution status and reliability evidence
+        exit_code: status,
+        ok: isSuccess,
+        success: isSuccess,
+        delivery_uncertain,
+        error_code: stdoutJson?.error?.code ?? (status !== 0 ? 'command_failed' : undefined)
+      };
+
+      if (stderr) {
+        stderr.write(JSON.stringify(metrics) + '\n');
       }
+
+      resolve({
+        stdout: rawStdout,
+        stdoutJson,
+        stderr: rawStderr,
+        timing: metrics,
+        timings: metrics,
+        exitCode: status ?? (signal ? 1 : 0)
+      });
     });
   });
 }
 
-export async function timeCall(argv = process.argv.slice(2), { stdout = process.stdout, stderr = process.stderr } = {}) {
-  const node_startup_ms = Math.round(tEntry * 10) / 10;
-
-  // 1. Measure module import
-  const tModule0 = performance.now();
-  const [
-    desktop,
-    { dataDir },
-    { BUILD_ID, VERSION },
-    { TOOLS, validate },
-    { parseArguments, parseRunArguments },
-    { loadDeployment, applyDeployment }
-  ] = await Promise.all([
-    import('./desktop.mjs'),
-    import('../server/build.mjs'),
-    import('../server/version.mjs'),
-    import('../server/desktop-tools.mjs'),
-    import('./arguments.mjs'),
-    import('../server/deployment.mjs')
-  ]);
-  const module_load_ms = Math.round((performance.now() - tModule0) * 10) / 10;
-
-  const { describeCommand, encodeReply, briefReply } = desktop;
-
-  let session_read_ms = 0;
-  let pipe_connect_ms = 0;
-  let service_ms = 0;
-  let transport_ms = 0;
-
-  const emit = (result, isError = false) => {
-    const total_cli_ms = Math.round(performance.now() * 10) / 10;
-    const timings = {
-      node_startup_ms,
-      module_load_ms,
-      session_read_ms,
-      pipe_connect_ms,
-      service_ms,
-      transport_ms,
-      total_cli_ms
-    };
-    stdout.write(encodeReply(result) + '\n');
-    stderr.write(JSON.stringify(timings) + '\n');
-    return { result, timings, exitCode: isError || (result && result.ok === false) ? 1 : 0 };
-  };
-
-  try {
-    const argsCopy = [...argv];
-    let jsonMode = false;
-    if (argsCopy[0] === '--json') { jsonMode = true; argsCopy.shift(); }
-    const rawCommand = argsCopy.shift();
-    const command = rawCommand?.replace(/^computer_/, '');
-    if (argsCopy[0] === '--json') { jsonMode = true; argsCopy.shift(); }
-
-    if (!command || command === '--help') {
-      const helpText = 'Native desktop skill (no MCP)\nUsage: node scripts/time-call.mjs [--json] <command> [args...]\n';
-      stdout.write(helpText);
-      const total_cli_ms = Math.round(performance.now() * 10) / 10;
-      const timings = {
-        node_startup_ms,
-        module_load_ms,
-        session_read_ms: 0,
-        pipe_connect_ms: 0,
-        service_ms: 0,
-        transport_ms: 0,
-        total_cli_ms
-      };
-      stderr.write(JSON.stringify(timings) + '\n');
-      return { result: { ok: true, usage: helpText }, timings, exitCode: 0 };
-    }
-
-    if (command === 'describe') {
-      const target = argsCopy[0];
-      const desc = target ? describeCommand(target) : { commands: TOOLS.map(t => t.name) };
-      return emit(desc);
-    }
-
-    const replyMode = jsonMode || (argsCopy.length && (!argsCopy[0].startsWith('--') || argsCopy[0] === '--request')) ? 'json' : 'brief';
-    const schema = describeCommand(command).inputSchema;
-    let args;
-    try {
-      args = command === 'run' ? parseRunArguments(schema, argsCopy, describeCommand) : parseArguments(schema, argsCopy);
-      if (TOOLS.some(t => t.name === 'computer_' + command)) validate('computer_' + command, args);
-      else if (Object.keys(args).length) throw Object.assign(Error('This lifecycle command takes no arguments.'), { code: 'bad_arguments' });
-    } catch (argErr) {
-      argErr.code = argErr.code || 'bad_arguments';
-      throw argErr;
-    }
-
-    const policy = applyDeployment(loadDeployment());
-    const file = path.join(dataDir(), 'desktop-session.json');
-
-    // 2. Measure session file lookup
-    const tSession0 = performance.now();
-    const exists = fs.existsSync(file);
-    let session = null;
-    if (exists) {
-      session = JSON.parse(fs.readFileSync(file, 'utf8'));
-    }
-    session_read_ms = Math.round((performance.now() - tSession0) * 10) / 10;
-
-    if (!exists) {
-      if (command === 'status') {
-        const stopFile = path.join(dataDir(), 'emergency.stop');
-        const state = fs.existsSync(stopFile) ? 'stopped' : 'not_running';
-        return emit({ ok: true, state, build_version: VERSION, build_id: BUILD_ID, reconnect_required: true }, false);
-      }
-      throw Object.assign(Error('No desktop session is running (it may have expired after 15 idle minutes). Start the desktop service before sending actions.'), { code: 'no_session' });
-    }
-
-    // 3. Timed request over IPC pipe
-    const timeout = Number(process.env.AGCU_REQUEST_TIMEOUT_MS) || 100000;
-    const { result, meta } = await timedRequest(session, command, args, timeout, policy.permission_mode, BUILD_ID);
-    pipe_connect_ms = meta.pipe_connect_ms ?? 0;
-    service_ms = meta.service_ms ?? 0;
-    transport_ms = meta.transport_ms ?? 0;
-
-    const formatted = replyMode === 'brief' ? briefReply(result) : result;
-    return emit(formatted, !result.ok);
-  } catch (err) {
-    if (err.pipe_connect_ms !== undefined) pipe_connect_ms = err.pipe_connect_ms;
-    if (err.service_ms !== undefined) service_ms = err.service_ms;
-    if (err.transport_ms !== undefined) transport_ms = err.transport_ms;
-    return emit({ ok: false, error: { code: err.code || 'refused', message: err.message } }, true);
-  }
+export async function timeCall(argv = process.argv.slice(2), options = {}) {
+  return runTimedCommand(argv, options);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

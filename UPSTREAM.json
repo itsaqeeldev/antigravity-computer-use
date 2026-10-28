@@ -260,11 +260,11 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "284c8e5ebd22e41af59bdd9472f24c1b76a33ac3f00a821e638b29a9ba555b6d"
+      "sha256": "661a4e3c9387c1cd8be03b530d8b740046a078937094d115e810be339c293843"
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "70e62227f9ebea52ec0995a901e2e4cd67018a5e44691c2eb38ec3a5e0003536"
+      "sha256": "2d61df3bc73167b2ec309f72b78e2e1ed35d998a104d9acacb697e58b2d71d96"
     },
     {
       "path": "server/version.mjs",
@@ -452,11 +452,11 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "d0652bb6e45d3e0fd18cc705811f3f1c4d3dd5bb6ebd32612198eaa1df167724"
+      "sha256": "51a490018534f43bf11d53152a9a3419b5b8c8b1ddcb443b0c0b2d10241ea63a"
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "63b13d09412f5930b3c3abfaf0ab2b8eaa87622bf7cd68d7b778753ecb0823a6"
+      "sha256": "3f89ea6473fa69497c0f65fdb7158119296c41c79cd16d55a8df253fa3d08a93"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -505,6 +505,34 @@
     {
       "path": "docs/media/upscaly-demo.gif",
       "sha256": "db55092b7f3c45c88e6c9f5277983e8332cdb8490237e7e92cd39b2b0ef23a59"
+    },
+    {
+      "path": "scripts/time-call.mjs",
+      "sha256": "c1f6b62f1ddf1cbed610e80605171c554870dc3851212f23a742dac666236fb3"
+    },
+    {
+      "path": "scripts/benchmark-baseline.mjs",
+      "sha256": "5fe03f9c1efd0b1a264a9f8e5aa0bd6a13674a9ef40b5dcec06a3d37fba15fc9"
+    },
+    {
+      "path": "scripts/compare-runs.mjs",
+      "sha256": "008d0d00685c1454f8e8c60a78fc3a0a123269397827d8a700c0f3c0476742b6"
+    },
+    {
+      "path": "tests/time-call.test.mjs",
+      "sha256": "9ab94537196c251663e209f5073ac444e25bde7d30a7f536fe2f7f369dd3aad0"
+    },
+    {
+      "path": "tests/observation-optimization.test.mjs",
+      "sha256": "a0e6fe570581feafab58668e8d507fd9ffc10a6268c165682cdaab7095be8ac6"
+    },
+    {
+      "path": "tests/compare-runs.test.mjs",
+      "sha256": "ee3df0be80d448e04f758b93b23397d056878190b9cd58a1471a6751f179998d"
+    },
+    {
+      "path": "skills/computer-use/SKILL.md",
+      "sha256": "3e6af737299c961b002d2c5e61e4cab8bb8e479a0eb69286192dd7c437420286"
     }
   ]
 }
