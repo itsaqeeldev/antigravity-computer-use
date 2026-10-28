@@ -4,6 +4,25 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
 
 ## 28 October stable Upscaly demo and remaining problems
 
+Latest correction: the public recording now uses a different owner-authorized
+portrait, full-screen capture and normal-speed actions. It includes the actual
+glow, working chip, native pointer movement and comparison drag. The fresh
+2800×4496 PNG fully decoded; an independent observer recorded the native NCNN
+process during this export. Exact evidence and edit ranges are in
+[UPSCALY-DEMO.md](docs/media/UPSCALY-DEMO.md). The earlier excerpt below was
+rejected because its crop and capture exclusion hid the controls.
+
+Source commit `7815cc2` added a local menu option to include the native visuals in
+recordings while still hiding them from agent observations. Native exclusion and
+inclusion checks passed; the source suite had148 passes and5 explicit ACL skips.
+The installed recording candidate `eec4740…` is ahead of published beta.2
+`23ddd7…`. Do not claim installed/published manifest equivalence. Recording
+inclusion was disabled again after End; the passive listener remains available.
+The clean task also exposed a real app edge case: clicking Upscale on an already
+Done queue item did not generate another output. Antigravity recovered by
+re-importing the sample. Initial ineffective attempts and host gaps remain in
+private evidence; the clip is not proof that latency is solved.
+
 - Antigravity used the installed beta.2 direct controller with the verified
   Upscaly 1.0.9 stable executable and the owner's requested sample image. It
   reported General Real-World native AI, 4× and a completed PNG. Independent

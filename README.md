@@ -40,13 +40,15 @@ browser extension or required MCP server.
   <img src="docs/media/upscaly-demo.gif" width="720" alt="Real Antigravity computer-use session in Upscaly: select a model, import a photo, upscale and view the result.">
 </p>
 
-<p align="center"><a href="docs/media/upscaly-demo.mp4"><b>Watch the real demo</b></a> · <a href="docs/media/UPSCALY-DEMO.md">Recording details</a></p>
+<p align="center"><a href="docs/media/upscaly-demo.mp4"><b>Watch the full 39-second real demo</b></a> · <a href="docs/media/UPSCALY-DEMO.md">Recording details</a></p>
 
-An actual Antigravity task operating **Upscaly 1.0.9** with the installed
-**v0.3.0-beta.2** direct controller and a user-provided sample. The excerpt is
-sped up 3×; setup/waiting and the file picker are omitted. The app used 4×.
-The recording is not a measure of task speed. Native engine execution remains
-to be independently verified. [Previous fixture demo](docs/media/REAL-DEMO.md).
+An actual Antigravity task operating **Upscaly 1.0.9**, with a different
+user-provided portrait, our breathing edge glow, working bar and moving native
+cursor. The **39-second excerpt plays at normal speed**; waiting and the private
+file picker are cut. The native NCNN process was observed and the resulting
+2800×4496 PNG independently decoded. This records a development build with the
+new local recording preference; the downloadable beta.2 predates that preference.
+The excerpt is not a task-speed benchmark. [Recording provenance](docs/media/UPSCALY-DEMO.md).
 
 <details>
 <summary><b>Minimal desktop controls</b></summary>

@@ -25,7 +25,7 @@ These common command shapes are complete; use them directly without schema setup
 | --- | --- |
 | `launch` | `--app EXE --observe --reason TEXT` |
 | `snapshot` | `--hwnd H --reason TEXT [--query TEXT] [--max-nodes 500] [--image] [--settle-ms 600]` |
-| `click` | `--hwnd H --observation-id F --name TEXT --role Button --risk routine --reason TEXT [--image] [--max-nodes 500]`; or `--index N` in place of name/role |
+| `click` | `--hwnd H --observation-id F --name TEXT --role Button --risk routine --reason TEXT [--physical true] [--image] [--max-nodes 500]`; or `--index N` in place of name/role |
 | `set_value` | `--hwnd H --observation-id F --name TEXT --role Edit --text VALUE --risk routine --reason TEXT`; or `--index N` |
 | `file_dialog` | `--hwnd OWNER --observation-id F --path FILE --action open` (or `save`) `--entry-method clipboard --reason TEXT` |
 | `run` | `--hwnd H --observation-id F --reason TEXT --step COMMAND` followed by that step's flags; repeat at most8times, omitting per-step owner/frame |
@@ -36,6 +36,7 @@ These common command shapes are complete; use them directly without schema setup
 - Inspect the returned `tree` and **open the actual `image.path` with the host image viewer** at visual checkpoints. Agent Manager's `read_file` can view its JPEGs. JSON, a reconstructed picture or an accessibility label does not prove visual behavior. Report an unavailable image viewer.
 - Every action consumes its `observation_id` and returns a **fresh frame and tree**. Use that reply directly. Do not take another snapshot merely to get a frame you already have. Ordinary named actions are tree-only; add `--image` when pixels or visual verification are needed. Pixel targets require a fresh viewed image.
 - Prefer observed accessibility indexes or exact **unique** `--name`, `--role`, `--automation-id`. Names resolve against that frame's bounded native snapshot, not an unbounded live search. Ambiguous/missing controls refuse; inspect rather than guess. `--query 'Export format'` returns a matching section and its child controls. Named section snapshots are tree-only by default; add `--image` for visual inspection. Queries are literal substrings, not regex. If a reply is truncated, use one relevant section query or `--max-nodes 500`, rather than many repeated full screenshots.
+- Named/index clicks normally use accessibility actions and may leave the pointer stationary. Add **`--physical true`** to click a uniquely observed control with the real animated pointer. This retains semantic target resolution and native ownership checks. Use physical input for a foreground task when visible cursor interaction is requested; `set_value`, invoke and other semantic actions need not move the pointer. Do not invent pointer movement to represent an accessibility action.
 - Combine predictable steps in one bounded `run` with 1–8 `--step` groups. The runtime observes between steps, resolves names from fresh state, and stops on the first failure. Do not guess future indexes or pixel positions across layout changes. Root owner/frame/reason precede the first group. The last step returns an image by default; use `--no-image` explicitly when appropriate.
 
 ```powershell
