@@ -473,6 +473,14 @@
     {
       "path": "docs/media/social-preview.png",
       "sha256": "51522808bca74e3a2280912ee2c31cdb1f4b96ad9663f3659cf34451eef916b4"
+    },
+    {
+      "path": "scripts/quick-install.mjs",
+      "sha256": "4f2548620e136c7c84ea39b348a279ab611f302c9e53aa9d03d24553d1fc0889"
+    },
+    {
+      "path": "tests/quick-install.test.mjs",
+      "sha256": "7cdcd4e7d75bf20ae2565d3734987c48c4b255426b6758650ebc7445524b477b"
     }
   ]
 }
