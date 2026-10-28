@@ -540,11 +540,11 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "c122d4fbad33734b70b867d1f09b74e56433ae6cbfde9232092685459a73efc6"
+      "sha256": "74f4e66d5d7133305b22e79f6f5163951672783e8c4b0f95da52aad52f4fa9a8"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
-      "sha256": "00983f7e07127297d08793ccc7f6871c0e2abfef25b65d8b07441906fe895ae1"
+      "sha256": "0df522ba8020d67690739b755e67a399d87ab0778c0ec5f5ccacd2f13fa82a7f"
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",

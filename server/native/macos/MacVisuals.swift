@@ -12,6 +12,7 @@ final class MacVisuals: NSObject {
     var pointer: NSPanel?
     var hiddenDisplays: [CGDirectDisplayID] = []
     var state = "idle", captureHidden = false
+    var hoverChecked = Date.distantPast
     let origin = ProcessInfo.processInfo.systemUptime
     var visible: Bool { panel?.isVisible == true }
     var cursorApplied: Bool { !hiddenDisplays.isEmpty }
@@ -93,6 +94,21 @@ final class MacVisuals: NSObject {
             let point = NSEvent.mouseLocation
             pointer?.setFrameOrigin(NSPoint(x: point.x - 4, y: point.y - 38))
             if pointer?.isVisible != true { pointer?.orderFrontRegardless() }
+            if Date().timeIntervalSince(hoverChecked) >= 0.15 {
+                hoverChecked=Date();var insertion=false
+                if let location=CGEvent(source:nil)?.location,
+                   let element=elementAt(Int(location.x),Int(location.y)) {
+                    var pid: pid_t=0
+                    if AXUIElementGetPid(element,&pid) == .success,
+                       let identity=try? macIdentity(pid), let key=identity["key"] as? String,
+                       let control=try? MacFence.read(), control.grants.contains(key) {
+                        AXUIElementSetMessagingTimeout(element,0.08)
+                        let role=axString(element,kAXRoleAttribute as String) ?? ""
+                        insertion=["AXTextField","AXTextArea","AXComboBox"].contains(role)
+                    }
+                }
+                if let view=pointer?.contentView as? MacPointerView,view.textInsertion != insertion {view.textInsertion=insertion;view.needsDisplay=true}
+            }
         }
     }
     @objc func toggleControl() { onToggle?() }
@@ -112,8 +128,15 @@ final class MacVisuals: NSObject {
 }
 
 final class MacPointerView: NSView {
+    var textInsertion=false
     override var isFlipped: Bool { true }
     override func draw(_ dirtyRect: NSRect) {
+        if textInsertion {
+            let p=NSBezierPath();p.move(to:NSPoint(x:4,y:3));p.line(to:NSPoint(x:4,y:28))
+            p.move(to:NSPoint(x:0,y:3));p.line(to:NSPoint(x:8,y:3));p.move(to:NSPoint(x:0,y:28));p.line(to:NSPoint(x:8,y:28))
+            NSColor(calibratedWhite:0.12,alpha:0.95).setStroke();p.lineWidth=4;p.stroke()
+            NSColor(calibratedRed:0.84,green:0.93,blue:0.98,alpha:1).setStroke();p.lineWidth=1.8;p.stroke();return
+        }
         let p = NSBezierPath(); p.move(to: NSPoint(x: 4, y: 2)); p.line(to: NSPoint(x: 28, y: 16))
         p.curve(to: NSPoint(x: 27.8, y: 18.2), controlPoint1: NSPoint(x: 29.5, y: 17), controlPoint2: NSPoint(x: 29, y: 18))
         p.line(to: NSPoint(x: 17.3, y: 19.6)); p.line(to: NSPoint(x: 11.8, y: 28.5))

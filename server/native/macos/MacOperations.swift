@@ -33,10 +33,12 @@ func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
     }
     guard let expected = windowNumber(pid: pid, title: try resolveWindow(args).2, rect: rect),
           let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { throw AxonError("obscured", "The target point cannot be verified.") }
-    let guardian = (try? String(contentsOfFile: MacFence.file + ".guardian", encoding: .utf8)).flatMap { Int32($0.split(separator: "|").first ?? "") }
+    let guardianRecord = (try? String(contentsOfFile: MacFence.file + ".guardian", encoding: .utf8).split(separator:"|")) ?? []
+    let guardian = guardianRecord.count == 2 ? Int32(guardianRecord[0]) : nil
+    let guardianAlive = guardian != nil && (try? macProcessStart(guardian!)) == String(guardianRecord.last ?? "")
     for candidate in windows {
         let owner = (candidate[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value ?? -1
-        if owner == guardian { continue } // only this runtime's native click-through chrome
+        if guardianAlive && owner == guardian { continue } // only this runtime's native click-through chrome
         guard (candidate[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 0 > 0,
               let bounds = candidate[kCGWindowBounds as String] as? [String:Any],
               let boundsRect = CGRect(dictionaryRepresentation: bounds as CFDictionary), boundsRect.contains(point) else { continue }
