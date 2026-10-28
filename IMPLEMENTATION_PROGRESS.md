@@ -1,3 +1,7 @@
+# Publication checkpoint — 28 October 2026
+
+Recorded the 27 October automatic-startup configuration repair in the public handoff/status/validation and corrected the Claude Code prompt's superseded disabled-service checkpoint. The existing published beta.2 runtime and installed payloads were not changed. Raw local configuration and private test evidence remain ignored. General speed and final-helper AI/physical/hardware work remain open; no goal or automation was recreated.
+
 # Startup control-bar fix — 26 October 2026
 
 26 October 2026 startup bar repair: v0.3.0-beta.2. Passive startup/status/End/shutdown do not start the guardian; native startup is hidden; End hides controls; Stop dismisses after8seconds; explicit controls reveals human re-arm without clearing Stop. Actual native visibility regression passed for idle and latched startup, active/End, capture cleanup, dismissal and refused activation while stopped. Source139pass/0fail/5ACLskips. The changed helper requires fresh real-app and physical/hardware qualification; earlier AI speed figures remain historical. General orchestration latency is still unfinished.

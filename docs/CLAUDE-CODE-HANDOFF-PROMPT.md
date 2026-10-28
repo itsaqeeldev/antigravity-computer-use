@@ -17,8 +17,13 @@ separate supported UI integration if available and authorized; otherwise prepare
 the exact bounded Antigravity benchmark prompt and hand only its launch/re-arm to
 the human, then verify actual receipts and outputs independently. A direct CLI
 test is useful component evidence, not an Antigravity orchestration benchmark.
-At the 26 October fix checkpoint the owner's Sidecar setting was disabled and
-was preserved, and the controller was left closed with Stop still latched.
+On 27 October the owner's disabled Sidecar entry was re-enabled, and Antigravity
+automatically started the exact published beta.2 service without a manual launcher
+or App restart. Both installed scopes were verified; passive startup created no
+guardian window, native discovery passed, and the listener was left available
+with Stop still latched. The enabled setting was rechecked on28October. Verify
+live state before work: automatic service startup does not clear emergency Stop,
+and human re-arm must never be manufactured. Read the latest HANDOFF.md checkpoint.
 
 Read AGENTS.md and HANDOFF.md completely, then PROJECT-STATUS.md, VALIDATION.md,
 docs/PERFORMANCE.md, the installed skill and relevant implementation/tests.

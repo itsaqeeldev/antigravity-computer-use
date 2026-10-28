@@ -1,3 +1,7 @@
+# Automatic-startup qualification — 27 October 2026
+
+Actual Antigravity-managed startup passed on published beta.2: the service parent was the App's `language_server.exe`; no manual launcher/App restart was used, and no guardian process opened. Native read-only app discovery passed the visible-desktop preflight and returned three windows. Both scope pins and 75 sealed files per scope matched build `23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777`. End retained Stop and cleared grants. Only the project's Sidecar enabled setting changed; unrelated configuration was checked equal. The existing focused Sidecar configuration test passed. Private evidence: `.localdata/autostart-repair-20261027/result.json`. This is startup/discovery qualification, not physical re-arm/input or full Upscaly AI acceptance. The enabled setting was rechecked on 28 October without restarting or retesting the service.
+
 # Startup control-bar fix — 26 October 2026
 
 26 October 2026 startup bar repair: v0.3.0-beta.2. Passive startup/status/End/shutdown do not start the guardian; native startup is hidden; End hides controls; Stop dismisses after8seconds; explicit controls reveals human re-arm without clearing Stop. Actual native visibility regression passed for idle and latched startup, active/End, capture cleanup, dismissal and refused activation while stopped. Source139pass/0fail/5ACLskips. The changed helper requires fresh real-app and physical/hardware qualification; earlier AI speed figures remain historical. General orchestration latency is still unfinished.

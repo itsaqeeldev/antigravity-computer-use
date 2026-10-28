@@ -452,7 +452,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "c7bca598b63bc040060378b91415d833933cc409ffb13b82689cd4104fd01c7b"
+      "sha256": "fd73579b8280fc61679742cf2d90692a1d5876f52566a91c59b674f7b0518227"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -460,7 +460,7 @@
     },
     {
       "path": "docs/CLAUDE-CODE-HANDOFF-PROMPT.md",
-      "sha256": "acb850f85e9aca45758b153103f88e83baeff8033e1eac2d29e53434206b87cc"
+      "sha256": "4ad9381d3384207482cb47ec9c2ebbe68594fe1722c0b85c36c86194107ab4e2"
     }
   ]
 }

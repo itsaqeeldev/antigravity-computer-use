@@ -1,6 +1,31 @@
 # Antigravity Computer Use: handoff
 
-Updated **26 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
+Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
+
+## 27 October automatic-startup repair
+
+The installed Sidecar had remained disabled after the startup-bar fix, so
+Antigravity asked the owner to run the manual launcher. At the owner's request,
+only this project's Sidecar entry was enabled; unrelated configuration was
+verified unchanged. Antigravity's `language_server.exe` then started the pinned
+beta.2 service automatically, without a manual launch or whole-App restart.
+
+Recorded qualification on 27 October: the exact installed build was
+`23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777` in
+both global and Upscaly scopes, with all 75 sealed payload files checked in each.
+The automatic passive startup created no guardian window/process. Read-only
+native app discovery passed the visible-desktop preflight, returned three
+windows, and End left no app grants. Emergency Stop remained latched; no physical
+input or re-arm was sent. The passive listener was left available. The enabled
+Sidecar setting was checked again on 28 October; the running service was not
+retested in that documentation-only check.
+
+This was a local configuration repair using the existing published beta.2 code,
+not a new runtime build or full AI-workflow qualification. Private evidence is
+retained under `.localdata/autostart-repair-20261027/`; do not publish the raw
+host configuration. Silent background availability and human-only emergency
+re-arm are separate: a saved Stop still needs the human even though the service
+starts automatically. Remaining speed and hardware qualifications stay open.
 
 ## 26 October startup control-bar fix
 
