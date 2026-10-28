@@ -7,10 +7,10 @@
 // - external_wall_ms: Parent-observed wall time from immediately before spawn
 //   until the child process exits and all stdio streams close. Complete invocation wall time.
 // - entry_timestamp_ms: Timestamp recorded at the first script statement of the CLI.
-//   Includes OS process initialization, V8 runtime startup, and script compilation.
+//   Includes OS process initialization, V8 runtime startup, and resolution/evaluation of static imports.
 //   (Retained with backward-compatible alias node_startup_ms).
-// - module_load_ms: Elapsed time to resolve and evaluate local CLI modules.
-//   Excludes Node built-in module initialization.
+// - module_load_ms: Elapsed time from Node bootstrap completion until top-level script entry,
+//   measuring static resolution, parsing, and execution of the module dependency graph.
 // - session_read_ms: Elapsed time to read and parse desktop-session.json.
 // - pipe_connect_ms: Elapsed time from net.createConnection() until socket connect event.
 // - service_ms: Service execution time reported by the native controller receipt.
@@ -53,8 +53,10 @@ export function runTimedCommand(args, { env = {}, stdout = process.stdout, stder
     });
 
     let timer = null;
+    let timedOut = false;
     if (timeout > 0) {
       timer = setTimeout(() => {
+        timedOut = true;
         child.kill('SIGTERM');
       }, timeout);
     }
@@ -98,7 +100,8 @@ export function runTimedCommand(args, { env = {}, stdout = process.stdout, stder
       const internal_cli_ms = internalMetrics?.internal_cli_ms ?? external_wall_ms;
       const teardown_and_delivery_ms = Math.max(0, Math.round((external_wall_ms - internal_cli_ms) * 10) / 10);
 
-      const isSuccess = status === 0 && (stdoutJson?.ok !== false);
+      const effectiveExitCode = status ?? (timedOut ? 1 : (signal ? 1 : 0));
+      const isSuccess = effectiveExitCode === 0 && !timedOut && (stdoutJson?.ok !== false);
       const delivery_uncertain = stdoutJson?.delivery_unknown === true || internalMetrics?.delivery_uncertain === true;
 
       const metrics = {
@@ -119,12 +122,13 @@ export function runTimedCommand(args, { env = {}, stdout = process.stdout, stder
         node_startup_ms: internalMetrics?.entry_timestamp_ms ?? 0,
         total_cli_ms: internal_cli_ms,
 
-        // Execution status and reliability evidence
-        exit_code: status,
+        // Execution status, reliability and delivery evidence
+        exit_code: effectiveExitCode,
         ok: isSuccess,
         success: isSuccess,
+        timed_out: timedOut,
         delivery_uncertain,
-        error_code: stdoutJson?.error?.code ?? (status !== 0 ? 'command_failed' : undefined)
+        error_code: timedOut ? 'timeout' : (stdoutJson?.error?.code ?? (effectiveExitCode !== 0 ? 'command_failed' : undefined))
       };
 
       if (stderr) {
@@ -137,14 +141,26 @@ export function runTimedCommand(args, { env = {}, stdout = process.stdout, stder
         stderr: rawStderr,
         timing: metrics,
         timings: metrics,
-        exitCode: status ?? (signal ? 1 : 0)
+        exitCode: effectiveExitCode
       });
     });
   });
 }
 
 export async function timeCall(argv = process.argv.slice(2), options = {}) {
-  return runTimedCommand(argv, options);
+  let timeout = options.timeout ?? 30000;
+  const filteredArgs = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--timeout' && i + 1 < argv.length) {
+      timeout = Number(argv[++i]);
+    } else if (arg.startsWith('--timeout=')) {
+      timeout = Number(arg.slice(10));
+    } else {
+      filteredArgs.push(arg);
+    }
+  }
+  return runTimedCommand(filteredArgs, { ...options, timeout });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

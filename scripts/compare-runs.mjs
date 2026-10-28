@@ -19,6 +19,18 @@ function validateReportMetrics(report, label) {
   if (typeof report.service_ms !== 'number' || !Number.isFinite(report.service_ms) || report.service_ms < 0) {
     throw Object.assign(Error(`${label} report must have non-negative finite numeric service_ms.`), { code: 'invalid_report' });
   }
+  if (report.tool_failures != null && (!Number.isSafeInteger(report.tool_failures) || report.tool_failures < 0)) {
+    throw Object.assign(Error(`${label} report tool_failures must be a non-negative integer.`), { code: 'invalid_report' });
+  }
+  if (report.verification_failures != null && (!Number.isSafeInteger(report.verification_failures) || report.verification_failures < 0)) {
+    throw Object.assign(Error(`${label} report verification_failures must be a non-negative integer.`), { code: 'invalid_report' });
+  }
+  if (report.median_service_ms != null && (!Number.isFinite(report.median_service_ms) || report.median_service_ms < 0)) {
+    throw Object.assign(Error(`${label} report median_service_ms must be a non-negative finite number.`), { code: 'invalid_report' });
+  }
+  if (report.median_gap_ms != null && (!Number.isFinite(report.median_gap_ms) || report.median_gap_ms < 0)) {
+    throw Object.assign(Error(`${label} report median_gap_ms must be a non-negative finite number.`), { code: 'invalid_report' });
+  }
 }
 
 export function loadRunReport(input, options = {}) {
@@ -54,11 +66,11 @@ export function compareRuns(beforeReport, afterReport) {
 
   // Task success and evidence assessment
   const assessSuccess = report => {
-    const hasEvidence = report.success !== undefined || report.completed !== undefined;
-    const explicitFailed = report.failed === true || report.success === false || report.ok === false;
+    const hasEvidence = report.success !== undefined || report.completed !== undefined || report.ok !== undefined;
+    const explicitFailed = report.failed === true || report.success === false || report.ok === false || report.completed === false || report.status === 'failed' || report.status === 'error' || Boolean(report.error);
     const hasToolFailures = (report.tool_failures || 0) > 0;
     const hasVerificationFailures = (report.verification_failures || 0) > 0;
-    const isSuccess = hasEvidence && !explicitFailed && !hasToolFailures && !hasVerificationFailures;
+    const isSuccess = hasEvidence && !explicitFailed && !hasToolFailures && !hasVerificationFailures && (report.success === true || (report.completed === true && report.ok !== false) || (report.ok === true && report.completed !== false));
     return {
       has_evidence: hasEvidence,
       failed: explicitFailed || hasToolFailures || hasVerificationFailures,
@@ -98,6 +110,16 @@ export function compareRuns(beforeReport, afterReport) {
     qualificationStatus = 'unqualified_missing_evidence';
     faster = false;
     summary = 'Run is unqualified: missing proof of successful task completion.';
+  } else if (beforeAssessment.failed) {
+    qualified = false;
+    qualificationStatus = 'disqualified_due_to_failure';
+    faster = false;
+    summary = `Baseline run failed with ${beforeReport.tool_failures || 0} tool failures and ${beforeReport.verification_failures || 0} verification failures; comparison against a broken baseline is disqualified.`;
+  } else if (!beforeAssessment.has_evidence) {
+    qualified = false;
+    qualificationStatus = 'unqualified_missing_evidence';
+    faster = false;
+    summary = 'Run is unqualified: baseline run lacks proof of successful task completion.';
   } else if (!matchedWorkload) {
     qualified = false;
     qualificationStatus = 'disqualified_mismatched_workload';
@@ -108,6 +130,11 @@ export function compareRuns(beforeReport, afterReport) {
     qualificationStatus = 'unqualified_missing_verification';
     faster = false;
     summary = 'Run completed without errors but lacks independent output verification evidence.';
+  } else if (!beforeVerified) {
+    qualified = false;
+    qualificationStatus = 'unqualified_missing_verification';
+    faster = false;
+    summary = 'Run completed without errors but baseline lacks independent output verification evidence.';
   } else {
     // Both completed successfully with verified outputs on matched workload
     if (afterReport.wall_ms < beforeReport.wall_ms) {
@@ -229,12 +256,67 @@ ${Object.entries(comp.command_deltas).map(([cmd, d]) => `| \`${cmd}\` | ${d.befo
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [beforePath, afterPath, outputPath] = process.argv.slice(2);
-  if (!beforePath || !afterPath) {
-    throw Error('Usage: node scripts/compare-runs.mjs BEFORE_JSON AFTER_JSON [OUTPUT_MD_OR_JSON]');
+  const argv = process.argv.slice(2);
+  if (argv.length < 2 || argv.includes('--help') || argv.includes('-h')) {
+    console.log(`Compare two desktop task runs (precomputed bounded reports or bounded raw receipts).
+
+Usage:
+  node scripts/compare-runs.mjs <before_path> <after_path> [output_path] [options]
+
+Arguments:
+  before_path            Precomputed report JSON or raw receipts JSONL
+  after_path             Precomputed report JSON or raw receipts JSONL
+  output_path            Optional destination (.json or .md)
+
+Boundary options (required for raw receipts JSONL):
+  --pid <number>         Process ID for both runs
+  --since <id>           Start receipt boundary for both runs
+  --through <id>         Final receipt boundary for both runs
+  --before-pid <number>  Process ID for before run
+  --after-pid <number>   Process ID for after run
+  --before-since <id>    Start receipt for before run
+  --after-since <id>     Start receipt for after run
+  --before-through <id>  Final receipt for before run
+  --after-through <id>   Final receipt for after run
+`);
+    process.exit(argv.includes('--help') || argv.includes('-h') ? 0 : 1);
   }
-  const before = loadRunReport(beforePath);
-  const after = loadRunReport(afterPath);
+
+  const positionals = [];
+  const options = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--pid') options.pid = Number(argv[++i]);
+    else if (arg === '--since' || arg === '--start') options.since = argv[++i];
+    else if (arg === '--through' || arg === '--final') options.through = argv[++i];
+    else if (arg === '--before-pid') options.beforePid = Number(argv[++i]);
+    else if (arg === '--after-pid') options.afterPid = Number(argv[++i]);
+    else if (arg === '--before-since' || arg === '--before-start') options.beforeSince = argv[++i];
+    else if (arg === '--after-since' || arg === '--after-start') options.afterSince = argv[++i];
+    else if (arg === '--before-through' || arg === '--before-final') options.beforeThrough = argv[++i];
+    else if (arg === '--after-through' || arg === '--after-final') options.afterThrough = argv[++i];
+    else if (!arg.startsWith('--')) positionals.push(arg);
+    else throw Object.assign(Error(`Unknown option: ${arg}`), { code: 'bad_arguments' });
+  }
+
+  const [beforePath, afterPath, outputPath] = positionals;
+  if (!beforePath || !afterPath) {
+    throw Object.assign(Error('Usage: node scripts/compare-runs.mjs <before> <after> [output] [options]'), { code: 'bad_arguments' });
+  }
+
+  const beforeOpts = {
+    pid: options.beforePid ?? options.pid,
+    since: options.beforeSince ?? options.since,
+    through: options.beforeThrough ?? options.through
+  };
+  const afterOpts = {
+    pid: options.afterPid ?? options.pid,
+    since: options.afterSince ?? options.since,
+    through: options.afterThrough ?? options.through
+  };
+
+  const before = loadRunReport(beforePath, beforeOpts);
+  const after = loadRunReport(afterPath, afterOpts);
   const comparison = compareRuns(before, after);
 
   if (outputPath) {

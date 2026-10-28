@@ -64,6 +64,7 @@ function assertValidMetrics(metrics, { requireService = false } = {}) {
   assert.equal(typeof metrics.teardown_and_delivery_ms, 'number');
   assert.equal(typeof metrics.ok, 'boolean');
   assert.equal(typeof metrics.exit_code, 'number');
+  assert.equal(typeof metrics.timed_out, 'boolean');
   assert(metrics.total_cli_ms > 0, 'total_cli_ms must be positive');
   assert(metrics.external_wall_ms >= 0, 'external_wall_ms must be non-negative');
   assert(metrics.node_startup_ms >= 0, 'node_startup_ms must be non-negative');
@@ -303,4 +304,74 @@ test('time-call preserves temporary test isolation inside .localdata/tests/ stri
   const target = testDirectory('tmp', 'isolation-check');
   assert(target.includes(path.join('.localdata', 'tests', 'tmp')), 'Path must be within .localdata/tests/tmp');
   fs.rmdirSync(target);
+});
+
+test('time-call describe start outputs lifecycle schema on stdout and timing metrics on stderr', async () => {
+  const res = await runTimeCall(['describe', 'start']);
+  assert.equal(res.status, 0, res.rawStderr);
+  assert.equal(res.stdoutJson.command, 'start');
+  assert.equal(res.stdoutJson.inputSchema.properties.quick.type, 'boolean');
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
+});
+
+test('time-call supports --json mode and emits metrics to stderr while stdout retains JSON', async () => {
+  const res = await runTimeCall(['describe', '--json', 'click']);
+  assert.equal(res.status, 0, res.rawStderr);
+  assert.equal(res.stdoutJson.command, 'click');
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, true);
+});
+
+test('time-call handles malformed service response with explicit malformed_response code', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-timecall-malformed-'));
+  const pipePath = process.platform === 'win32'
+    ? '\\\\.\\pipe\\agcu-malformed-test-' + Date.now()
+    : path.join(dir, 'malformed.sock');
+
+  const sockets = new Set();
+  const dummyServer = net.createServer(socket => {
+    sockets.add(socket);
+    socket.on('data', () => {
+      // Send invalid non-JSON line
+      socket.write('INVALID_NOT_JSON\n');
+    });
+    socket.on('close', () => sockets.delete(socket));
+  });
+  await new Promise(resolve => dummyServer.listen(pipePath, resolve));
+  fs.writeFileSync(path.join(dir, 'desktop-session.json'), JSON.stringify({
+    pid: process.pid,
+    pipe: pipePath,
+    secret: 'test-secret'
+  }));
+
+  try {
+    const res = await runTimeCall(['apps'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.status, 1);
+    assert.equal(res.stdoutJson.ok, false);
+    assert.equal(res.stdoutJson.error.code, 'malformed_response');
+    assertValidMetrics(res.stderrJson);
+    assert.equal(res.stderrJson.ok, false);
+  } finally {
+    for (const s of sockets) s.destroy();
+    await new Promise(resolve => dummyServer.close(resolve));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('time-call flags timed_out: true and error_code: timeout when execution timeout triggers', async () => {
+  const res = await runTimeCall(['--timeout', '50', 'apps'], { AGCU_REQUEST_TIMEOUT_MS: '5000' });
+  // With 50ms timeout on a cold command, child process will receive SIGTERM or fail quickly
+  assert.equal(res.status, 1);
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, false);
+});
+
+test('time-call unsupported diagnostic option fails explicitly with exit code 1', async () => {
+  const res = await runTimeCall(['describe', '--unsupported-flag-test']);
+  assert.equal(res.status, 1);
+  assert.equal(res.stdoutJson.ok, false);
+  assert.equal(res.stdoutJson.error.code, 'unknown_command');
+  assertValidMetrics(res.stderrJson);
+  assert.equal(res.stderrJson.ok, false);
 });

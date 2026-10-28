@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "2d61df3bc73167b2ec309f72b78e2e1ed35d998a104d9acacb697e58b2d71d96"
+      "sha256": "1869900e2b8a5dd424861d5bebeae2270c0d251e7646cb957f35d3448303da16"
     },
     {
       "path": "server/version.mjs",
@@ -452,11 +452,11 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "51a490018534f43bf11d53152a9a3419b5b8c8b1ddcb443b0c0b2d10241ea63a"
+      "sha256": "39cf1eaf50b3a2dbe49b57300721425fc4d027f8be6776661c62af9c32f30b71"
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "3f89ea6473fa69497c0f65fdb7158119296c41c79cd16d55a8df253fa3d08a93"
+      "sha256": "bf279fedda6b224f1a180476f451c929b741cc6610ea529196eb1f64b24fd5fe"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -508,27 +508,27 @@
     },
     {
       "path": "scripts/time-call.mjs",
-      "sha256": "c1f6b62f1ddf1cbed610e80605171c554870dc3851212f23a742dac666236fb3"
+      "sha256": "e21a9ade0f78e411ed1acdfe9ef8111cd72d1b47bed67b8f0374468b498e0e00"
     },
     {
       "path": "scripts/benchmark-baseline.mjs",
-      "sha256": "5fe03f9c1efd0b1a264a9f8e5aa0bd6a13674a9ef40b5dcec06a3d37fba15fc9"
+      "sha256": "62e3dbca3d711c5c83d1d224e21e8292ba1ccbe97da82bdd073861d4de60d41d"
     },
     {
       "path": "scripts/compare-runs.mjs",
-      "sha256": "008d0d00685c1454f8e8c60a78fc3a0a123269397827d8a700c0f3c0476742b6"
+      "sha256": "850bf056a09f6392b5e8b1de9172b8a1149887bafe38f294e678622de62986e5"
     },
     {
       "path": "tests/time-call.test.mjs",
-      "sha256": "9ab94537196c251663e209f5073ac444e25bde7d30a7f536fe2f7f369dd3aad0"
+      "sha256": "c2abf5849b5c16c14893ae1d59da21d0d4c0c3881f6130151b9996643336fcf3"
     },
     {
       "path": "tests/observation-optimization.test.mjs",
-      "sha256": "a0e6fe570581feafab58668e8d507fd9ffc10a6268c165682cdaab7095be8ac6"
+      "sha256": "c1941b9a0dd51ba2eb328a8a99e04e96f3a799e879d1f58682a350c32518ff32"
     },
     {
       "path": "tests/compare-runs.test.mjs",
-      "sha256": "ee3df0be80d448e04f758b93b23397d056878190b9cd58a1471a6751f179998d"
+      "sha256": "3cb53bd95648d7f27227eb444cdcdd1067b5a6525a0580468280144f62b67e2d"
     },
     {
       "path": "skills/computer-use/SKILL.md",

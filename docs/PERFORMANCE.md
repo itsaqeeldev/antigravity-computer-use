@@ -46,12 +46,12 @@ instruments external process wall time and internal phase breakdowns across cold
 
 | Stage | First process invocation (cold) | Subsequent process invocations (5 runs median) | Mean | Max |
 | --- | ---: | ---: | ---: | ---: |
-| Process entry timestamp | 38.5 ms | 38.4 ms | 39.9 ms | 48.2 ms |
-| Module load / imports | 14.2 ms | 0.0 ms | 0.0 ms | 0.0 ms |
-| Session file read | 0.1 ms | 0.1 ms | 0.1 ms | 0.2 ms |
-| Internal CLI wall time | 39.0 ms | 39.0 ms | 40.5 ms | 48.6 ms |
-| Teardown & output delivery | 51.0 ms | 67.9 ms | 75.8 ms | 144.2 ms |
-| **Total external wall time** | **90.0 ms** | **112.3 ms** | **116.4 ms** | **183.3 ms** |
+| Process entry timestamp | 37.7 ms | 36.9 ms | 35.9 ms | 38.1 ms |
+| Module load / imports | 15.6 ms | 17.1 ms | 17.3 ms | 18.3 ms |
+| Session file read | 0.0 ms | 0.0 ms | 0.0 ms | 0.0 ms |
+| Internal CLI wall time | 38.2 ms | 37.5 ms | 36.5 ms | 38.8 ms |
+| Teardown & output delivery | 53.2 ms | 49.9 ms | 56.2 ms | 83.8 ms |
+| **Total external wall time** | **91.4 ms** | **87.5 ms** | **92.7 ms** | **121.3 ms** |
 
 *Note: Subsequent process launches reflect warm OS filesystem cache for separate Node processes, NOT a persistent in-memory warm JavaScript client.*
 
@@ -83,16 +83,16 @@ instruments external process wall time and internal phase breakdowns across cold
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Timing instrumentation harness | **DONE** | `scripts/time-call.mjs`, 14 tests in `tests/time-call.test.mjs` pass |
+| Timing instrumentation harness | **DONE** | `scripts/time-call.mjs`, 19 tests in `tests/time-call.test.mjs` pass |
 | Empirical baseline measurement | **DONE** | `.localdata/benchmarks/baseline-results.json` logs external wall and internal milestones |
-| Observation query tree-only default | **DONE** | `server/runtime.mjs`, 13 tests in `tests/observation-optimization.test.mjs` pass |
-| Tree-only pixel input refusal regressions | **DONE** | Verified in `tests/observation-optimization.test.mjs` (`no_image` refusal on click/move/drag) |
+| Observation query tree-only default | **DONE** | `server/runtime.mjs`, 17 tests in `tests/observation-optimization.test.mjs` pass |
+| Tree-only pixel input refusal regressions | **DONE** | Verified in `tests/observation-optimization.test.mjs` (`no_image` refusal on click/move/drag & delivery preservation) |
 | Fast start / reconnect (`--quick`) | **DONE** | `scripts/desktop.mjs`, verified in `tests/observation-optimization.test.mjs` |
 | Lifecycle schema validation (types & unknown fields) | **DONE** | `server/desktop-tools.mjs`, tested for named flags and inline JSON |
 | Multi-step workflow patterns | **DONE** | Documented in `skills/computer-use/SKILL.md` (import, settings, export+wait) |
-| Run comparison harness & failure disqualification | **DONE** | `scripts/compare-runs.mjs`, 9 tests in `tests/compare-runs.test.mjs` pass |
+| Run comparison harness & failure disqualification | **DONE** | `scripts/compare-runs.mjs`, 13 tests in `tests/compare-runs.test.mjs` pass |
 | Live service non-interference | **DONE** | Running beta.2 service remains idle and available; no live files overwritten |
-| Automated test suite | **DONE** | 190 tests total: 189 passed, 0 failed, 1 skip (C: drive) / 5 skips (D: drive replaceable ACLs) |
+| Automated test suite | **DONE** | 203 tests total: 202 passed, 0 failed, 1 skip (C: drive) / 5 skips (D: drive replaceable ACLs) |
 | Provenance verification | **DONE** | 111 files clean in `scripts/check-provenance.mjs` |
 | Matched end-to-end human benchmark | **PENDING** | Projected ~50–60s saving remains a hypothesis; pending matched human run on real host |
 | Live queued input physical interruption | **BLOCKED** | Hardware/human-only check; requires human at physical console |

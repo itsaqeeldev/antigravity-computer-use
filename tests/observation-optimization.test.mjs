@@ -59,6 +59,9 @@ function createMockRuntime({nodes = null} = {}) {
     async grant(hwnd) {
       return { hwnd: Number(hwnd), pid: 100, started: 'fixture', path: 'C:/app.exe', rect: [0, 0, 800, 600] };
     },
+    async app(hwnd) {
+      return { hwnd: Number(hwnd), pid: 100, started: 'fixture', path: 'C:/app.exe', rect: [0, 0, 800, 600] };
+    },
     guardian: {
       send() {},
       async request(req) {
@@ -336,6 +339,29 @@ test('tree-only observation frame refuses pixel click, move and drag with no_ima
   const freshObs = await r.observe({ hwnd: 123, with_image: true });
   assert(freshObs.image, 'Fresh observation with with_image: true must capture image');
   assert(r.frames.get(freshObs.metadata.observation_id)?.image, 'Cached frame must retain image');
+
+  // 5. Post-input verification failure preserves input_completed: true and delivery evidence
+  let inputExecuted = false;
+  let screenshotCallsCount = 0;
+  r.driver.call = async (op, payload) => {
+    if (op === 'authorize') return { result: { sensitive: false } };
+    if (op === 'click') { inputExecuted = true; return { result: { clicked: true } }; }
+    if (op === 'snapshot') return { result: { snapshot_id: 'snap-post', nodes: [] } };
+    if (op === 'screenshot') {
+      screenshotCallsCount++;
+      if (screenshotCallsCount === 1) return { result: { width: 800, height: 600, source: [0, 0, 800, 600], capture: 'window_foreground', data: 'ZmFrZQ==' } };
+      throw Object.assign(Error('Capture device lost'), { code: 'capture_device_lost' });
+    }
+    throw Error(`Unexpected driver op: ${op}`);
+  };
+  r.sessions = { withInput: async (op, meta, fn) => fn() };
+  const obsForClick = await r.observe({ hwnd: 123, with_image: true });
+  const postFail = await r.action('click', { hwnd: 123, observation_id: obsForClick.metadata.observation_id, index: 0, reason: 'test delivery preservation' });
+  assert.equal(inputExecuted, true, 'Input must be completed');
+  assert.equal(postFail.input_completed, true, 'input_completed must be preserved');
+  assert.equal(postFail.verification_required, true);
+  assert.equal(postFail.observe_before_continuing, true);
+  assert.equal(postFail.verification_error.code, 'capture_device_lost');
 });
 
 test('lifecycle validation checks types for inline JSON and rejects string or object quick', async () => {
@@ -414,16 +440,92 @@ test('start refuses to replace live unresponsive service and preserves capabilit
 
 test('start preserves emergency stop state without clearing it', async () => {
   const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-stop-preserve-'));
+  const runtime = {
+    status: () => ({ state: 'stopped', build_id: BUILD_ID, build_version: VERSION, permission_mode: 'standalone' }),
+    async close() {}
+  };
+  const service = await serveDesktop({ directory: dir, runtime });
   const stopFile = path.join(dir, 'emergency.stop');
   fs.writeFileSync(stopFile, 'stopped');
 
   try {
-    // When no service is running, start returns not_running or stopped state without removing emergency.stop
-    const res = await runDesktop(['status'], { AGCU_DATA_DIR: dir });
-    assert.equal(res.code, 0);
+    const res = await runDesktop(['start', '--quick'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.code, 0, res.stderr);
     const json = JSON.parse(res.stdout);
     assert.equal(json.state, 'stopped');
     assert(fs.existsSync(stopFile), 'emergency.stop must be strictly preserved');
+  } finally {
+    await service.shutdown();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start rejects live session with mismatched build_id', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-mismatch-build-'));
+  const runtime = {
+    status: () => ({ state: 'idle', build_id: 'DIFFERENT_BUILD_ID', build_version: VERSION, permission_mode: 'standalone' }),
+    async close() {}
+  };
+  const service = await serveDesktop({ directory: dir, runtime });
+  try {
+    const res = await runDesktop(['start'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.code, 1);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.ok, false);
+    assert.match(json.error.message, /different runtime version owns the live session/i);
+  } finally {
+    await service.shutdown();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start rejects live session with mismatched permission_mode with deployment_policy_mismatch', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-mismatch-policy-'));
+  const runtime = {
+    status: () => ({ state: 'idle', build_id: BUILD_ID, build_version: VERSION, permission_mode: 'host-managed' }),
+    async close() {}
+  };
+  const service = await serveDesktop({ directory: dir, runtime });
+  try {
+    const res = await runDesktop(['start'], { AGCU_DATA_DIR: dir, AGCU_PERMISSION_MODE: 'standalone' });
+    assert.equal(res.code, 1);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.ok, false);
+    assert.equal(json.error.code, 'deployment_policy_mismatch');
+  } finally {
+    await service.shutdown();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start recovers from stale session metadata with dead PID by starting new daemon', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-stale-meta-'));
+  const sessionFile = path.join(dir, 'desktop-session.json');
+  fs.writeFileSync(sessionFile, JSON.stringify({ pid: 9999999, pipe: '\\\\.\\pipe\\non-existent-pipe', secret: 'dummy' }));
+  try {
+    const res = await runDesktop(['start', '--quick'], { AGCU_DATA_DIR: dir });
+    assert.equal(res.code, 0);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.ok, true);
+    assert.equal(json.state, 'idle');
+    const sessionAfter = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+    assert.notEqual(sessionAfter.pid, 9999999, 'Session file should be replaced by new daemon');
+    await request(sessionAfter, 'shutdown');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('start validates storage security and fails when storage directory is inaccessible', async () => {
+  const dir = fs.mkdtempSync(path.join(testDirectory('tmp'), 'agcu-inaccessible-'));
+  const fileAsDir = path.join(dir, 'fake-file');
+  fs.writeFileSync(fileAsDir, 'not a directory');
+  try {
+    const res = await runDesktop(['start'], { AGCU_DATA_DIR: fileAsDir });
+    assert.equal(res.code, 1);
+    const json = JSON.parse(res.stdout);
+    assert.equal(json.ok, false);
+    assert.equal(json.error.code, 'storage_permissions_failed');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

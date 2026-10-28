@@ -213,9 +213,70 @@ export async function runBenchmarkSuite(options = {}) {
   return suiteResults;
 }
 
+export function parseBenchmarkArgs(argv = process.argv.slice(2)) {
+  const options = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (arg === '--hwnd') {
+      options.hwnd = Number(argv[++i]);
+    } else if (arg.startsWith('--hwnd=')) {
+      options.hwnd = Number(arg.slice(7));
+    } else if (arg === '--warm-runs' || arg === '--iterations') {
+      options.warmRuns = Number(argv[++i]);
+    } else if (arg.startsWith('--warm-runs=')) {
+      options.warmRuns = Number(arg.slice(12));
+    } else if (arg === '--settle-ms') {
+      options.settleMs = Number(argv[++i]);
+    } else if (arg.startsWith('--settle-ms=')) {
+      options.settleMs = Number(arg.slice(12));
+    } else if (arg === '--timeout-ms') {
+      options.timeoutMs = Number(argv[++i]);
+    } else if (arg.startsWith('--timeout-ms=')) {
+      options.timeoutMs = Number(arg.slice(13));
+    } else if (arg === '--output-dir') {
+      options.outputDir = argv[++i];
+    } else if (arg.startsWith('--output-dir=')) {
+      options.outputDir = arg.slice(13);
+    } else if (arg === '--include-apps') {
+      options.includeApps = true;
+    } else if (arg === '--task') {
+      options.task = argv[++i];
+    } else {
+      throw Object.assign(Error(`Unknown benchmark option: ${arg}. Use --help for usage.`), { code: 'bad_arguments' });
+    }
+  }
+  return options;
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  runBenchmarkSuite().catch(err => {
-    console.error('Benchmark failed:', err);
+  try {
+    const options = parseBenchmarkArgs(process.argv.slice(2));
+    if (options.help) {
+      console.log(`Baseline benchmark runner for Antigravity Computer Use CLI operations.
+
+Usage:
+  node scripts/benchmark-baseline.mjs [options]
+
+Options:
+  --hwnd <number>        Explicit target window HWND (required for native observation benchmark)
+  --include-apps         Include apps enumeration benchmark (service must be idle)
+  --warm-runs <count>    Number of subsequent process runs (default: 5)
+  --settle-ms <ms>       Delay between iterations (default: 50 ms)
+  --timeout-ms <ms>      Per-command process timeout (default: 30000 ms)
+  --output-dir <path>    Output directory strictly within .localdata/ (default: .localdata/benchmarks)
+  --task <name>          Optional workload label
+  --help, -h             Show this help message
+`);
+      process.exit(0);
+    }
+    runBenchmarkSuite(options).catch(err => {
+      console.error('Benchmark failed:', err);
+      process.exit(1);
+    });
+  } catch (err) {
+    console.error('Benchmark argument error:', err.message);
     process.exit(1);
-  });
+  }
 }

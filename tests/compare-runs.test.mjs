@@ -205,3 +205,43 @@ test('loadRunReport rejects raw receipts jsonl when explicit boundaries are miss
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
   }
 });
+
+test('adversarial: completed: false is disqualified and never marked as success or faster', () => {
+  const before = { wall_ms: 1000, calls: 5, service_ms: 200, success: true, output_verified: true };
+  const after = { wall_ms: 200, calls: 2, service_ms: 50, completed: false, output_verified: true };
+  const result = compareRuns(before, after);
+  assert.equal(result.after.success, false);
+  assert.equal(result.conclusion.faster, false);
+  assert.equal(result.conclusion.qualified, false);
+  assert.equal(result.conclusion.qualification_status, 'disqualified_due_to_failure');
+});
+
+test('adversarial: before run failure disqualifies comparison even if after run succeeded', () => {
+  const before = { wall_ms: 2000, calls: 10, service_ms: 500, tool_failures: 2, success: false, output_verified: false };
+  const after = { wall_ms: 500, calls: 3, service_ms: 100, success: true, output_verified: true };
+  const result = compareRuns(before, after);
+  assert.equal(result.before.success, false);
+  assert.equal(result.conclusion.faster, false);
+  assert.equal(result.conclusion.qualified, false);
+  assert.equal(result.conclusion.qualification_status, 'disqualified_due_to_failure');
+  assert.match(result.conclusion.summary, /Baseline run failed/);
+});
+
+test('adversarial: before run unverified leaves comparison unqualified', () => {
+  const before = { wall_ms: 2000, calls: 10, service_ms: 500, success: true, output_verified: false };
+  const after = { wall_ms: 500, calls: 3, service_ms: 100, success: true, output_verified: true };
+  const result = compareRuns(before, after);
+  assert.equal(result.conclusion.faster, false);
+  assert.equal(result.conclusion.qualified, false);
+  assert.equal(result.conclusion.qualification_status, 'unqualified_missing_verification');
+  assert.match(result.conclusion.summary, /baseline lacks independent output verification/);
+});
+
+test('adversarial: invalid tool_failures or verification_failures or median gaps throw invalid_report', () => {
+  const valid = { wall_ms: 1000, calls: 5, service_ms: 200, success: true, output_verified: true };
+  assert.throws(() => compareRuns({ ...valid, tool_failures: -1 }, valid), error => error.code === 'invalid_report');
+  assert.throws(() => compareRuns({ ...valid, tool_failures: 'none' }, valid), error => error.code === 'invalid_report');
+  assert.throws(() => compareRuns(valid, { ...valid, verification_failures: -2 }), error => error.code === 'invalid_report');
+  assert.throws(() => compareRuns(valid, { ...valid, median_gap_ms: -10 }), error => error.code === 'invalid_report');
+  assert.throws(() => compareRuns(valid, { ...valid, median_service_ms: NaN }), error => error.code === 'invalid_report');
+});

@@ -1,7 +1,9 @@
 // One command per observed desktop step. Persistent native session via local IPC.
 import {performance} from 'node:perf_hooks';
+const tBootstrap = performance.nodeTiming?.bootstrapComplete ?? 0;
 const tEntry = performance.now();
-// Entry timestamp includes OS process bootstrap and Node runtime setup up to this script entry.
+// Entry timestamp records script top-level execution start relative to process initialization.
+// Includes OS process bootstrap, Node/V8 runtime initialization, and resolution/evaluation of static imports.
 
 import net from 'node:net';
 import fs from 'node:fs';
@@ -15,8 +17,9 @@ import {parseArguments,parseRunArguments} from './arguments.mjs';
 import {storageOperation} from '../server/storage.mjs';
 import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 
-const moduleLoadMs = performance.now() - tEntry;
-// Module timing includes resolution/execution of local dependencies above; excludes Node built-ins.
+const moduleLoadMs = tBootstrap > 0 ? Math.max(0, Math.round((tEntry - tBootstrap) * 10) / 10) : 0;
+// Module timing measures elapsed time from Node bootstrap completion until top-level execution,
+// capturing resolution, parsing, and execution of this module and its static import graph.
 
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
@@ -75,7 +78,7 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
     });
     socket.on('data',chunk=>{
       buffer+=chunk;
-      if(Buffer.byteLength(buffer)>4*1024*1024)return done(Error('Desktop response too large'));
+      if(Buffer.byteLength(buffer)>4*1024*1024)return done(Object.assign(Error('Desktop response too large'),{code:'response_too_large'}));
       if(buffer.includes('\n')){
         const tReceived=performance.now();
         try{
@@ -88,7 +91,7 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
           }
           done(null,parsed);
         }catch(error){
-          done(error);
+          done(Object.assign(Error('Malformed JSON response from desktop service: '+error.message),{code:'malformed_response',cause:error}));
         }
       }
     });
@@ -122,6 +125,11 @@ export async function main(){
     process.stderr.write(JSON.stringify(payload)+'\n');
   };
 
+  const jsonIdx = rest.indexOf('--json');
+  const jsonMode = jsonIdx !== -1;
+  if(jsonMode) rest.splice(jsonIdx, 1);
+  replyMode = jsonMode || (rest.length && (!rest[0].startsWith('--') || rest[0] === '--request')) ? 'json' : 'brief';
+
   if(rest[0]==='--help'){const desc=describeCommand(command);emitTiming(desc);printReply(desc);return;}
   if(command==='describe'||(command==='--help'&&rest[0])){
     let reply;
@@ -134,8 +142,6 @@ export async function main(){
     console.log('Native desktop skill (no MCP)\nserve | start | shutdown | describe [COMMAND...] | describe --all | '+TOOLS.map(tool=>tool.name.replace(/^computer_/,'' )).join(' | ')+'\nAntigravity: reuse the installed App sidecar; isolated exebox terminals cannot start visible-desktop control. The human starter runs on the normal Windows desktop. Interactive external terminals may use start or foreground serve. Fast path: snapshot --hwnd 123; click --hwnd 123 --observation-id FRAME --index 7 --reason "Open settings". Named action flags return a compact tree without a new image unless --image is requested. Open actual image.path at visual checkpoints. Use --text-file for generated bulk text. Fast batches: run --hwnd 123 --observation-id FRAME --reason "Import sample" --step click --index 7 --risk routine --step file_dialog --path "D:/sample.png" --action open --entry-method clipboard. Owner/frame/reason precede all --step groups. No JSON/plan file is needed; the final step returns an image by default. No per-action request/result files or JPEG copies are needed. One describe call can fetch multiple schemas; do not interrogate every command at startup. JSON inline and --request FILE remain supported; --json retains full output. Esc stops; only the human can re-arm.');
     emitTiming({ok:true});return;
   }
-  const jsonMode=rest[0]==='--json';if(jsonMode)rest.shift();
-  replyMode=jsonMode||(rest.length&&(!rest[0].startsWith('--')||rest[0]==='--request'))?'json':'brief';
   const schema=describeCommand(command).inputSchema;
   const args=command==='run'?parseRunArguments(schema,rest,describeCommand):parseArguments(schema,rest);
   try{

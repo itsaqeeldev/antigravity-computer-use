@@ -9,7 +9,7 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
   output delivery & teardown (`teardown_and_delivery_ms`, ~40–120 ms), and internal milestones
   (`entry_timestamp_ms`, `module_load_ms`, `session_read_ms`, `pipe_connect_ms`, `service_ms`,
   `transport_ms`, `internal_cli_ms`). Instrumentation runs the real CLI (`scripts/desktop.mjs`)
-  directly under `AGCU_TIMING=1`. 14 dedicated tests pass in `tests/time-call.test.mjs`.
+  directly under `AGCU_TIMING=1`. 19 dedicated tests pass in `tests/time-call.test.mjs`.
 - Quantified maximum plausible benefit of a persistent client daemon at ~100–150 ms per invocation
   (saving process launch and teardown). Demonstrated that persistent daemons cannot resolve
   host terminal scheduling (~200–500 ms) or model deliberation gaps (~8,000–15,000 ms), making
@@ -17,8 +17,8 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
 - Qualified observation query optimization: direct JSON/IPC callers omitting `with_image`
   default to tree-only in `server/runtime.mjs` (named CLI queries were already tree-only via
   `scripts/arguments.mjs`). Regressions in `tests/observation-optimization.test.mjs` prove
-  tree-only frames refuse pixel click, move, and drag with code `no_image` before input, and
-  recover with fresh `--image`. 13 dedicated tests pass.
+  tree-only frames refuse pixel click, move, and drag with code `no_image` before input,
+  recover with fresh `--image`, and preserve uncertain/completed-input evidence on post-input observation failure. 17 dedicated tests pass.
 - Added fast reconnect (`start --quick`) in `scripts/desktop.mjs` with compact status (~1–3 ms
   saving on status payload size). Preserved private storage ACL validation (`storageOperation`)
   before session file read. Added `validateSchema` in `server/desktop-tools.mjs` to strictly
@@ -27,15 +27,15 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
 - Documented multi-step batching patterns in `skills/computer-use/SKILL.md` (combining open +
   file dialog, settings changes, and export + wait). Labelled the projected ~50–60s saving from
   reducing 15 calls to ~9–10 as a **Hypothesis** pending matched real-host verification.
-- Rebuilt run comparison tool `scripts/compare-runs.mjs` (9 tests passing in
+- Rebuilt run comparison tool `scripts/compare-runs.mjs` (13 tests passing in
   `tests/compare-runs.test.mjs`) to strictly validate report metrics, require task completion
-  and independent output verification, disqualify failed-but-shorter runs, flag mismatched
-  workloads, and reject unbounded raw receipts.
+  and independent output verification for both runs, disqualify `completed: false` and failed-but-shorter runs, flag mismatched
+  workloads, and accept boundary options (`--pid`, `--since`, `--through`) for raw JSONL receipts.
 - Revised baseline runner `scripts/benchmark-baseline.mjs` to eliminate arbitrary window
-  selection (`windows[0]`), require explicit `--hwnd` targets, defer/refuse when another task
+  selection (`windows[0]`), parse CLI flags (`--hwnd`, `--warm-runs`, `--settle-ms`, etc.), require explicit `--hwnd` targets, defer/refuse when another task
   owns active control, enforce bounded child process timeouts, and isolate failed runs from
   timing summaries.
-- Test suite expanded to **190 tests**: 189 passed, 0 failed, 1 skip on C: drive / 5 skips on
+- Test suite expanded to **203 tests**: 202 passed, 0 failed, 1 skip on C: drive / 5 skips on
   D: drive with replaceable ancestor ACLs. Skip reasons are preserved and never converted to passes.
 - Provenance checks pass with **111 files clean** in `scripts/check-provenance.mjs`; native C#
   compilation succeeds with `csc.exe`.
