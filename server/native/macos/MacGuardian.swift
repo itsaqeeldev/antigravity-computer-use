@@ -11,7 +11,9 @@ enum MacWorkers {
         child.arguments = args; child.environment = ProcessInfo.processInfo.environment
         let output = Pipe(); child.standardOutput = output; child.standardError = FileHandle.standardError
         try child.run()
-        guard let line = String(data: output.fileHandleForReading.availableData, encoding: .utf8), line.contains("watchdog_ready") else {
+        let ready = DispatchSemaphore(value:0); var line: String?
+        DispatchQueue.global().async { line = String(data:output.fileHandleForReading.availableData,encoding:.utf8); ready.signal() }
+        guard ready.wait(timeout:.now()+5) == .success, line?.contains("watchdog_ready") == true else {
             if child.isRunning { child.terminate() }
             throw AxonError("stop_monitor_unavailable", "Independent Stop monitoring did not start. Check Input Monitoring permission.")
         }

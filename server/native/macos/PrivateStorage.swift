@@ -19,11 +19,11 @@ enum MacPrivateStorage {
             if errno == ENOENT || errno == ENOTSUP { return }
             try reject("storage_acl_unavailable", path, "Cannot inspect extended access permissions.")
         }
-        defer { acl_free(acl) }
+        defer { acl_free(UnsafeMutableRawPointer(acl)) }
         var entry: acl_entry_t?
-        var cursor = ACL_FIRST_ENTRY
+        var cursor = Int32(ACL_FIRST_ENTRY.rawValue)
         while acl_get_entry(acl, cursor, &entry) == 0 {
-            cursor = ACL_NEXT_ENTRY
+            cursor = Int32(ACL_NEXT_ENTRY.rawValue)
             var tag = ACL_UNDEFINED_TAG
             guard acl_get_tag_type(entry, &tag) == 0 else { try reject("storage_acl_unavailable", path, "Cannot read extended access entry.") }
             if tag == ACL_EXTENDED_ALLOW { try reject("storage_unsafe_acl", path, "Extended Allow permissions need manual review. ACLs were not changed.") }

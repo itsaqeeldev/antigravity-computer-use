@@ -536,7 +536,7 @@
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
-      "sha256": "668b9d488fac77b541d85a2a13788878083167f6850913131d6fb87cfbaead23"
+      "sha256": "26422d807b453662b19e1675a946fe81ced35e3edd0847a2c0f467fc1ae74b52"
     },
     {
       "path": "server/native/macos/MacOperations.swift",
@@ -548,7 +548,7 @@
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
-      "sha256": "26c76e9f6ba8288b1fa0103dae0d34c3152c4457388a07eda1e3f512fcde28cd"
+      "sha256": "8070255f6107c0b9226d8ddd2a9242265c1a4ebd361ca7e1848481fced656a26"
     },
     {
       "path": "server/native/macos/StorageMain.swift",
