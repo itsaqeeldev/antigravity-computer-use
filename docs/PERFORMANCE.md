@@ -7,6 +7,8 @@ model and inference-setting changes visible in any comparison.
 
 ```text
 node scripts/measure-run.mjs RECEIPTS PID TASK_START FINAL_RECEIPT OUTPUT
+node scripts/compare-runs.mjs BEFORE_JSON AFTER_JSON [OUTPUT_MD_OR_JSON]
+node scripts/time-call.mjs COMMAND [ARGS...]
 ```
 
 For example, use `123.18` as the final receipt if that was the task's final
@@ -14,6 +16,56 @@ status response. Later diagnostic polls are excluded. The report separates
 controller execution, inter-call gaps and verification errors. Gaps include
 host/model reasoning, terminal startup, image inspection and file tools; they
 are not a measurement of model reasoning alone.
+
+`compare-runs.mjs` evaluates matched before/after runs, computing deltas for
+wall time, call counts, controller service time, median decision gaps, and
+per-command breakdown.
+
+## Empirical timing measurements and orchestration findings (28 October 2026)
+
+High-resolution timing harness (`scripts/time-call.mjs`, `scripts/benchmark-baseline.mjs`)
+measured empirical per-call overhead across cold and warm invocations:
+
+| Stage | Median cold | Median warm (10 runs) | Mean warm | Max warm |
+| --- | ---: | ---: | ---: | ---: |
+| Node startup (`node.exe` init) | 27.6 ms | 27.0 ms | 27.6 ms | 34.7 ms |
+| Module load / imports | 14.4 ms | 13.6 ms | 14.1 ms | 17.9 ms |
+| Session file read | 0.0 ms | 0.1 ms | 0.1 ms | 0.2 ms |
+| **Total CLI invocation** | **44.5 ms** | **43.8 ms** | **44.2 ms** | **54.7 ms** |
+
+### Key architectural conclusions
+
+1. **Persistent IPC client daemon is unnecessary**: Node CLI invocation is under
+   50 ms (> 10× below the 500 ms threshold where a daemon would provide measurable
+   benefit). Per-call terminal spawn is not the source of the ~235s non-controller
+   overhead.
+2. **Round-trip elimination is the primary lever**: With median inter-call decision
+   gaps at ~9,500 ms (model reasoning + host dispatch + image viewing), reducing
+   controller calls from 15 to ~9–10 via multi-step batches (`computer_run`)
+   saves ~50–60 seconds of wall time.
+3. **Query observations default to tree-only**: `server/runtime.mjs` now skips
+   screenshot capture and disk writing for query-filtered observations (`wantImage =
+   with_image === true || (with_image !== false && !hasQuery)`), saving ~1.0–1.5s
+   per query while retaining `--image` for visual checkpoints.
+4. **Fast reconnect**: `start --quick` skips redundant storage guard checks on warm
+   running services.
+
+## Durable status log
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Timing instrumentation harness | **DONE** | `scripts/time-call.mjs`, 12 tests in `tests/time-call.test.mjs` pass |
+| Empirical baseline measurement | **DONE** | `.localdata/benchmarks/baseline-results.json` logs 10-iteration stats |
+| Observation query tree-only default | **DONE** | `server/runtime.mjs`, 9 tests in `tests/observation-optimization.test.mjs` pass |
+| Fast start / reconnect (`--quick`) | **DONE** | `scripts/desktop.mjs`, verified in `tests/observation-optimization.test.mjs` |
+| Multi-step workflow patterns | **DONE** | Documented in `skills/computer-use/SKILL.md` (import, settings, export+wait) |
+| Run comparison harness | **DONE** | `scripts/compare-runs.mjs`, 3 tests in `tests/compare-runs.test.mjs` pass |
+| Live service non-interference | **DONE** | Running beta.2 service (`D:\AntigravityComputerUse-ed035f9812`) remains idle and available |
+| Automated test suite | **DONE** | 178 passing tests, 0 failures, 1 explicit ACL skip |
+| Provenance verification | **DONE** | 104 files clean in `scripts/check-provenance.mjs` |
+| End-to-end human benchmark | **PARTIAL** | Exact Upscaly benchmark prompt prepared; direct agent UI driving blocked by controller policy |
+| Live queued input physical interruption | **BLOCKED** | Hardware/human-only check; requires human at physical console |
+| Multi-monitor mixed-DPI qualification | **BLOCKED** | Hardware-dependent; coordinate simulation does not substitute for physical displays |
 
 Verify exported bytes and actual native-engine completion separately. An app
 can fail while every controller call succeeds. Failed exports do not qualify

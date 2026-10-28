@@ -143,12 +143,14 @@ export class Runtime {
       .replace(/\[~\d+ tokens\. Re-read[^\]]+\]/g,'[Use query to return matching controls, or max_nodes up to 500 for more rows.]');
     const response={observation_id:randomUUID(),hwnd:Number(args.hwnd),app:w.path,at:Date.now(),tree:rendered,elements:nodes};
     let image;
-    if(args.with_image!==false){
+    const hasQuery = Boolean(String(args.query || '').trim());
+    const wantImage = args.with_image === true || (args.with_image !== false && !hasQuery);
+    if (wantImage) {
       await this.guardian.request({op:'capture'});
-      try { image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80})).result; }
+      try { image = (await this.driver.call('screenshot', { ...metadata, max_width: Math.min(args.max_width || 1400, targetImageSize(w.rect[2], w.rect[3])[0]), quality: 80 })).result; }
       finally { this.guardian.send({op:'capture_end'}); }
-      if(image.capture==='screen_occluded')fail('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.');
-      response.image={...image};delete response.image.data;
+      if (image.capture === 'screen_occluded') fail('window_capture_unavailable', 'The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.');
+      response.image = { ...image }; delete response.image.data;
     }
     this.check();
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');

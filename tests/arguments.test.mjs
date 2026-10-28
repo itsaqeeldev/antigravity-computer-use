@@ -1,6 +1,6 @@
 import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {parseArguments,parseRunArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';
+import {parseArguments,parseRunArguments} from '../scripts/arguments.mjs';import {TOOLS,validate} from '../server/desktop-tools.mjs';import {describeCommand} from '../scripts/desktop.mjs';
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';
 const parse=(command,words,options)=>{const name='computer_'+command;const args=parseArguments(TOOLS.find(t=>t.name===name).inputSchema,words,options);validate(name,args);return args;};
 test('named native action flags need no request file and preserve explicit frame/permission boundaries',()=>{
@@ -70,3 +70,14 @@ test('named batches cross actual Windows PowerShell without JSON quoting or Unic
   const r=spawnSync(ps,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{windowsHide:true,encoding:'utf8'});assert.equal(r.status,0,r.stderr);const a=JSON.parse(r.stdout);assert.equal(a.steps[1].path,sample);assert.equal(a.steps[1].observe.with_image,true);assert.equal(a.hwnd,123);
  }finally{fs.unlinkSync(file);fs.rmdirSync(dir);}
 });
+
+test('start lifecycle command parses --quick flag and rejects unrecognized arguments',()=>{
+ const schema=describeCommand('start').inputSchema;
+ assert.deepEqual(parseArguments(schema,['--quick']),{quick:true});
+ assert.deepEqual(parseArguments(schema,['--quick=true']),{quick:true});
+ assert.deepEqual(parseArguments(schema,['--quick=false']),{quick:false});
+ assert.deepEqual(parseArguments(schema,[]),{});
+ assert.throws(()=>parseArguments(schema,['--quick=invalid']),error=>error.code==='bad_arguments');
+ assert.throws(()=>parseArguments(schema,['--unrecognized']),error=>error.code==='bad_arguments');
+});
+

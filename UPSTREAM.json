@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "1dd6f9e42e0ca87c2bb09edda6e7bb26319b112c576d3e9c4fd339f19c07b808"
+      "sha256": "a8e9593b5b6bddbfb30fbe91915d316b3bb54fb9d4e975b97590e794664e7f5d"
     },
     {
       "path": "server/mcp.mjs",
@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "2f3261f468c5e287244872fd36c10d21c93b0be2b23352649b220dea8bfd387b"
+      "sha256": "70e62227f9ebea52ec0995a901e2e4cd67018a5e44691c2eb38ec3a5e0003536"
     },
     {
       "path": "server/version.mjs",
@@ -300,7 +300,7 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "8bc9b0ac16dcbf9daea2c13fabab80453c8423193ba72793a4ca5488e9d8080e"
+      "sha256": "def24b0902be99bb00551e6020aa43aa2a73a1476237ce87653f0a7618336c98"
     },
     {
       "path": "tests/receipts.test.mjs",
@@ -452,7 +452,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "387eea80f6d9261bc699deb35bf05f4882deb3395c2b8574368a1c5f7f12d043"
+      "sha256": "d0652bb6e45d3e0fd18cc705811f3f1c4d3dd5bb6ebd32612198eaa1df167724"
     },
     {
       "path": "HANDOFF.md",

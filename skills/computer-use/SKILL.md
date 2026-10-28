@@ -33,11 +33,31 @@ These common command shapes are complete; use them directly without schema setup
 | `close_window` | `--hwnd H --reason TEXT` |
 | `end`, `status` | No arguments |
 
+## Workflow patterns
+
+Combine predictable operations to minimize round trips. Each round trip incurs host scheduling and model deliberation overhead (~10–15 seconds).
+
+**Import sample into editor** (combines open click + file dialog in 1 call instead of 2):
+```powershell
+{{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Import the sample' --step click --name 'Open' --role Button --risk routine --step file_dialog --path 'D:\sample.png' --action open --entry-method clipboard --settle-ms 600
+```
+
+**Configure settings** (combines multiple selections in 1 call instead of 3):
+```powershell
+{{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Select format and close' --step click --name 'JPEG' --role Button --risk routine --step click --name 'Close' --role Button --risk routine
+```
+
+**Execute and wait for completion** (combines export action and wait in 1 call):
+```powershell
+{{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Export and await completion' --step click --name 'Save' --role Button --risk routine --step wait --until 'Completed' --timeout-ms 30000
+```
+
 - Inspect the returned `tree` and **open the actual `image.path` with the host image viewer** at visual checkpoints. Agent Manager's `read_file` can view its JPEGs. JSON, a reconstructed picture or an accessibility label does not prove visual behavior. Report an unavailable image viewer.
 - Every action consumes its `observation_id` and returns a **fresh frame and tree**. Use that reply directly. Do not take another snapshot merely to get a frame you already have. Ordinary named actions are tree-only; add `--image` when pixels or visual verification are needed. Pixel targets require a fresh viewed image.
 - Prefer observed accessibility indexes or exact **unique** `--name`, `--role`, `--automation-id`. Names resolve against that frame's bounded native snapshot, not an unbounded live search. Ambiguous/missing controls refuse; inspect rather than guess. `--query 'Export format'` returns a matching section and its child controls. Named section snapshots are tree-only by default; add `--image` for visual inspection. Queries are literal substrings, not regex. If a reply is truncated, use one relevant section query or `--max-nodes 500`, rather than many repeated full screenshots.
 - Named/index clicks normally use accessibility actions and may leave the pointer stationary. Add **`--physical true`** to click a uniquely observed control with the real animated pointer. This retains semantic target resolution and native ownership checks. Use physical input for a foreground task when visible cursor interaction is requested; `set_value`, invoke and other semantic actions need not move the pointer. Do not invent pointer movement to represent an accessibility action.
 - Combine predictable steps in one bounded `run` with 1–8 `--step` groups. The runtime observes between steps, resolves names from fresh state, and stops on the first failure. Do not guess future indexes or pixel positions across layout changes. Root owner/frame/reason precede the first group. The last step returns an image by default; use `--no-image` explicitly when appropriate.
+- Fast status / reconnection: use `start --quick` to quickly verify a running service without verbose output.
 
 ```powershell
 {{DESKTOP_COMMAND}} click --hwnd 123 --observation-id FRAME --name Settings --role Button --risk routine --reason 'Open observed settings' --max-nodes 500

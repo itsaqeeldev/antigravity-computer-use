@@ -12,7 +12,7 @@ import {storageOperation} from '../server/storage.mjs';
 import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
-  {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
+  {command:'start',description:'Start or reconnect to this exact installed build. Never clears emergency Stop or changes the installed permission policy.',inputSchema:{type:'object',properties:{quick:{type:'boolean',description:'Fast verification without verbose status or redundant storage operations.'}},required:[],additionalProperties:false}},
   {command:'serve',description:'Run the exact installed service in the foreground. For an interactive host terminal use run_command IsDaemon:true and WaitMsBeforeAsync:1000. Windows exebox terminals need the installed App sidecar or local starter. No permission/data overrides. Reuses only a matching live build/policy.',inputSchema:EMPTY_INPUT},
   {command:'shutdown',description:'Shut down the native service after input cleanup. No arguments. Preserves emergency Stop for human re-arm.',inputSchema:EMPTY_INPUT},
   {command:'describe',description:'Read command descriptions or the exact argument schema for one command, without desktop access.',usage:'describe [COMMAND]',inputSchema:{type:'object',properties:{command:{type:'string'}},required:[],additionalProperties:false}}
@@ -70,16 +70,16 @@ export async function main(){
   const schema=describeCommand(command).inputSchema;
   const args=command==='run'?parseRunArguments(schema,rest,describeCommand):parseArguments(schema,rest);
   if(TOOLS.some(tool=>tool.name==='computer_'+command))validate('computer_'+command,args);
-  else if(Object.keys(args).length)throw Object.assign(Error('This lifecycle command takes no arguments.'),{code:'bad_arguments'});
+  else if(Object.keys(args).some(k=>!Object.hasOwn(schema.properties||{},k)))throw Object.assign(Error('This lifecycle command takes no arguments.'),{code:'bad_arguments'});
   const policy=applyDeployment(loadDeployment());
   const file=path.join(dataDir(),'desktop-session.json');
   if(command==='start'||command==='serve'){
-    storageOperation('data',dataDir());
     let existing,saved;
     try{saved=JSON.parse(fs.readFileSync(file));existing=await request(saved,'status',{},1500,policy.permission_mode);}catch{}
     if(existing?.ok){
       if(existing.build_id!==BUILD_ID||existing.build_version!==VERSION)throw Error('A different runtime version owns the live session. End and shutdown that session before starting this build; do not interrupt another task.');
       if(existing.permission_mode!==policy.permission_mode)throw Object.assign(Error('A different permission policy owns the live session. Finish and shutdown its task before using this installed policy; no override was applied.'),{code:'deployment_policy_mismatch'});
+      if(args.quick){printReply({ok:true,state:existing.state,build_id:existing.build_id,build_version:existing.build_version});return;}
       printReply(existing);return;
     }
     // An unresponsive live service may still be controlling the desktop. Never
@@ -88,6 +88,7 @@ export async function main(){
       let alive=true;try{process.kill(saved.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
       if(alive)throw Object.assign(Error('The existing desktop service is still running but did not answer. Do not start another controller. Wait for recovery or use the local Stop control; no replacement was launched.'),{code:'session_unresponsive'});
     }
+    storageOperation('data',dataDir());
     if(command==='serve'){
       const {serveDesktop}=await import('../server/desktop-service.mjs');
       const service=await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});
@@ -99,7 +100,7 @@ export async function main(){
     const child=spawn(process.execPath,[fileURLToPath(new URL('../server/desktop-service.mjs',import.meta.url)),'--serve'],{detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,AGCU_PERMISSION_MODE:policy.permission_mode}});child.unref();
     for(let i=0;i<100;i++){
       await new Promise(resolve=>setTimeout(resolve,100));
-      try{const session=JSON.parse(fs.readFileSync(file));const found=await request(session,'status',{},1500,policy.permission_mode);if(found.ok&&found.build_id===BUILD_ID&&found.permission_mode===policy.permission_mode){printReply(found);return;}}catch{}
+      try{const session=JSON.parse(fs.readFileSync(file));const found=await request(session,'status',{},1500,policy.permission_mode);if(found.ok&&found.build_id===BUILD_ID&&found.permission_mode===policy.permission_mode){printReply(args.quick?{ok:true,state:found.state,build_id:found.build_id,build_version:found.build_version}:found);return;}}catch{}
     }
     throw Error('Native session did not start; run the service in foreground for diagnostics.');
   }

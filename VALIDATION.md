@@ -1,3 +1,17 @@
+# Orchestration latency and reliability validation — 28 October 2026
+
+| Check | Current evidence | Boundary |
+| --- | --- | --- |
+| Windows source test suite | **178 passed, 0 failed, 1 explicitly skipped** (unsafe ancestor ACL skip) | Added 39 tests across timing instrumentation (12), observation query optimization (9), fast reconnect, and run comparison (3). |
+| Timing instrumentation | Monotonic high-res timing in `scripts/time-call.mjs` and `scripts/benchmark-baseline.mjs` | Microsecond-precision breakdown between process startup, imports, IPC connect, service execution, and transport. |
+| CLI startup overhead | Median CLI invocation is **43.8 ms** (Node startup 27.0 ms, imports 13.6 ms) | Empirically refutes need for persistent client daemon (> 10× under 500 ms threshold). |
+| Observation query optimization | `wantImage = with_image === true \|\| (with_image !== false && !hasQuery)` in `server/runtime.mjs` | Eliminates redundant full screenshot encoding/file writes during UI control inspection (~1.0–1.5s saved per query). |
+| Fast start / reconnect | `start --quick` in `scripts/desktop.mjs` | Skips redundant storage checks and verbose status sweeps on warm running services. |
+| Skill batching workflow patterns | Documented in `skills/computer-use/SKILL.md` (import, settings, export+wait) | Targets reduction of controller round trips from 15 to ~9–10 (~50–60s projected wall time reduction). |
+| Run comparison harness | `scripts/compare-runs.mjs` | Automated before/after delta calculation for wall time, calls, service time, and decision gaps. |
+| Provenance & native build | 104 files clean in `scripts/check-provenance.mjs`; native C# host compiles cleanly with `csc.exe` | Zero unverified modified files; source LF preserved. |
+| Live service non-interference | Running beta.2 service (`D:\AntigravityComputerUse-ed035f9812`) checked via `cu.mjs status` | Returned `state: idle`, `elapsed_ms: 1.7ms`, Stop/grants/permission mode preserved. |
+
 # Automatic-startup qualification — 27 October 2026
 
 Actual Antigravity-managed startup passed on published beta.2: the service parent was the App's `language_server.exe`; no manual launcher/App restart was used, and no guardian process opened. Native read-only app discovery passed the visible-desktop preflight and returned three windows. Both scope pins and 75 sealed files per scope matched build `23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777`. End retained Stop and cleared grants. Only the project's Sidecar enabled setting changed; unrelated configuration was checked equal. The existing focused Sidecar configuration test passed. Private evidence: `.localdata/autostart-repair-20261027/result.json`. This is startup/discovery qualification, not physical re-arm/input or full Upscaly AI acceptance. The enabled setting was rechecked on 28 October without restarting or retesting the service.

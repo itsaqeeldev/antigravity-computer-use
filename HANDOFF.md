@@ -2,6 +2,29 @@
 
 Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
 
+## 28 October orchestration latency and reliability engineering
+
+- Instrumented high-resolution timing harness in `scripts/time-call.mjs` and
+  `scripts/benchmark-baseline.mjs`, covering Node init, imports, session lookup,
+  pipe connect, service execution, and transport. 12 dedicated tests pass.
+- Measured empirical per-call CLI invocation at 35–45 ms (sub-50 ms), > 10× below
+  the 500 ms threshold where a persistent client daemon would be beneficial.
+  Confirmed that model deliberation gaps (~9,500 ms median) and round-trip count
+  are the actual latency bottlenecks.
+- Optimized observation queries in `server/runtime.mjs`: query-filtered
+  observations default to tree-only, skipping screenshot capture and disk writing
+  when checking controls. Shaves ~1.0–1.5s per query while retaining `--image` for
+  visual checkpoints. 9 dedicated tests pass in `tests/observation-optimization.test.mjs`.
+- Added fast reconnect (`start --quick`) in `scripts/desktop.mjs`, skipping
+  redundant storage checks on warm running services.
+- Added multi-step batching patterns to `skills/computer-use/SKILL.md` (combining
+  open + file dialog, settings changes, and export + wait), targeting reduction
+  from 15 calls down to ~9–10 (~50–60s projected savings).
+- Built run comparison tool `scripts/compare-runs.mjs` (3 tests passing) to
+  evaluate matched before/after runs with call count, service time, and wall time deltas.
+- Test suite expanded to 178 tests: 177 passed, 0 failed, 1 explicit ACL skip.
+- Provenance checks pass with 104 files clean; native C# compilation succeeds.
+
 ## 28 October stable Upscaly demo and remaining problems
 
 Latest correction: the public recording now uses a different owner-authorized

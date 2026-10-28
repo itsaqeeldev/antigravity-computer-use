@@ -1,3 +1,14 @@
+# Orchestration latency and reliability engineering — 28 October 2026
+
+- **Timing instrumentation**: Added `scripts/time-call.mjs` and `scripts/benchmark-baseline.mjs` measuring microsecond-level process startup, module imports, session lookup, IPC, and service time. 12 passing tests in `tests/time-call.test.mjs`.
+- **Startup overhead measured**: CLI invocation is ~35–45 ms (sub-50 ms), > 10× below the 500 ms threshold where a persistent client daemon would be justified. Confirms model deliberation gaps (~9,500 ms median) and round-trip counts as primary latency drivers.
+- **Observation query optimization**: In `server/runtime.mjs`, query observations default to tree-only, skipping screenshot capture/disk writes when checking UI controls (~1.0–1.5s saved per query). Retains `--image` for visual checkpoints. 9 passing tests in `tests/observation-optimization.test.mjs`.
+- **Fast reconnect**: Added `start --quick` in `scripts/desktop.mjs` to bypass redundant storage checks on warm running services.
+- **Skill batching workflow patterns**: Added concrete multi-step batching patterns in `skills/computer-use/SKILL.md` (combining open + file dialog, settings changes, and export + wait) to reduce round trips from 15 to ~9–10 (~50–60s projected savings).
+- **Run comparison harness**: Added `scripts/compare-runs.mjs` (3 passing tests in `tests/compare-runs.test.mjs`) to calculate deltas for wall time, calls, service time, and median gaps between matched runs.
+- **Test suite**: Expanded from 139/152 to **178 tests** (177 passed, 0 failed, 1 explicit ACL skip).
+- **Integrity**: Provenance checks pass with 104 files clean in `scripts/check-provenance.mjs`; native C# host compiles cleanly with `csc.exe`.
+
 # Automatic-startup repair — recorded 28 October 2026
 
 On 27 October, enabled the existing Computer Use Sidecar at the owner's request. Antigravity automatically started the published beta.2 build `23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777`, without a manual launcher or App restart. Both installed scopes passed 75-file payload checks. Passive startup created no guardian; native read-only discovery passed, End left no grants, and emergency Stop remained latched. Unrelated settings were preserved. The enabled setting was rechecked on 28 October; no new runtime build, desktop input or full AI qualification was performed. See [HANDOFF.md](HANDOFF.md).
