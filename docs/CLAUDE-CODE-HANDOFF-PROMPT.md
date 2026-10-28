@@ -4,6 +4,12 @@ Take over the remaining speed and reliability work on Antigravity Computer Use.
 Do the engineering and real qualification; do not stop at a review or plan, and
 do not make premature completion claims.
 
+Scope: finish the remaining controller speed/reliability engineering and real
+Antigravity/Upscaly qualification. The repository presentation cleanup is separate
+and does not qualify the product. The current README labels the only public task
+recording as an older v0.2.0 fixture run; do not present it as current beta.2 or
+Upscaly evidence. Keep those labels and the short installation path accurate.
+
 Repository: https://github.com/shayann07/antigravity-computer-use
 Current handoff: https://github.com/shayann07/antigravity-computer-use/blob/main/HANDOFF.md
 Release: https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2
@@ -80,15 +86,21 @@ Priorities:
    remain unqualified until actually exercised.
 6. Keep the frontend minimal and polished. Show bar/glow/custom cursor only when
    appropriate, clean them up reliably, preserve smooth pointer motion and return
-   the normal cursor after End/Pause/Stop/crashes. Never leave desktop control
-   enabled while only reading or editing code. Preserve unrelated host settings
-   and security presets. Do not treat host-managed mode as authenticated Turbo.
+   the normal cursor after End/Pause/Stop/crashes. During source-only work, use
+   `end` to release active control, grants and overlays while leaving the passive
+   App Sidecar listener available. Do not disable it or use `shutdown` merely to
+   hide a bar; shutdown is for an actual update/removal. Preserve unrelated host
+   settings and security presets. Do not treat host-managed mode as authenticated Turbo.
 
 All tests, probes, recordings, backups and temporary evidence must remain under
 this checkout's ignored .localdata directory. Follow tests/paths.mjs. Never widen
 ancestor permissions, weaken guards or relocate refused ACL tests to force a pass.
 Five ACL cases are explicit skips, not qualification passes. One desktop owner at
 a time; do not interfere with another session or treat virtual desktops as isolation.
+The redundant historical work branches were retired on28October after ancestry
+review and archival of the only unique README draft. See docs/BRANCHES.md. Keep
+future branches short-lived, preserve active work and remove only integrated or
+explicitly archived branches; do not recreate the old branch collection.
 
 For final acceptance, use repeatable actual Antigravity tasks with matched app,
 sample, model, settings and hardware. Measure task wall time separately from

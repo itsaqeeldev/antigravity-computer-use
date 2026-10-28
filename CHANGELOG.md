@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-28 - repository presentation
+
+- Reworked the README with original branding, CI/release/license badges, the labelled historical real demo, installation and concise qualification limits.
+- Updated the GitHub About description, download homepage and searchable topics.
+- Corrected obsolete draft/pending installation guidance and refreshed the Claude Code continuation brief.
+- Retired six redundant work branches after ancestry review; the only unique README draft remains under an archive tag. No runtime or release asset changed.
+
+## 0.3.0-beta.2 - silent startup and control cleanup (26 October 2026)
+
+- Passive startup/status/End/shutdown no longer starts the guardian merely because Stop is saved.
+- Native controls start hidden; End hides the bar and stopped controls auto-dismiss after eight seconds. Added explicit controls reveal for human re-arm and a Hide action while stopped.
+- Capture completion cannot resurrect a hidden bar; Stop remains latched and human-only re-arm is unchanged.
+- Actual native lifecycle checks passed; source checks: 139 passed, zero failed, five explicit ACL skips. Full AI workflow, physical queued/held-input interruption and hardware qualification on this changed helper remain open.
+- On 27 October, re-enabled the owner's existing Sidecar entry. Actual Antigravity-managed beta.2 startup and native read-only discovery passed without a manual launcher or whole-App restart; unrelated settings and Stop were preserved. This configuration repair did not create a new runtime build.
+
 ## 0.3.0-beta.1 - direct native Windows skill
 
 - Direct skill scripts and persistent authenticated native service replace the default MCP route. No extra model or credentials.

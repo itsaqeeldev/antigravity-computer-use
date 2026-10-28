@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">Antigravity Computer Use</title>
+  <desc id="desc">Desktop automation for Google Antigravity. Observe, act, verify. An open-source Windows skill.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#141b24"/><stop offset="1" stop-color="#0d1117"/></linearGradient>
+    <radialGradient id="light"><stop stop-color="#7ab8d9" stop-opacity=".16"/><stop offset="1" stop-color="#7ab8d9" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pointer" x2="1" y2="1"><stop stop-color="#f3f8fb"/><stop offset="1" stop-color="#93bad0"/></linearGradient>
+  </defs>
+  <rect width="1280" height="360" rx="24" fill="url(#background)"/>
+  <ellipse cx="1080" cy="170" rx="320" ry="270" fill="url(#light)"/>
+  <rect x=".5" y=".5" width="1279" height="359" rx="23.5" fill="none" stroke="#92b4ca" stroke-opacity=".2"/>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="64" y="65" fill="#a8c7da" font-size="15" letter-spacing="3">ANTIGRAVITY COMPUTER USE</text>
+    <text x="60" y="169" fill="#f2f6fa" font-family="Consolas,monospace" font-size="76" font-weight="600" letter-spacing="-4">/computer-use</text>
+    <text x="64" y="215" fill="#aebbc8" font-size="24">Desktop automation for Google Antigravity.</text>
+    <text x="64" y="291" fill="#d5e3ec" font-size="17">Observe</text><path d="M147 285h30m-6-5 6 5-6 5" stroke="#7391a5" fill="none" stroke-width="1.5"/>
+    <text x="193" y="291" fill="#d5e3ec" font-size="17">Act</text><path d="M234 285h30m-6-5 6 5-6 5" stroke="#7391a5" fill="none" stroke-width="1.5"/>
+    <text x="280" y="291" fill="#d5e3ec" font-size="17">Verify</text>
+    <text x="1216" y="306" text-anchor="end" fill="#8195a6" font-size="14">WINDOWS · OPEN SOURCE · MIT</text>
+  </g>
+  <g fill="none" stroke="#a2c5dc" stroke-opacity=".15"><circle cx="1068" cy="151" r="65"/><circle cx="1068" cy="151" r="101"/></g>
+  <path d="M1042 107 1113 150Q1119 155 1112 156L1084 160 1068 187Q1064 193 1062 185Z" fill="url(#pointer)" stroke="#293c4d" stroke-width="2"/>
+  <path d="m1047 114 37 46-19 27Z" fill="#5686a6" fill-opacity=".45"/>
+</svg>

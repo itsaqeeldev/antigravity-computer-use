@@ -2,6 +2,20 @@
 
 Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
 
+## 28 October repository presentation and branch cleanup
+
+Compared the public LiquidGlass and ComposeDoc repositories, then rewrote this
+README around the product, real labelled demo, install path and capabilities.
+Added original SVG branding, live CI/release/license badges, repository topics,
+a searchable About description and a download homepage. Corrected the installation
+guide's obsolete draft/pending wording. The current speed and beta.2 qualification
+limits remain explicit; presentation changes are not new runtime acceptance.
+
+Retired six historical work branches after ancestry/open-PR checks. Five were
+ancestors of `main`; the README-only unique draft is preserved under
+`archive/readme-draft-20261028`. [Branch policy and exact commits](docs/BRANCHES.md).
+The published Windows bundle and installed runtime were not changed by this cleanup.
+
 ## 27 October automatic-startup repair
 
 The installed Sidecar had remained disabled after the startup-bar fix, so

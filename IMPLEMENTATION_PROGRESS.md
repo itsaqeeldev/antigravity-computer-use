@@ -1,3 +1,7 @@
+# Repository presentation cleanup — 28 October 2026
+
+Compared LiquidGlass and ComposeDoc, rewrote the public README with product branding, live badges, labelled real historical demo, direct Windows installation, capability table and concise evidence boundaries. Corrected stale installation release/startup claims, updated the Claude Code brief, and documented retirement of six obsolete work branches with a recoverable archive for the README-only draft. Updated GitHub description/topics/download homepage. No runtime changes, installation changes or new product acceptance claims.
+
 # Publication checkpoint — 28 October 2026
 
 Recorded the 27 October automatic-startup configuration repair in the public handoff/status/validation and corrected the Claude Code prompt's superseded disabled-service checkpoint. The existing published beta.2 runtime and installed payloads were not changed. Raw local configuration and private test evidence remain ignored. General speed and final-helper AI/physical/hardware work remain open; no goal or automation was recreated.

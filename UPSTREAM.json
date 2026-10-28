@@ -452,7 +452,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "fd73579b8280fc61679742cf2d90692a1d5876f52566a91c59b674f7b0518227"
+      "sha256": "63c12d7f052fc8f1989f35c6fa5268e0cf6692ad99495abe7f8a97ed48b4ef5b"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -460,7 +460,19 @@
     },
     {
       "path": "docs/CLAUDE-CODE-HANDOFF-PROMPT.md",
-      "sha256": "4ad9381d3384207482cb47ec9c2ebbe68594fe1722c0b85c36c86194107ab4e2"
+      "sha256": "6d655cd101d7185cdece6b1cf0632f7388812d6d7b2f7d21dba8eefe159b0473"
+    },
+    {
+      "path": "docs/BRANCHES.md",
+      "sha256": "8b6aeeeb74f1d0bd53c31cf8ed0d46d142741ee8eff1e08f029042b699c38f19"
+    },
+    {
+      "path": "docs/media/hero.svg",
+      "sha256": "396a769855973d638d1469f9bdf6ff661bdd74fd4cc0ad20a4ad452fbe33fef4"
+    },
+    {
+      "path": "docs/media/social-preview.png",
+      "sha256": "51522808bca74e3a2280912ee2c31cdb1f4b96ad9663f3659cf34451eef916b4"
     }
   ]
 }
