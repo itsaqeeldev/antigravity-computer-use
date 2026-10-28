@@ -256,11 +256,11 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "a16b3e07a26a35ff023c838c662d9628e8d3d9317bc70f8abeac1f7abdb562e4"
+      "sha256": "a9d51864a952123eca7304a2787c989dc56d06b09a141236c332c373df31cccd"
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "284c8e5ebd22e41af59bdd9472f24c1b76a33ac3f00a821e638b29a9ba555b6d"
+      "sha256": "315f2861cd2612d8c7d75c9dfe3b62cf84d63e1be7be8e381954bb27573f138a"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -508,7 +508,7 @@
     },
     {
       "path": "server/platform.mjs",
-      "sha256": "196117c8c577f59cbc289c46e76199138e94857d8ce4febb4cbf184790cfecec"
+      "sha256": "2b1bf09fdbc31eddc78d679f0488fee6db065541332a7ae4308b09ee6da80e00"
     },
     {
       "path": "server/control-contract.json",
@@ -520,7 +520,7 @@
     },
     {
       "path": "tests/platform-contract.test.mjs",
-      "sha256": "eb0bc9ce15d0c20188557e0a8286aa59eab22a8db3ef917bba8114991d59df81"
+      "sha256": "a16fa8632aec5c7fb66e50471816b7ba39383980805c4c09bceab92761bf65e2"
     },
     {
       "path": "scripts/macos-native-check.mjs",
@@ -528,11 +528,11 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "49685b4bf99d748f17233ac7a5e169ab1ea59d5f3e91798420c9b03dad689a99"
+      "sha256": "d46a9ed2aad582962fa940b6866024aa94ab46f3ccf7d85fc44bf9ef4498b545"
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "c8fce9ea576a039981293088a5de92bf840fe4c0e8d80d73fa74b9f8fd4d442f"
+      "sha256": "d16a997b46bb7ee2198bcc3b8bf3bdf9d853d8e3fa34191e34c72bb5855ce4c7"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "74f4e66d5d7133305b22e79f6f5163951672783e8c4b0f95da52aad52f4fa9a8"
+      "sha256": "b785d59823c3b68f106c41afe7f1b58454d61e4ab964cf14d5a45af572370bbc"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",

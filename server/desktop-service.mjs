@@ -11,6 +11,7 @@ import {Receipts} from './receipts.mjs';
 import {loadDeployment,applyDeployment} from './deployment.mjs';
 import {acquireServiceLease} from './service-lease.mjs';
 import {fileURLToPath} from 'node:url';
+import {ipcEndpoint} from './platform.mjs';
 
 export function compact(result,dir){
   const value={...result};
@@ -52,7 +53,7 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
     if(ownership.lost)throw Object.assign(Error('Controller ownership was lost during startup.'),{code:'service_ownership_lost'});
   }catch(error){if(initialized)await Promise.resolve().then(()=>runtime.close?.()).catch(()=>{});await ownership.release();throw error;}
   const secret=randomBytes(32).toString('hex');
-  const pipe=process.platform==='win32'?`\\\\.\\pipe\\agcu-${randomBytes(18).toString('hex')}`:path.join(directory,`desktop-${process.pid}.sock`);
+  let pipe=ipcEndpoint(directory,randomBytes(18).toString('hex'));
   let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending,idleReleased=false;
   const sockets=new Set();
   const receipts=new Receipts(directory);
@@ -114,6 +115,7 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   const temporary=path.join(directory,`desktop-session-${process.pid}-${randomBytes(6).toString('hex')}.tmp`);
   try{
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(pipe,resolve);});
+    if(process.platform==='darwin')pipe={host:'127.0.0.1',port:server.address().port};
     ownership.assertHeld();fs.writeFileSync(temporary,JSON.stringify({pid:process.pid,pipe,secret}),{mode:0o600});fs.renameSync(temporary,file);
   }catch(error){try{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}catch{}await shutdown();throw error;}
   expiry=setInterval(()=>{

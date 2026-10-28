@@ -21,7 +21,7 @@ jobs:
       - name: Compile native adapters and check contracts without desktop access
         run: node scripts/macos-native-check.mjs
       - name: Native private storage and controller-ownership checks
-        run: node --test tests/macos-storage.test.mjs
+        run: node --test tests/macos-storage.test.mjs tests/desktop-service.test.mjs
       - name: Package the prebuilt Mac candidate
         run: node scripts/bundle.mjs --output .localdata/macos-bundle
       - name: Install, restart, update and rollback in a project-local fake home

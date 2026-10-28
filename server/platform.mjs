@@ -4,6 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 export {contract};
+export function ipcEndpoint(directory,nonce,platform=process.platform){
+  if(platform==='win32')return `\\\\.\\pipe\\agcu-${nonce}`;
+  // Darwin AF_UNIX paths are limited to roughly 104 bytes. Per-user installs
+  // and checkout-local tests routinely exceed that, so use an ephemeral IPv4
+  // loopback endpoint with the same private 256-bit capability authentication.
+  if(platform==='darwin')return {host:'127.0.0.1',port:0};
+  throw Object.assign(Error('No native IPC adapter for this platform.'),{code:'unsupported_platform'});
+}
 export function nativePlatform(platform=process.platform){
   if(platform==='win32')return {platform,runtime:'native-windows',node:'node.exe',host:'AxonHost.exe',storage:'StorageGuard.exe',shortcut:'ctrl'};
   if(platform==='darwin')return {platform,runtime:'native-macos',node:'node',host:'AxonHost.app/Contents/MacOS/AxonHost',storage:'StorageGuard',shortcut:'cmd'};

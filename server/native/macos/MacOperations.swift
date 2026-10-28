@@ -194,6 +194,7 @@ func macEnsureTyping(_ args: [String: Any]) throws {
         guard matched else { throw AxonError("focus_failed", "The requested editor did not acquire focus.") }
     }
     MacFence.keyboardPID = pid
+    MacFence.keyboardWindow = window
 }
 
 func macChord(_ code: CGKeyCode, _ flags: CGEventFlags = []) throws {
@@ -317,6 +318,7 @@ func macFileDialog(_ args: [String: Any]) throws -> [String: Any] {
         throw AxonError("invalid_path", "The picker needs an exact absolute local path.")
     }
     MacFence.keyboardPID = pid
+    MacFence.keyboardWindow = dialog
     try macChord(5, [.maskCommand, .maskShift]); Thread.sleep(forTimeInterval: 0.2)
     func descendants(_ root: AXUIElement) -> [AXUIElement] {
         var pending = [root], result: [AXUIElement] = []

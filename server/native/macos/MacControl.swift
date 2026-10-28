@@ -96,6 +96,7 @@ enum MacFence {
     static var rootIdentity: (dev_t, ino_t)?
     static var parentIdentity: String?
     static var keyboardPID: pid_t = 0
+    static var keyboardWindow: AXUIElement?
     static func initialize(requireDirectParent: Bool = true) throws {
         try MacContract.load()
         guard !file.isEmpty else { throw AxonError("no_native_guard", "Native permission runtime required.") }
@@ -142,10 +143,21 @@ enum MacFence {
             if keyboardPID != 0 && NSWorkspace.shared.frontmostApplication?.processIdentifier != keyboardPID {
                 throw AxonError("focus_changed", "Keyboard focus left the approved application. No further input was sent.")
             }
+            if keyboardPID != 0, let window=keyboardWindow {
+                guard let focused=axAttr(AXUIElementCreateApplication(keyboardPID),kAXFocusedUIElementAttribute as String),
+                      CFGetTypeID(focused)==AXUIElementGetTypeID() else {throw AxonError("focus_changed","No keyboard target is currently observable.")}
+                var element: AXUIElement?=focused as! AXUIElement;var inside=false
+                for _ in 0..<64 {
+                    guard let node=element else {break}
+                    if CFEqual(node,window) {inside=true;break}
+                    element=axAttr(node,kAXParentAttribute as String) as! AXUIElement?
+                }
+                guard inside else {throw AxonError("focus_changed","Keyboard focus moved outside the approved window or dialog. No further input was sent.")}
+            }
         }
     }
     static func begin(_ op: String, _ args: [String: Any]) throws {
-        current = args; operation = op; didDispatch = false; keyboardPID = 0
+        current = args; operation = op; didDispatch = false; keyboardPID = 0; keyboardWindow=nil
         if ["ping", "list_apps", "identity", "presence", "session"].contains(op) { return }
         if op == "authorize" {
             current = args["action_args"] as? [String: Any] ?? [:]
