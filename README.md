@@ -89,30 +89,20 @@ Restore the original settings and end computer use when finished.
 
 ## Install
 
-**Requires Windows x64, the standard .NET Framework runtime, and Google Antigravity
-Agent Manager App.** The ZIP includes Node and prebuilt native helpers. Normal
-installation needs no compiler, Python environment or additional model credentials.
+On Windows, paste this one line into PowerShell:
 
-1. Download the [Windows ZIP](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.2/AntigravityComputerUse-0.3.0-beta.2-windows-x64.zip)
-   and [checksums](https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.2/SHA256SUMS.txt).
-2. Extract it. From the extracted bundle folder, run:
+```powershell
+irm https://raw.githubusercontent.com/shayann07/antigravity-computer-use/main/install.ps1 | iex
+```
 
-   ```powershell
-   .\install.cmd --integration direct --sidecar
-   ```
+Then open Antigravity, choose **/computer-use**, and describe your task. The
+installer downloads and verifies the pinned Windows beta, installs the global
+skill and enables its passive background service. It preserves existing settings
+and emergency Stop. Requires Windows x64 and the standard .NET Framework runtime.
 
-3. Allow Antigravity to load its **Computer Use** Sidecar. In a fresh conversation,
-   select **/computer-use** from slash autocomplete and describe your task.
-
-The Sidecar starts the passive background service automatically. It does not open
-the control bar or start a desktop task on its own. The installer preserves
-unrelated settings, pins the exact build, verifies its files and makes rollback
-backups. Project-local installs are supported with `--workspace "D:\Projects\MyApp"`.
-
-**Troubleshooting:** if Antigravity asks you to run the manual launcher, check that
-its Computer Use Sidecar is enabled. A saved emergency Stop is separate: the
-service can be running while human re-arm is still required. Do not restart it to
-bypass Stop. [Installation, updates, startup recovery and rollback](docs/INSTALLATION.md).
+For manual download, project-local setup, permissions, updates and rollback, see
+[installation options](docs/INSTALLATION.md). Fresh-install native ACL qualification
+remains open where project ancestors are replaceable; see [validation](VALIDATION.md).
 
 ## Permissions and human control
 

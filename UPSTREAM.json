@@ -481,6 +481,14 @@
     {
       "path": "tests/quick-install.test.mjs",
       "sha256": "7cdcd4e7d75bf20ae2565d3734987c48c4b255426b6758650ebc7445524b477b"
+    },
+    {
+      "path": "install.ps1",
+      "sha256": "14272600d2d8f835f90a58b4eec167c31e1196560902ae30dd3ec33dbba40d68"
+    },
+    {
+      "path": "tests/bootstrap.test.mjs",
+      "sha256": "376d9b51b58114104cef796cb036240dca6553746e07d727db9bdb72b183e2a7"
     }
   ]
 }

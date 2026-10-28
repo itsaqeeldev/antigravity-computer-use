@@ -2,7 +2,21 @@
 
 Version **0.3.0-beta.2** is the published Windows direct `/computer-use` prerelease with bundled Node and native helpers. Download the [complete Windows ZIP and checksums](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). General orchestration latency and hardware/input qualification remain open; see [HANDOFF.md](../HANDOFF.md). Historical v0.2.0 uses the older MCP route, including the recording labelled as such in the README.
 
-## Windows portable bundle
+## Quick install
+
+Paste this in Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/shayann07/antigravity-computer-use/main/install.ps1 | iex
+```
+
+It downloads the pinned beta.2 archive and pinned helper, verifies SHA-256, and
+installs the global direct skill and Sidecar. A matching installation is verified
+and reused without shutting down a running session. Existing permission policy and
+emergency Stop are retained. Source: [install.ps1](../install.ps1). On unsafe
+replaceable cache ancestors the installer refuses rather than changing parent ACLs.
+
+## Windows portable bundle (manual)
 
 1. Download the complete Windows ZIP and SHA256 checksums from [the beta.2 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
 2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
