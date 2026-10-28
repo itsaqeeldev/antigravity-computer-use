@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "8eb32ececa22c9bec6b595959da657b15dcbf7fdeaec332df489e6f88399071d",
+      "local_sha256": "b9a1b2a11da43e20a2549d7fb2360187e40c4ba7623a97af409bc6fa5bd71733",
       "modified": true
     },
     {
@@ -320,11 +320,11 @@
     },
     {
       "path": "scripts/verify-install.mjs",
-      "sha256": "5e81fa12faccd58a34d143e57e17e98c2d06b36147238d476b47489d8118c616"
+      "sha256": "b3216cc174d2f774939cfff3d74bcbee5d8b857d4f55b4f57fac3c085183ee9e"
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "e96925021dec8f7f7b4b557bb526cc82a9c1c2e155376c89500d7a1ad468dd3a"
+      "sha256": "9f406790607e90ef8405bc624aca93ecde10efed8ce5f8434f33673accace4ea"
     },
     {
       "path": "tests/install.test.mjs",
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "b6e82f2976191b118b529e6331c7dd36eb9a336f68cb8b27ce1c14442b487bc6"
+      "sha256": "62526724714a304c226f41cd4c64b9348539d8bdbf211ecb6b6f6bb77257db82"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",

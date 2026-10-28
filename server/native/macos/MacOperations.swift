@@ -38,8 +38,8 @@ func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
         let owner = (candidate[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value ?? -1
         if owner == guardian { continue } // only this runtime's native click-through chrome
         guard (candidate[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 0 > 0,
-              let bounds = candidate[kCGWindowBounds as String] as? CFDictionary,
-              let boundsRect = CGRect(dictionaryRepresentation: bounds), boundsRect.contains(point) else { continue }
+              let bounds = candidate[kCGWindowBounds as String] as? [String:Any],
+              let boundsRect = CGRect(dictionaryRepresentation: bounds as CFDictionary), boundsRect.contains(point) else { continue }
         guard (candidate[kCGWindowNumber as String] as? NSNumber)?.uint32Value == expected else {
             throw AxonError("obscured", "Another window covers this point. No click was sent.")
         }
@@ -56,7 +56,7 @@ func macBringToFront(_ args: [String: Any]) throws {
     }
     if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid {
         try MacFence.dispatched()
-        guard NSRunningApplication(processIdentifier: pid)?.activate(options: [.activateIgnoringOtherApps]) == true,
+        guard NSRunningApplication(processIdentifier: pid)?.activate(options: []) == true,
               AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success else {
             throw AxonError("input_outcome_unknown", "Window activation was not confirmed. Observe before continuing.")
         }
@@ -181,6 +181,7 @@ func macChord(_ code: CGKeyCode, _ flags: CGEventFlags = []) throws {
 func macPaste(_ args: [String: Any]) throws -> [String: Any] {
     try macEnsureTyping(args)
     let pasteboard = NSPasteboard.general
+    let before = pasteboard.changeCount
     var saved: [[(NSPasteboard.PasteboardType, Data)]] = []
     for item in pasteboard.pasteboardItems ?? [] {
         var formats: [(NSPasteboard.PasteboardType, Data)] = []
@@ -190,21 +191,22 @@ func macPaste(_ args: [String: Any]) throws -> [String: Any] {
         }
         saved.append(formats)
     }
-    let before = pasteboard.changeCount
     guard before == pasteboard.changeCount else { throw AxonError("clipboard_changed", "The clipboard changed before preservation.") }
     try MacFence.dispatched(); pasteboard.clearContents()
     guard pasteboard.setString(str(args["text"]) ?? "", forType: .string) else { throw AxonError("clipboard_failed", "Cannot set temporary text.") }
     let ours = pasteboard.changeCount
-    var restored = false
-    defer {
+    func restore() throws -> Bool {
         if pasteboard.changeCount == ours {
             let items = saved.map { formats -> NSPasteboardItem in let item = NSPasteboardItem(); for (type, data) in formats { item.setData(data, forType: type) }; return item }
-            pasteboard.clearContents(); restored = items.isEmpty || pasteboard.writeObjects(items)
+            pasteboard.clearContents()
+            guard items.isEmpty || pasteboard.writeObjects(items) else { throw AxonError("input_cleanup_failed", "The clipboard could not be restored. Inspect before continuing.") }
+            return true
         }
+        return false
     }
-    try macChord(9, .maskCommand); Thread.sleep(forTimeInterval: 0.12)
-    // Restoration runs in defer; verification of document contents remains required.
-    return ["method": "clipboard_paste", "clipboard_restore_attempted": true, "clipboard_changed_by_other_app": pasteboard.changeCount != ours]
+    do { try macChord(9, .maskCommand); Thread.sleep(forTimeInterval: 0.12) }
+    catch { _ = try? restore(); throw error }
+    return ["method": "clipboard_paste", "clipboard_restored": try restore(), "verification_required": true]
 }
 
 func macFitWindow(_ args: [String: Any]) throws -> [String: Any] {
@@ -278,7 +280,7 @@ func macFileDialog(_ args: [String: Any]) throws -> [String: Any] {
     // Fail closed until a real AppKit picker can be identified and read back.
     // Implemented below through AX sheets; never use blind Enter or shell paths.
     let (owner, pid, _, _) = try resolveWindow(args)
-    let sheets = axAttr(owner, kAXSheetsAttribute as String) as? [AXUIElement] ?? []
+    let sheets = axChildren(owner).filter { axString($0, kAXRoleAttribute as String) == "AXSheet" }
     let ownRole = axString(owner, kAXRoleAttribute as String) ?? ""
     let ownSubrole = axString(owner, kAXSubroleAttribute as String) ?? ""
     let candidates = sheets + ((ownRole == "AXSheet" || ownSubrole == "AXDialog") ? [owner] : [])

@@ -603,7 +603,7 @@ func snapshotElement(_ a: [String: Any]) throws -> (AXUIElement, pid_t) {
         }
         sid = "s\(snapSeq)"
     }
-    guard var snap = snapshots[sid] else {
+    guard let snap = snapshots[sid] else {
         throw AxonError("snapshot_expired", "Snapshot \(sid) is no longer held.", "Take a fresh snapshot.")
     }
     // The caller's window wins. An index resolved with no snapshot_id falls
@@ -761,7 +761,7 @@ func opDrag(_ a: [String: Any]) throws -> [String: Any] {
     if (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0) != pid {
         let m = modeOf(a)
         if m == "take" || m == "exclusive" {
-            NSRunningApplication(processIdentifier: pid)?.activate(options: [.activateIgnoringOtherApps])
+            NSRunningApplication(processIdentifier: pid)?.activate(options: [])
             AXUIElementPerformAction(win, kAXRaiseAction as CFString)
             Thread.sleep(forTimeInterval: 0.15)
         }
@@ -902,7 +902,7 @@ func opKey(_ a: [String: Any]) throws -> [String: Any] {
         if (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0) != pid {
             let m = modeOf(a)
             if m == "take" || m == "exclusive" {
-                NSRunningApplication(processIdentifier: pid)?.activate(options: [.activateIgnoringOtherApps])
+                NSRunningApplication(processIdentifier: pid)?.activate(options: [])
                 AXUIElementPerformAction(win, kAXRaiseAction as CFString)
                 Thread.sleep(forTimeInterval: 0.15)
             }
@@ -988,7 +988,7 @@ func opFocus(_ a: [String: Any]) throws -> [String: Any] {
     if waited > 0 { res["waited_for_user_ms"] = waited }
     try checkStop()
     AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-    let ok = NSRunningApplication(processIdentifier: pid)?.activate(options: [.activateIgnoringOtherApps]) ?? false
+    let ok = NSRunningApplication(processIdentifier: pid)?.activate(options: []) ?? false
     AXUIElementPerformAction(win, kAXRaiseAction as CFString)
     res["focused"] = ok
     res["hwnd"] = handle
