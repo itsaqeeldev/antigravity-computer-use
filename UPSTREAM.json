@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/launch-observe.test.mjs",
-      "sha256": "e6e0532fce7f1d4829bc1aef196ffec64c950ef013dc3e62953d2f8a1c7df4f7"
+      "sha256": "3d0bd4c24ba22e523b4e0d419f25af8ea477a3c147e6e603e39c354ac176ede0"
     },
     {
       "path": "scripts/install.mjs",
@@ -520,7 +520,7 @@
     },
     {
       "path": "tests/platform-contract.test.mjs",
-      "sha256": "f9b201d3d4f52f3f7be37bbe0fe467c2029eeb65e2e94686b07c28c18a7bfd63"
+      "sha256": "eb0bc9ce15d0c20188557e0a8286aa59eab22a8db3ef917bba8114991d59df81"
     },
     {
       "path": "scripts/macos-native-check.mjs",

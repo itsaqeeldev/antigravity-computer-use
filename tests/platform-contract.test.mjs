@@ -8,7 +8,8 @@ test('both native adapters expose one shared lifecycle and tool core',()=>{
  for(const os of ['win32','darwin'])assert.equal(nativePlatform(os).platform,os);
  assert.equal(contract.action_budget,200);assert.equal(contract.frame_ms,90000);
  assert.throws(()=>nativePlatform('linux'),e=>e.code==='unsupported_platform');
- assert.equal(Runtime.prototype.observe,Runtime.prototype.observe);
+ assert.equal(nativePlatform('win32').runtime,'native-windows');
+ assert.equal(nativePlatform('darwin').runtime,'native-macos');
 });
 test('an old or partially guarded Mac helper is refused before control',()=>{
  for(const info of [{},{control_contract:1},{control_contract:1,native_fence:true}])
