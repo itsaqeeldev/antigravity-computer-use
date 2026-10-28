@@ -1,6 +1,6 @@
 # Reuse and provenance
 
-The native foundation is `ridelink0/claude-computer-use`, revision `70347e652ab19f017939653e1a112eb523695198`, published under MIT. Its license is retained in `LICENSE.upstream`; source inventory and original byte hashes are in `UPSTREAM.json`.
+The native foundation is `ridelink0/claude-computer-use`, revision `70347e652ab19f017939653e1a112eb523695198`, published under MIT. Its license is retained in `licenses/ridelink0.txt`; source inventory and original byte hashes are in `UPSTREAM.json`.
 
 Retained implementation: persistent C# `AxonHost.cs`, `Presence.cs`, `Overlay.cs`; Node driver/build, renderer, session input lease and classification utilities; selected original fixtures/tests. Modified files add Antigravity integration, native human grants/action approvals, native input fencing, independent stop/worker termination, real-cursor behavior, monitor-edge glow and prebuilt packaging. `upstream-index.mjs` is an unexecuted source reference and is excluded from runtime bundles. Its old model-asserted grants are not the new MCP entry point.
 

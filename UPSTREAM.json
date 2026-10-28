@@ -320,7 +320,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "9bc53acd8507886df18200dc95a5ce761f240f129da546dd9fdc1b144fdd24ce"
+      "sha256": "0342825a51e775af563cf1155ba62b36e0f8502e4cfe69c9f2c524c7c938a44b"
     },
     {
       "path": "tests/install.test.mjs",
@@ -452,7 +452,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "63c12d7f052fc8f1989f35c6fa5268e0cf6692ad99495abe7f8a97ed48b4ef5b"
+      "sha256": "3e7f8b964a23598c83f401f68b714f865586f0a5eeb512cc2d04c8a0bb939454"
     },
     {
       "path": "tests/guardian-visibility.mjs",

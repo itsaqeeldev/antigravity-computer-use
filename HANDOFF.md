@@ -2,6 +2,30 @@
 
 Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
 
+## 28 October stable Upscaly demo and remaining problems
+
+- Antigravity used the installed beta.2 direct controller with the verified
+  Upscaly 1.0.9 stable executable and the owner's requested sample image. It
+  reported General Real-World native AI, 4× and a completed PNG. Independent
+  decoding confirmed a 2944×5232 PNG and SHA-256
+  `1c805486a807098718f33030c38f3963b772d9623e769fb67eea7bf2ffe33a11`.
+  Engine process execution has not yet been independently verified; the agent's
+  report and a difference from Lanczos do not alone prove the backend used.
+- The actual task took about 14 minutes. Receipts contain a 251-second gap,
+  stale observations and two `element_stale` failures. Investigate host/tool
+  latency, stale accessibility references and error recovery without replaying
+  uncertain input. A second output exists; determine its provenance before using it.
+- The first window-only recording was 900 seconds of near-black frames. A second
+  aborted capture is incomplete. Neither is acceptable as a real demo. A desktop
+  capture probe showed the app; a new retake is in progress. Raw desktop captures
+  can contain other windows and remain private under `.localdata`; inspect and
+  crop every published frame. Do not claim a working video until reviewed.
+- Stable app UI did not offer 2× or a 64-pixel tile for that selected model;
+  the observed task used 4× and AUTO. Restore and independently check settings.
+- Source installer tests and GitHub CI passed, but fresh installation ACL
+  qualification was refused under replaceable ancestors. Those five skips do not
+  qualify native fresh installation. Existing-install idempotence was checked.
+
 ## 28 October repository presentation and branch cleanup
 
 Compared the public LiquidGlass and ComposeDoc repositories, then rewrote this
