@@ -54,6 +54,16 @@ This does not read or change Antigravity's Turbo preset. The host agent is respo
 
 Keep working is the default: normal physical mouse/keyboard activity does not pause. The bar's optional Yield on input mode pauses on deliberate input. Soft Resume follows local human Resume or, in host-managed mode, an explicit user message. Esc/Stop always requires local human re-arm; never restart a service to bypass it. Windows virtual desktops share one mouse, keyboard and active screen capture.
 
+## Recording the visible controls (source recording candidate)
+
+By default, Windows screen capture omits the control bar, glow and pointer halo.
+To include them in a real demo, open the control bar's three-dot menu and enable
+**Show glow and controls in screen recordings**. This is a local preference;
+desktop action requests cannot enable it. Permission dialogs stay excluded.
+The controller continues to hide its own chrome from agent screenshots. Turn the
+option off afterward if you want clean recordings. It does not start a recorder.
+This option was added after the published beta.2 bundle.
+
 ## Verify an installed development bundle
 
 ```powershell

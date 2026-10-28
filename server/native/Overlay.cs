@@ -340,9 +340,22 @@ namespace Axon
         }
 
         internal static bool CaptureExcluded=true;
+        static volatile bool _recordVisuals;
+        // Local recording preference only. The action protocol cannot change it.
+        // Agent screenshots still hide these windows through Guardian.capture.
+        internal static void RecordVisuals(bool enabled)
+        {
+            _recordVisuals=enabled;
+            if(!Enabled||_marker==null)return;
+            _marker.Invoke((MethodInvoker)delegate {
+                CaptureExcluded=!enabled;
+                foreach(IntPtr h in new IntPtr[]{_markerHwnd,_ringHwnd,_bannerHwnd,_cursorHwnd})
+                    if(h!=IntPtr.Zero)Exclude(h);
+            });
+        }
         static void Exclude(IntPtr h)
         {
-            try { if(!SetWindowDisplayAffinity(h,WDA_EXCLUDEFROMCAPTURE)) CaptureExcluded=false; } catch { CaptureExcluded=false; }
+            try { if(!SetWindowDisplayAffinity(h,_recordVisuals?0:WDA_EXCLUDEFROMCAPTURE)) CaptureExcluded=false; } catch { CaptureExcluded=false; }
         }
 
         // When Computer Use last began doing something. Escape reads this to tell

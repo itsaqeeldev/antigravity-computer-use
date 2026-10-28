@@ -215,7 +215,7 @@ namespace Axon {
         volatile string state = "idle"; string token = "";
         readonly object stateLock=new object();
         readonly HashSet<string> grants = new HashSet<string>();
-        Form activePrompt; bool captureHidden; bool captureExcluded;
+        Form activePrompt; bool captureHidden; bool captureExcluded; bool recordVisuals;
         bool controlsRequested, initialized; DateTime controlsUntil=DateTime.MaxValue;
         long visibilityEpoch;
         readonly List<Process> workers=new List<Process>();
@@ -269,17 +269,18 @@ namespace Axon {
         // Application.Run(Form) asks to show its MainForm; SetVisibleCore keeps
         // that implicit startup request hidden until a task explicitly needs it.
         bool Initialize() {
-                Mark(this); captureExcluded=SetWindowDisplayAffinity(Handle,0x11);
+                Mark(this); ApplyRecordingPreference();
                 registered = RegisterHotKey(Handle, 1, 0x4003, 0x7B);
                 if (!registered) { Emit(new { ev="error", message="Ctrl+Alt+F12 is unavailable; refusing control" }); return false; }
                 Presence.Start();
                 Presence.OnPanic = delegate { if(state=="active"||state=="paused"||prompting)Emergency("escape"); };
                 if (!Presence.HooksOk) { Emit(new { ev="error", message="Physical-input monitoring unavailable" }); UnregisterHotKey(Handle,1);Presence.Stop();return false; }
                 Overlay.Configure(1, "Antigravity", 0); Overlay.Start(true);
+                Overlay.RecordVisuals(recordVisuals);
                 SetState(!String.IsNullOrEmpty(StopLatch)&&File.Exists(StopLatch)?"stopped":"idle");
                 DismissControls();
                 initialized=true;
-                Emit(new {ev="settings",takeover_mode=takeover.Mode});
+                Emit(new {ev="settings",takeover_mode=takeover.Mode,record_visuals=recordVisuals});
                 Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true });
                 Thread reader = new Thread(Read); reader.IsBackground = true; reader.Start();
                 return true;
@@ -322,11 +323,24 @@ namespace Axon {
         void LoadTakeoverMode() {
             try {var prefs=js.DeserializeObject(File.ReadAllText(PreferenceFile)) as Dictionary<string,object>;
                 string mode=Convert.ToString(prefs["takeover_mode"]);if(mode=="manual"||mode=="smart")takeover.SetMode(mode,Presence.Capture());
+                recordVisuals=prefs.ContainsKey("record_visuals")&&Convert.ToBoolean(prefs["record_visuals"]);
             }catch {}
+        }
+        void SavePreferences() {
+            try {string file=PreferenceFile,temp=file+".tmp";File.WriteAllText(temp,js.Serialize(new {takeover_mode=takeover.Mode,record_visuals=recordVisuals}));if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);}catch {Emit(new {ev="visual_warning",message="Could not save control preference"});}
+        }
+        void ApplyRecordingPreference() {
+            // Unlike the recording chrome, permission dialogs always remain excluded.
+            captureExcluded=!recordVisuals&&SetWindowDisplayAffinity(Handle,0x11);
+            if(recordVisuals)SetWindowDisplayAffinity(Handle,0);
+        }
+        void ChangeRecordingPreference() {
+            recordVisuals=!recordVisuals;ApplyRecordingPreference();Overlay.RecordVisuals(recordVisuals);SavePreferences();
+            Emit(new {ev="settings",takeover_mode=takeover.Mode,record_visuals=recordVisuals});
         }
         void ChangeTakeoverMode(string mode) {
             takeover.SetMode(mode,Presence.Capture());
-            try {string file=PreferenceFile,temp=file+".tmp";File.WriteAllText(temp,js.Serialize(new {takeover_mode=takeover.Mode}));if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);}catch {Emit(new {ev="visual_warning",message="Could not save control preference"});}
+            SavePreferences();
             RefreshHud();Emit(new {ev="settings",takeover_mode=takeover.Mode});
         }
         void OpenModeMenu() {
@@ -336,6 +350,7 @@ namespace Axon {
             ToolStripMenuItem manual=new ToolStripMenuItem("Keep working — Pause or Esc to interrupt");manual.Checked=takeover.Mode=="manual";manual.Click+=delegate {ChangeTakeoverMode("manual");};
             ToolStripMenuItem smart=new ToolStripMenuItem("Yield on input — deliberate input pauses");smart.Checked=takeover.Mode=="smart";smart.Click+=delegate {ChangeTakeoverMode("smart");};
             modeMenu.Items.Add(manual);modeMenu.Items.Add(smart);modeMenu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem recording=new ToolStripMenuItem("Show glow and controls in screen recordings");recording.Checked=recordVisuals;recording.Click+=delegate {ChangeRecordingPreference();};modeMenu.Items.Add(recording);
             ToolStripMenuItem hint=new ToolStripMenuItem("Esc always stops immediately");hint.Enabled=false;modeMenu.Items.Add(hint);
             ToolStripMenuItem dismiss=new ToolStripMenuItem("Dismiss controls and keep stopped");dismiss.Click+=delegate {if(state!="stopped")Emergency("dismiss");DismissControls();};modeMenu.Items.Add(dismiss);
             modeMenu.Show(modeButton,new Point(0,modeButton.Height));
@@ -419,7 +434,7 @@ namespace Axon {
         }
         void Receive(Dictionary<string, object> m) {
             string op = Convert.ToString(m["op"]); object id=m.ContainsKey("id")?m["id"]:null;
-            if(op=="visual_status") {Emit(new {id=id,state=state,controls_visible=Visible,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode});return;}
+            if(op=="visual_status") {Emit(new {id=id,state=state,controls_visible=Visible,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode,record_visuals=recordVisuals});return;}
             if(op=="show_controls") {ShowControls(state=="stopped"||state=="idle"?30000:0);Emit(new {id=id,state=state,controls_visible=Visible,human_rearm_required=state=="stopped"});return;}
             if(op=="dismiss_controls") {if(state=="active"||state=="paused")Emergency("dismiss");DismissControls();Emit(new {id=id,state=state,controls_visible=Visible});return;}
             if(op=="activity" && state=="active") {

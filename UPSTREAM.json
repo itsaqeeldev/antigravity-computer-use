@@ -72,7 +72,7 @@
     {
       "path": "server/native/Overlay.cs",
       "upstream_sha256": "eaadd8bc72befd9f42aa214dbb1a3ba45f2e28d0c40ed3491ece4414280a4551",
-      "local_sha256": "d6eae93b938344125f89a4f6a706a7caba132319337ce4654ae4394a0d2a9856",
+      "local_sha256": "33bd3193a26f9d55657a352acc92e2d736b7f45bec1edc0e998f2a729f92ffd0",
       "modified": true
     },
     {
@@ -215,6 +215,10 @@
   ],
   "authored_files": [
     {
+      "path": "tests/recording-visuals-live.mjs",
+      "sha256": "4d787902ce877b5b0a7acf46497d67541fc397d9a7aa66c1ecc055ec1ffd9165"
+    },
+    {
       "path": "server/runtime.mjs",
       "sha256": "1dd6f9e42e0ca87c2bb09edda6e7bb26319b112c576d3e9c4fd339f19c07b808"
     },
@@ -228,7 +232,7 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "b4b7dd9d705b3dbd5caa701919fc2003e0b03a0161840306f916071f7792f833"
+      "sha256": "ccc0392ed7460bdca27dfad803df618f9334ccc09d25c318bf3b1c1584a7f152"
     },
     {
       "path": "server/native/CursorSafety.cs",
