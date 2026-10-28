@@ -37,19 +37,16 @@ browser extension or required MCP server.
 ## See it in action
 
 <p align="center">
-  <img src="docs/media/real-demo.gif" width="640" alt="Real Antigravity computer-use recording: typing into a Windows test app, clicking a button, changing a checkbox and selecting an option. Shown at four times speed.">
+  <img src="docs/media/upscaly-demo.gif" width="720" alt="Real Antigravity computer-use session in Upscaly: select a model, import a photo, upscale and view the result.">
 </p>
 
-<p align="center">
-  <a href="docs/media/real-demo-realtime.mp4">Watch at original speed</a> ·
-  <a href="docs/media/real-demo-4x.mp4">Watch the 4× excerpt</a> ·
-  <a href="docs/media/REAL-DEMO.md">Recording details</a>
-</p>
+<p align="center"><a href="docs/media/upscaly-demo.mp4"><b>Watch the real demo</b></a> · <a href="docs/media/UPSCALY-DEMO.md">Recording details</a></p>
 
-This is a **real recorded Antigravity task**, captured on 23 October using the
-older v0.2.0 MCP integration and a disposable Windows test app. It shows actual
-app effects; it is not a current beta.2 benchmark, an Upscaly recording or proof
-of task completion. The current release uses the direct skill and App Sidecar.
+An actual Antigravity task operating **Upscaly 1.0.9** with the installed
+**v0.3.0-beta.2** direct controller and a user-provided sample. The excerpt is
+sped up 3×; setup/waiting and the file picker are omitted. The app used 4×.
+The recording is not a measure of task speed. Native engine execution remains
+to be independently verified. [Previous fixture demo](docs/media/REAL-DEMO.md).
 
 <details>
 <summary><b>Minimal desktop controls</b></summary>

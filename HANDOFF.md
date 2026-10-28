@@ -16,10 +16,11 @@ Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Win
   latency, stale accessibility references and error recovery without replaying
   uncertain input. A second output exists; determine its provenance before using it.
 - The first window-only recording was 900 seconds of near-black frames. A second
-  aborted capture is incomplete. Neither is acceptable as a real demo. A desktop
-  capture probe showed the app; a new retake is in progress. Raw desktop captures
-  can contain other windows and remain private under `.localdata`; inspect and
-  crop every published frame. Do not claim a working video until reviewed.
+  aborted capture is incomplete. Neither is acceptable as a real demo. A new
+  desktop retake captured the real import and completed app view. Its cropped,
+  accelerated excerpt and limitations are documented in
+  [the recording notes](docs/media/UPSCALY-DEMO.md); raw desktop footage remains
+  private under `.localdata`. Frame inspection must be repeated if it is re-edited.
 - Stable app UI did not offer 2× or a 64-pixel tile for that selected model;
   the observed task used 4× and AUTO. Restore and independently check settings.
 - Source installer tests and GitHub CI passed, but fresh installation ACL

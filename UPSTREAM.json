@@ -452,7 +452,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "3e7f8b964a23598c83f401f68b714f865586f0a5eeb512cc2d04c8a0bb939454"
+      "sha256": "73c9741dbbdbf2e6ffbf32e9c85c238f71f91cd0c03ab51b6013fb31320d5738"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -489,6 +489,18 @@
     {
       "path": "tests/bootstrap.test.mjs",
       "sha256": "376d9b51b58114104cef796cb036240dca6553746e07d727db9bdb72b183e2a7"
+    },
+    {
+      "path": "docs/media/UPSCALY-DEMO.md",
+      "sha256": "895c05a764519bdb3498cf02a8746650ed7c9a62f1841afcadda11fbc95e6878"
+    },
+    {
+      "path": "docs/media/upscaly-demo.mp4",
+      "sha256": "67d6c5c71846fe411c212540e8b897c9f3dfa25df37ea1196e0e0894f3ac0f9f"
+    },
+    {
+      "path": "docs/media/upscaly-demo.gif",
+      "sha256": "9ac9d931603180d4f4d9d7ef6553d7ad3b3741cefba01a8f4379a5a239ff9b0f"
     }
   ]
 }
