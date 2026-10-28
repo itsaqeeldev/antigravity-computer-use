@@ -19,6 +19,7 @@ const WIN_SOURCES = [
   path.join(HERE, 'native', 'Presence.cs'),
   path.join(HERE, 'native', 'Overlay.cs'),
   path.join(HERE, 'native', 'Guardian.cs'),
+  path.join(HERE, 'native', 'ControlContract.cs'),
   path.join(HERE, 'native', 'DesktopVisuals.cs'),
   path.join(HERE, 'native', 'CursorSafety.cs'),
   path.join(HERE, 'native', 'TakeoverPolicy.cs'),

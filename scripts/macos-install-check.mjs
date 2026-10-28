@@ -1,0 +1,33 @@
+// Exercise the actual shared installer in a fake project-local home. No real
+// Antigravity settings, desktop input, TCC prompts or live installation changes.
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
+import {install} from './install.mjs';
+if(process.platform!=='darwin')throw Error('Run this qualification on macOS.');
+const root=fileURLToPath(new URL('../',import.meta.url));
+const directory=path.join(root,'.localdata/tests/mac-install');fs.mkdirSync(directory,{recursive:true,mode:0o700});
+const home=path.join(directory,'home');fs.mkdirSync(home,{mode:0o700});
+const target=path.join(directory,'installed');const bundle=path.join(root,'.localdata/macos-bundle');
+const config=path.join(home,'.gemini/config/config.json');fs.mkdirSync(path.dirname(config),{recursive:true});
+fs.writeFileSync(config,JSON.stringify({permissions:{preset:'preserve'},sidecars:{unrelated:{enabled:true}}}));
+const first=install({bundle,target,home,sidecar:true});
+const node=first.launcher_node;
+function command(args){const p=spawnSync(node,args,{encoding:'utf8',timeout:20000});assert.equal(p.status,0,p.stderr||p.stdout);return p.stdout;}
+function desktop(name){return JSON.parse(command([first.launcher,name]));}
+try {
+ command([path.join(first.release,'scripts/verify-install.mjs'),target]);
+ const started=desktop('start');assert.equal(started.state,'idle');assert.equal(started.runtime,'native-macos');
+ assert.deepEqual(started.approved_apps,[]);assert.equal(started.custom_cursor,null);
+ assert.equal(desktop('end').state,'idle');assert.equal(desktop('stop').human_rearm_required,true);
+ desktop('shutdown');
+ const stopped=desktop('start');assert.equal(stopped.state,'stopped');assert.equal(stopped.custom_cursor,null);
+ assert.equal(desktop('end').state,'stopped');desktop('shutdown');
+ const next=install({bundle,target,home,sidecar:true});assert.notEqual(next.release,first.release);
+ assert(fs.existsSync(path.join(target,'data/emergency.stop')));
+ const changed=JSON.parse(fs.readFileSync(config));changed.sidecars.later={enabled:true};changed.unrelated_after=true;fs.writeFileSync(config,JSON.stringify(changed));
+ command([path.join(next.release,'scripts/rollback.mjs'),path.join(next.backup,'rollback.json')]);
+ assert.equal(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))).release,first.release);
+ const preserved=JSON.parse(fs.readFileSync(config));assert(preserved.sidecars.later.enabled);assert(preserved.sidecars.unrelated.enabled);assert(preserved.unrelated_after);assert.equal(preserved.permissions.preset,'preserve');
+ command([path.join(first.release,'scripts/verify-install.mjs'),target]);
+ console.log(JSON.stringify({ok:true,checks:['sealed prebuilt installation','passive native-macos listener','End cleanup','Stop persisted across restart','no guardian during passive Stop','update','rollback','unrelated host settings preserved'],interactive_desktop_qualified:false}));
+} finally {try{desktop('shutdown');}catch{} }

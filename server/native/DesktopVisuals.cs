@@ -15,8 +15,8 @@ namespace Axon {
         internal static bool MotionEnabled { get { if((DateTime.UtcNow-motionChecked).TotalSeconds>2){bool enabled;motion=SystemParametersInfo(0x1042,0,out enabled,0)&&enabled;motionChecked=DateTime.UtcNow;}return motion; } }
         static readonly double origin=System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency;
         internal static float BreathLevel {get {return MotionEnabled?.86f+.14f*(float)Math.Sin((System.Diagnostics.Stopwatch.GetTimestamp()/(double)System.Diagnostics.Stopwatch.Frequency-origin)*Math.PI*2/5.2):.94f;}}
-        internal static readonly Color Violet = Color.FromArgb(155, 205, 235);
-        internal static readonly Color Blue = Color.FromArgb(128, 171, 207);
+        internal static readonly Color Violet = ControlContract.ColorValue("accent_rgb",Color.FromArgb(155, 205, 235));
+        internal static readonly Color Blue = ControlContract.ColorValue("blue_rgb",Color.FromArgb(128, 171, 207));
         internal static readonly Color Mint = Color.FromArgb(186, 222, 232);
         internal static Color StateColor(string state) {
             return state=="paused" ? Color.FromArgb(248,199,119) : state=="stopped" ? Color.FromArgb(255,139,159) : Violet;

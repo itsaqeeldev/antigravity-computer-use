@@ -49,18 +49,18 @@ namespace Axon {
             label=SnapshotText.RiskLabel(label);
             object risk;
             if (!a.TryGetValue("__risk",out risk) || Convert.ToString(risk)!="routine") return true;
-            if (new List<string>{"launch","clipboard","close_window","paste","paste_files","open","file_dialog"}.Contains(op)) return true;
+            if (ControlContract.SensitiveOperation(op)) return true;
             if(op=="key") {
                 string key=Convert.ToString(a["keys"]).ToLowerInvariant();
-                if(System.Text.RegularExpressions.Regex.IsMatch(key,"enter|return|delete|alt\\+|win|meta|super|ctrl\\+[svx]")) return true;
+                if(ControlContract.Pattern("sensitive_key_pattern","enter|return|delete|alt\\+|win|meta|super|ctrl\\+[svx]",key)) return true;
             }
             if(a.ContainsKey("hwnd")) {
                 string name=Path.GetFileNameWithoutExtension(Convert.ToString(ControlFence.Identity(Convert.ToInt64(a["hwnd"]))["path"])).ToLowerInvariant();
                 System.Text.StringBuilder cls=new System.Text.StringBuilder(256); Native.GetClassName(new IntPtr(Convert.ToInt64(a["hwnd"])),cls,cls.Capacity);
                 bool console=cls.ToString().Contains("Console")||cls.ToString().Contains("CASCADIA")||cls.ToString().Contains("mintty");
-                if((console||System.Text.RegularExpressions.Regex.IsMatch(name,"^(windowsterminal|regedit|systemsettings|control|code|idea64|rider64)$")) && op!="focus") return true;
+                if((console||ControlContract.Pattern("sensitive_process_pattern","^(windowsterminal|regedit|systemsettings|control|code|idea64|rider64)$",name)) && op!="focus") return true;
             }
-            if(System.Text.RegularExpressions.Regex.IsMatch(label??"","send|submit|pay|purchase|buy|delete|remove|install|upload|share|password|permission|transfer|sign.in",System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return true;
+            if(ControlContract.Pattern("sensitive_label_pattern","send|submit|pay|purchase|buy|delete|remove|install|upload|share|password|permission|transfer|sign.in",label)) return true;
             return false;
         }
         internal static string FileName { get { return Environment.GetEnvironmentVariable("AGCU_GUARD_FILE"); } }

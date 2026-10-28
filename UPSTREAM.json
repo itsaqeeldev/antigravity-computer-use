@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "82675df2e8e0a71311f719b3b507e50bb5dc250ed5cb367c69c97bf5aadc2192",
+      "local_sha256": "3aa634762d67c1cb9d41943281d4d8dff8258fa9c8d93f1da39f9d26a724187a",
       "modified": true
     },
     {
@@ -232,7 +232,7 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "ccc0392ed7460bdca27dfad803df618f9334ccc09d25c318bf3b1c1584a7f152"
+      "sha256": "b8cf7177c18e93136e3f9a2a393591deeaaba3881767aff423e5b7287eb007ab"
     },
     {
       "path": "server/native/CursorSafety.cs",
@@ -240,7 +240,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "b2d4d3b3bc693de5b4e5abd23a7755b617d6d7df3a581f6cd8438f1017d2f117"
+      "sha256": "f36aa687656ff5172af34f68b543e07f0747bb9fb815856bb2356954d83bc4df"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -512,7 +512,7 @@
     },
     {
       "path": "server/control-contract.json",
-      "sha256": "4b0d8f7ae18fd0a81ce57e39d3508e3d6228cdf5b4b6c7b28322f23abacc5b21"
+      "sha256": "0623d54ac3372139f11d1124b170d1f67caa68af94473d13293d8826cc3f3755"
     },
     {
       "path": "server/macos-build.mjs",
@@ -528,11 +528,11 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "ed8480325fa799d488fe39513e2df9abd4bc537ac206c5d1277f36fcac28debd"
+      "sha256": "49685b4bf99d748f17233ac7a5e169ab1ea59d5f3e91798420c9b03dad689a99"
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "2aed79a0b46cf577fd7549f7bb5cae44a618c19fc6210fe1f8389a2b8c089cef"
+      "sha256": "c8fce9ea576a039981293088a5de92bf840fe4c0e8d80d73fa74b9f8fd4d442f"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -557,6 +557,14 @@
     {
       "path": "tests/macos-storage.test.mjs",
       "sha256": "cf85b73d01055cdb4de417df4b36af2a8ec549381b4ad6d84616e5c3c11b7d0c"
+    },
+    {
+      "path": "server/native/ControlContract.cs",
+      "sha256": "cc8954bce09992a32fdac68460723cc0665874b1988bf00065988cd358aa7a5f"
+    },
+    {
+      "path": "scripts/macos-install-check.mjs",
+      "sha256": "28d852134d515616054e49663c92e55e66feac29952fd8ad3ded976b44fa8512"
     }
   ]
 }

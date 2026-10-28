@@ -188,6 +188,8 @@ enum MacFence {
         if str(args["__risk"]) != "routine" { return true }
         if (MacContract.value["sensitive_operations"] as? [String] ?? []).contains(op) { return true }
         if op == "key" && MacContract.pattern("sensitive_key_pattern", str(args["keys"]) ?? "") { return true }
+        if op != "focus", let pid = args["__pid"] as? Int,
+           let path = try? macProcessPath(pid_t(pid)), MacContract.pattern("sensitive_process_pattern",URL(fileURLWithPath:path).lastPathComponent) { return true }
         if ["click", "drag"].contains(op) && label.isEmpty { return true }
         return MacContract.pattern("sensitive_label_pattern", label)
     }
