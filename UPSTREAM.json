@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "b9a1b2a11da43e20a2549d7fb2360187e40c4ba7623a97af409bc6fa5bd71733",
+      "local_sha256": "9cb6a11bf000b8aba1a758cc30b049adb5f5b82633a36c3695355bf3099cad69",
       "modified": true
     },
     {
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "affbcc9349f36dd930bf7a9f036f36b72a529b3f4772843fac8e424fc2171206"
+      "sha256": "ed8480325fa799d488fe39513e2df9abd4bc537ac206c5d1277f36fcac28debd"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "62526724714a304c226f41cd4c64b9348539d8bdbf211ecb6b6f6bb77257db82"
+      "sha256": "c122d4fbad33734b70b867d1f09b74e56433ae6cbfde9232092685459a73efc6"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -548,11 +548,15 @@
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
-      "sha256": "b4c21e6afccfbb1d1b90247e58110496096c82d934ec183352ba0874f771741e"
+      "sha256": "26c76e9f6ba8288b1fa0103dae0d34c3152c4457388a07eda1e3f512fcde28cd"
     },
     {
       "path": "server/native/macos/StorageMain.swift",
       "sha256": "43258885f2748c2eeea208ddf48c982501f3adada51a55a3fbcec5561f8bb0d0"
+    },
+    {
+      "path": "tests/macos-storage.test.mjs",
+      "sha256": "cf85b73d01055cdb4de417df4b36af2a8ec549381b4ad6d84616e5c3c11b7d0c"
     }
   ]
 }

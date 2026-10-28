@@ -125,14 +125,37 @@ func macMoveCursor(_ point: CGPoint, _ args: [String: Any]) throws -> [String: A
         let t = min(1, (ProcessInfo.processInfo.systemUptime - start) * 1000 / duration)
         let eased = t*t*t*(10+t*(-15+6*t))
         let p = CGPoint(x: from.x + (point.x-from.x)*eased, y: from.y + (point.y-from.y)*eased)
-        // Intermediate travel can cross an unrelated window, but never clicks it.
-        try macCheckPoint(p)
+        // Travel may cross display gaps without emitting input there. The end
+        // point and every button transition still require exact display/window ownership.
+        if !macDisplayRects().contains(where: { $0.contains(p) }) { Thread.sleep(forTimeInterval: 0.016); continue }
         try post(CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: p, mouseButton: .left))
         frames += 1; Thread.sleep(forTimeInterval: 0.016)
     }
     try macCheckTargetPoint(point, args)
     try post(CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left))
     return ["frames": frames + 1, "duration_ms": Int(duration), "animated": duration > 0]
+}
+
+func macScroll(_ args: [String:Any]) throws -> [String:Any] {
+    try macBringToFront(args)
+    let point: CGPoint
+    if let pixels = pair(args["point"]) { point = CGPoint(x:pixels[0],y:pixels[1]) }
+    else {
+        let (element, _) = try snapshotElement(args)
+        if bool(args["into_view"],false) {
+            guard axActions(element).contains("AXScrollToVisible") else { throw AxonError("unsupported_action","This control has no ScrollToVisible accessibility action.") }
+            try MacFence.dispatched()
+            guard AXUIElementPerformAction(element,"AXScrollToVisible" as CFString) == .success else { throw AxonError("input_outcome_unknown","The provider did not confirm scrolling. Observe before continuing.") }
+            return ["method":"ax_scroll_to_visible"]
+        }
+        guard let r = axRect(element) else { throw AxonError("no_click_point","The observed scroll target has no rectangle.") }
+        point = CGPoint(x:r[0]+r[2]/2,y:r[1]+r[3]/2)
+    }
+    _ = try macMoveCursor(point,args)
+    try macCheckTargetPoint(point,args)
+    let amount=Int32(int(args["amount"],-3)), horizontal=bool(args["horizontal"],false)
+    try post(CGEvent(scrollWheelEvent2Source:nil,units:.line,wheelCount:2,wheel1:horizontal ? 0 : amount,wheel2:horizontal ? amount : 0,wheel3:0))
+    return ["method":"wheel","delta":amount]
 }
 
 func macEnsureTyping(_ args: [String: Any]) throws {

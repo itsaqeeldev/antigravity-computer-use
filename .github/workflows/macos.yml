@@ -16,5 +16,16 @@ jobs:
         run: node --test tests/platform-contract.test.mjs tests/lifecycle.test.mjs tests/workflow.test.mjs tests/observed-selectors.test.mjs tests/launch-observe.test.mjs
       - name: Compile native adapters and check contracts without desktop access
         run: node scripts/macos-native-check.mjs
+      - name: Native private storage and controller-ownership checks
+        run: node --test tests/macos-storage.test.mjs
+      - name: Package the prebuilt Mac candidate
+        run: node scripts/bundle.mjs --output .localdata/macos-bundle
+      - name: Archive experimental prebuilt candidate
+        run: tar -czf .localdata/AntigravityComputerUse-macos-candidate.tar.gz -C .localdata macos-bundle
+      - uses: actions/upload-artifact@v6
+        with:
+          name: AntigravityComputerUse-macos-candidate
+          path: .localdata/AntigravityComputerUse-macos-candidate.tar.gz
+          retention-days: 14
       - name: Verify source provenance
         run: node scripts/check-provenance.mjs

@@ -10,6 +10,25 @@ struct PrivateStorageError: Error {
 
 enum MacPrivateStorage {
     static let marker = ".agcu-private-storage"
+    static func checkACL(_ path: String) throws {
+        // POSIX mode bits alone cannot exclude extended ACL access. A standard
+        // macOS deny-delete ACL is retained; any extended Allow entry refuses.
+        // Do not edit parent ACLs or infer that mode 0700 overrules them.
+        errno = 0
+        guard let acl = acl_get_file(path, ACL_TYPE_EXTENDED) else {
+            if errno == ENOENT || errno == ENOTSUP { return }
+            try reject("storage_acl_unavailable", path, "Cannot inspect extended access permissions.")
+        }
+        defer { acl_free(acl) }
+        var entry: acl_entry_t?
+        var cursor = ACL_FIRST_ENTRY
+        while acl_get_entry(acl, cursor, &entry) == 0 {
+            cursor = ACL_NEXT_ENTRY
+            var tag = ACL_UNDEFINED_TAG
+            guard acl_get_tag_type(entry, &tag) == 0 else { try reject("storage_acl_unavailable", path, "Cannot read extended access entry.") }
+            if tag == ACL_EXTENDED_ALLOW { try reject("storage_unsafe_acl", path, "Extended Allow permissions need manual review. ACLs were not changed.") }
+        }
+    }
     static func reject(_ code: String, _ path: String, _ message: String) throws -> Never {
         throw PrivateStorageError(code: code, path: path, message: message)
     }
@@ -40,6 +59,7 @@ enum MacPrivateStorage {
                 guard s.st_mode & 0o022 == 0 else {
                     try reject("storage_unsafe_ancestor", cursor, "Another account can replace this path. Parent permissions were not changed.")
                 }
+                try checkACL(cursor)
             }
             if cursor == "/" { break }
             cursor = URL(fileURLWithPath: cursor).deletingLastPathComponent().path
@@ -61,6 +81,7 @@ enum MacPrivateStorage {
             try FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         } else {
             let s = try info(root)
+            try checkACL(root)
             guard s.st_mode & S_IFMT == S_IFDIR, s.st_uid == getuid() else {
                 try reject("storage_untrusted_owner", root, "The private directory must be a real directory owned by this account.")
             }
@@ -91,6 +112,7 @@ enum MacPrivateStorage {
         let root = try normalized(raw)
         try ancestors(root)
         let s = try info(root)
+        try checkACL(root)
         guard s.st_uid == getuid(), s.st_mode & 0o077 == 0, dedicated(root) else {
             try reject("storage_permissions_failed", root, "Application storage is not private and owned by this account.")
         }
@@ -104,6 +126,7 @@ enum MacPrivateStorage {
         for case let relative as String in enumerator {
             let file = (root as NSString).appendingPathComponent(relative)
             let s = try info(file)
+            try checkACL(file)
             guard s.st_uid == getuid(), s.st_mode & 0o022 == 0,
                   s.st_mode & S_IFMT == S_IFDIR || s.st_mode & S_IFMT == S_IFREG else {
                 try reject("storage_permissions_failed", file, "Private storage contains a link, foreign owner or writable entry.")
