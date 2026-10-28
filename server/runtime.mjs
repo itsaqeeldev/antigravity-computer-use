@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {Driver,HostError} from './driver.mjs';
 import {Guardian} from './guardian.mjs';
 import {Sessions} from './sessions.mjs';
@@ -12,6 +13,7 @@ import {renderSnapshot,subtreeNodes} from './render.mjs';
 import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
+import {contract,nativePlatform,launchTarget} from './platform.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -22,7 +24,7 @@ export function savedTakeoverMode(file,fallback){
 export function appKey(w){return `${w.pid}:${w.started}:${String(w.path).toLowerCase()}`;}
 export function requireObservation(map,id,hwnd,now=Date.now()){
   const frame=map.get(id);map.delete(id);
-  if(!frame||frame.hwnd!==Number(hwnd)||now-frame.at>90000)fail('stale_observation','Observe again: missing, consumed or stale observation.');
+  if(!frame||frame.hwnd!==Number(hwnd)||now-frame.at>contract.frame_ms)fail('stale_observation','Observe again: missing, consumed or stale observation.');
   return frame;
 }
 export function imagePoint(image,x,y){
@@ -65,11 +67,11 @@ export class Runtime {
     else fs.mkdirSync(dataDir(),{recursive:true}); // inert unit-test dependencies
     this.latchFile=latchFile===undefined?(!driver&&!guardian?path.join(dataDir(),'emergency.stop'):null):latchFile;
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
-    fs.writeFileSync(this.guardFile,'idle||0|');
-    const env={AGCU_GUARD_FILE:this.guardFile,AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
+    fs.writeFileSync(this.guardFile,'idle||0|',{mode:0o600});
+    const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.remaining=200;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -83,7 +85,7 @@ export class Runtime {
         if(s==='stopped'||s==='paused')this.driver.abort?.().catch(()=>{});
       }
     });
-    this.guardian.on('resume',(_state,source)=>{this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+10*60000;});
+    this.guardian.on('resume',(_state,source)=>{this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+contract.session_ms;});
   }
   stamp(){return {__session:this.token};}
   // A passive App sidecar must not open a HUD, install input hooks or acquire
@@ -111,12 +113,12 @@ export class Runtime {
     if(this.state==='paused')this.check();
     const w=await this.app(hwnd);const key=appKey(w);
     if(this.grants.has(key)&&this.state==='active')return w;
-    const answer=await this.guardian.prompt({kind:'app',hwnd:Number(hwnd),host_pid:this.driver.info?.pid,
+    const answer=await this.guardian.prompt({kind:'app',hwnd:Number(hwnd),app_pid:w.pid,host_pid:this.driver.info?.pid,
       message:`Allow this application for this session?\r\n\r\n${w.title}\r\n${w.path}\r\nPID ${w.pid}\r\n\r\nTask: ${purpose}\r\n\r\nIts screenshots and accessibility text go to Antigravity's configured model. Ordinary actions run autonomously. Consequential effects need a separate confirmation. Your real mouse/keyboard will be used. Esc or Ctrl+Alt+F12 stops. Use a disposable account/VM for important data.`});
     if(!answer.allowed)fail(answer.decision==='timeout'?'approval_timeout':'permission_denied',answer.decision==='timeout'?'Local application approval timed out.':'The human denied this application.');
     this.guardian.send({op:'attach',pid:this.driver.info?.pid});
     const current=await this.app(hwnd);if(appKey(current)!==key)fail('identity_changed','Application restarted during approval.');
-    if(!this.token){this.token=randomUUID();this.deadline=Date.now()+10*60000;this.remaining=200;}
+    if(!this.token){this.token=randomUUID();this.deadline=Date.now()+contract.session_ms;this.remaining=contract.action_budget;}
     const active=await this.guardian.request({op:'activate',token:this.token,deadline:(BigInt(this.deadline)*10000n+621355968000000000n).toString()});
     if(!active.allowed)fail('control_inactive','Use the local controls to re-arm.');
     this.state='active';this.grants.set(key,{...current,purpose});return current;
@@ -231,15 +233,14 @@ export class Runtime {
   async launch(args){
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
-    const app=path.resolve(args.app);
-    if(!fs.existsSync(app)||path.extname(app).toLowerCase()!=='.exe')fail('invalid_application','Supply an existing .exe path.');
-    if(/^(?:AxonHost|StorageGuard)(?:-[0-9a-f]+)?\.exe$/i.test(path.basename(app)))fail('protected_app','Cannot launch internal runtime helpers as target applications.');
+    const {app,executable}=launchTarget(args.app);
+    if(/^(?:AxonHost|StorageGuard)(?:-[0-9a-f]+)?(?:\.exe|\.app)?$/i.test(path.basename(app)))fail('protected_app','Cannot launch internal runtime helpers as target applications.');
     if(classify({process:path.basename(app),path:app}).tier===TIER.BLOCKED)fail('protected_app','Cannot launch a protected application.');
     // Validate the execution desktop before showing controls or launching apps.
     await this.driver.start();
     await this.guardian.start();
     if(this.state==='stopped'||this.state==='paused')this.check();
-    if(!this.token){this.token=randomUUID();this.deadline=Date.now()+10*60000;this.remaining=200;}
+    if(!this.token){this.token=randomUUID();this.deadline=Date.now()+contract.session_ms;this.remaining=contract.action_budget;}
     const active=await this.guardian.request({op:'activate',token:this.token,deadline:(BigInt(this.deadline)*10000n+621355968000000000n).toString()});
     if(!active.allowed)fail('control_inactive','Use the local controls.');this.state='active';
     const payload={app,args:args.args||[],...this.stamp(),__risk:'sensitive'};
@@ -260,7 +261,7 @@ export class Runtime {
       do {
         this.check();if(generation!==this.generation)fail('control_changed','Control changed after launch.');
         const windows=(await this.driver.call('list_apps',{})).result.windows;
-        const matches=windows.filter(w=>w.pid===result.pid&&path.resolve(w.path||'').toLowerCase()===app.toLowerCase()&&!w.minimized&&!w.other_desktop&&w.rect?.[2]>0&&w.rect?.[3]>0);
+        const matches=windows.filter(w=>w.pid===result.pid&&path.resolve(w.path||'').toLowerCase()===executable.toLowerCase()&&!w.minimized&&!w.other_desktop&&w.rect?.[2]>0&&w.rect?.[3]>0);
         if(matches.length>1)return {...result,input_completed:true,observe_pending:true,observation_hint:'Several matching windows opened. Discover apps and select the intended window; do not relaunch.'};
         if(matches.length===1){
           const observed=await this.observe({hwnd:Number(matches[0].hwnd),reason:args.reason});
@@ -284,10 +285,10 @@ export class Runtime {
     if(this.state!=='paused'||generation!==this.generation)fail('control_changed','Control changed before Resume completed. Inspect status.');
     const result=await this.guardian.request({op:'resume'});
     if(!result.allowed||result.state!=='active'||generation!==this.generation||this.state==='stopped')fail('human_resume_required','Native runtime refused Resume or emergency Stop won the race. Use the local controls.');
-    this.state='active';this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+10*60000;
+    this.state='active';this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+contract.session_ms;
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
   async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch(error){this.lastControlReason='stop_persistence_failed: '+error.message;}await this.driver.abort?.();return {stopped:true,human_rearm_required:true};}
-  status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:'native-windows',build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
+  status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }

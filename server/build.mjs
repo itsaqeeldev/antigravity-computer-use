@@ -29,7 +29,7 @@ const WIN_SOURCES = [
   path.join(HERE, 'native', 'DesktopContext.cs'),
   path.join(HERE, 'native', 'WindowGeometry.cs'),
 ];
-const MAC_SOURCES = [path.join(HERE, 'native', 'AxonHost.swift')];
+const MAC_SOURCES = [path.join(HERE, 'native', 'AxonHost.swift'), ...['PrivateStorage.swift','MacControl.swift','MacGuardian.swift','MacVisuals.swift','MacOperations.swift'].map(name=>path.join(HERE,'native','macos',name))];
 
 export const SOURCES = process.platform === 'darwin' ? MAC_SOURCES : WIN_SOURCES;
 export const SOURCE = SOURCES[0];
@@ -118,7 +118,8 @@ export class BuildError extends Error {
 }
 
 export function ensureHost({ force = false, log = () => {} } = {}) {
-  if (process.platform !== 'win32') throw new BuildError('This build enables Windows only.', 'macOS/Linux adapters are not yet validated.');
+  if (process.platform === 'darwin') return ensureMacHost({ force, log });
+  if (process.platform !== 'win32') throw new BuildError('Native desktop control requires Windows or macOS.', 'Linux has no qualified native adapter.');
   const prebuilt = path.join(HERE, '..', 'bin', 'AxonHost.exe');
   if (!force && fs.existsSync(prebuilt) && !SOURCES.some(f => fs.existsSync(f))) return { exe: prebuilt, rebuilt: false };
   if (process.platform === 'darwin') return ensureMacHost({ force, log });
@@ -263,6 +264,8 @@ function pruneOldBuilds(keep, log) {
 }
 
 function ensureMacHost({ force = false, log = () => {} } = {}) {
+  const prebuilt=path.join(HERE,'..','bin','AxonHost.app','Contents','MacOS','AxonHost');
+  if(!force&&fs.existsSync(prebuilt)&&!SOURCES.some(file=>fs.existsSync(file)))return {exe:prebuilt,rebuilt:false};
   const swiftc = findSwiftc();
   if (!swiftc) {
     throw new BuildError('Could not find swiftc.',
@@ -271,9 +274,10 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
 
   const h = createHash('sha256');
   for (const f of SOURCES) h.update(fs.readFileSync(f));
-  h.update('\0' + swiftc + '\0mac-v1');
+  h.update('\0' + swiftc + '\0mac-guard-v1\0'+process.arch);
   const stamp = h.digest('hex');
-  const exe = exeFor(stamp);
+  const app=path.join(binDir(),'AxonHost-'+stamp.slice(0,16)+'.app');
+  const exe=path.join(app,'Contents','MacOS','AxonHost');
 
   if (!force && fs.existsSync(exe)) {
     log('host up to date');
@@ -285,10 +289,12 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
   const temp = path.join(binDir(), '.build-' + process.pid + '-' + Date.now());
 
   const res = spawnSync(swiftc, [
-    '-O', '-o', temp,
+    '-O', '-parse-as-library','-target',process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0', '-o', temp,
     '-framework', 'AppKit',
     '-framework', 'ApplicationServices',
     '-framework', 'CoreGraphics',
+    '-framework', 'ScreenCaptureKit',
+    '-framework', 'Carbon',
     ...SOURCES,
   ], { encoding: 'utf8' });
 
@@ -298,15 +304,18 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
     throw new BuildError('Compiling the macOS host failed.',
       out.slice(0, 2000) + String.fromCharCode(10, 10) +
       'The macOS host is a port that has not been validated on hardware. ' +
-      'Please open an issue at https://github.com/ridelink0/claude-computer-use/issues with this output.');
+      'Report this project build failure at https://github.com/shayann07/antigravity-computer-use/issues.');
   }
   try { fs.chmodSync(temp, 0o755); } catch {}
+  fs.mkdirSync(path.dirname(exe),{recursive:true});
+  fs.writeFileSync(path.join(app,'Contents','Info.plist'),'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>io.github.shayann07.antigravity-computer-use</string><key>CFBundleExecutable</key><string>AxonHost</string><key>CFBundleName</key><string>Antigravity Computer Use</string><key>CFBundleDisplayName</key><string>Antigravity Computer Use</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>1</string><key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/><key>LSMinimumSystemVersion</key><string>14.0</string></dict></plist>');
   try { fs.renameSync(temp, exe); }
   catch (err) {
     try { fs.unlinkSync(temp); } catch {}
     if (!fs.existsSync(exe)) throw new BuildError('Could not place the compiled host: ' + err.message, null);
   }
-  pruneOldBuilds(exe, log);
+  const signed=spawnSync('/usr/bin/codesign',['--force','--sign','-',app],{encoding:'utf8',timeout:30000});
+  if(signed.status!==0)throw new BuildError('Ad-hoc signing of the native Mac helper failed.',signed.stderr||signed.stdout);
   warmUp(exe, log);
   log('host built at ' + exe);
   return { exe, rebuilt: true, compiler: swiftc };

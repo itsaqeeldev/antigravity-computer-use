@@ -5,13 +5,13 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "f8a93c3eac5c61363e6067bd179b234aadc89df4b21f22168f4de43f83466c97",
+      "local_sha256": "065c2afec64a753dc2bba506973abcd6c9fbff693adceb0e1806aba47c839037",
       "modified": true
     },
     {
       "path": "server/driver.mjs",
       "upstream_sha256": "31c16f2c7d97d7c69a796a537996d1da3b6637150571a19361e1ba86dda8b6df",
-      "local_sha256": "07703b37f0bb179900dd0eab0cd89de21fffe73ebff30884aaab6c195f36c156",
+      "local_sha256": "0763f3678358e507ab83da085c22fe2c9e568cd75a014be57ab1454bd5c8070c",
       "modified": true
     },
     {
@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "606c2e6638555041236a99d1874067fe3de79d3e14880352348c4eebdeef57b2",
+      "local_sha256": "8eb32ececa22c9bec6b595959da657b15dcbf7fdeaec332df489e6f88399071d",
       "modified": true
     },
     {
@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "1dd6f9e42e0ca87c2bb09edda6e7bb26319b112c576d3e9c4fd339f19c07b808"
+      "sha256": "c934d86f32fadbb21d8166fa6485f3fb10ddd54e5b93bdd1618e2f1514287294"
     },
     {
       "path": "server/mcp.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "0342825a51e775af563cf1155ba62b36e0f8502e4cfe69c9f2c524c7c938a44b"
+      "sha256": "e96925021dec8f7f7b4b557bb526cc82a9c1c2e155376c89500d7a1ad468dd3a"
     },
     {
       "path": "tests/install.test.mjs",
@@ -352,7 +352,7 @@
     },
     {
       "path": "server/storage.mjs",
-      "sha256": "3e3a258f166e558021b16002e22a7e2e6dd64c13f787ab266e63fcf2f0df2994"
+      "sha256": "38ffa1659deccb5afb728434b9b8041e073052413526e55ae3e8deec2da95310"
     },
     {
       "path": "tests/storage.test.mjs",
@@ -505,6 +505,54 @@
     {
       "path": "docs/media/upscaly-demo.gif",
       "sha256": "db55092b7f3c45c88e6c9f5277983e8332cdb8490237e7e92cd39b2b0ef23a59"
+    },
+    {
+      "path": "server/platform.mjs",
+      "sha256": "196117c8c577f59cbc289c46e76199138e94857d8ce4febb4cbf184790cfecec"
+    },
+    {
+      "path": "server/control-contract.json",
+      "sha256": "4b0d8f7ae18fd0a81ce57e39d3508e3d6228cdf5b4b6c7b28322f23abacc5b21"
+    },
+    {
+      "path": "server/macos-build.mjs",
+      "sha256": "c1d476884b23519721cb6c1319d4b41806e548faee6db20312faa07be6c15b7a"
+    },
+    {
+      "path": "tests/platform-contract.test.mjs",
+      "sha256": "f9b201d3d4f52f3f7be37bbe0fe467c2029eeb65e2e94686b07c28c18a7bfd63"
+    },
+    {
+      "path": "scripts/macos-native-check.mjs",
+      "sha256": "04b1ebdc72f87e45050d3860f3f3bf687309c9a114d9bc1ec4b6597dd678d357"
+    },
+    {
+      "path": ".github/workflows/macos.yml",
+      "sha256": "affbcc9349f36dd930bf7a9f036f36b72a529b3f4772843fac8e424fc2171206"
+    },
+    {
+      "path": "server/native/macos/MacControl.swift",
+      "sha256": "2aed79a0b46cf577fd7549f7bb5cae44a618c19fc6210fe1f8389a2b8c089cef"
+    },
+    {
+      "path": "server/native/macos/MacGuardian.swift",
+      "sha256": "668b9d488fac77b541d85a2a13788878083167f6850913131d6fb87cfbaead23"
+    },
+    {
+      "path": "server/native/macos/MacOperations.swift",
+      "sha256": "b6e82f2976191b118b529e6331c7dd36eb9a336f68cb8b27ce1c14442b487bc6"
+    },
+    {
+      "path": "server/native/macos/MacVisuals.swift",
+      "sha256": "00983f7e07127297d08793ccc7f6871c0e2abfef25b65d8b07441906fe895ae1"
+    },
+    {
+      "path": "server/native/macos/PrivateStorage.swift",
+      "sha256": "b4c21e6afccfbb1d1b90247e58110496096c82d934ec183352ba0874f771741e"
+    },
+    {
+      "path": "server/native/macos/StorageMain.swift",
+      "sha256": "43258885f2748c2eeea208ddf48c982501f3adada51a55a3fbcec5561f8bb0d0"
     }
   ]
 }

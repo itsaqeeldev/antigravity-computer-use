@@ -1,0 +1,20 @@
+name: macOS adapter checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+          package-manager-cache: false
+      - name: Shared control and observation regressions
+        run: node --test tests/platform-contract.test.mjs tests/lifecycle.test.mjs tests/workflow.test.mjs tests/observed-selectors.test.mjs tests/launch-observe.test.mjs
+      - name: Compile native adapters and check contracts without desktop access
+        run: node scripts/macos-native-check.mjs
+      - name: Verify source provenance
+        run: node scripts/check-provenance.mjs

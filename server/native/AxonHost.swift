@@ -5,12 +5,11 @@
 // Accessibility API (AXUIElement) rather than pixels, matching the Windows
 // side's tree-first design.
 //
-// Compiled locally by the swiftc that comes with the Xcode Command Line Tools.
-// Shipped as source, never as a binary.
+// The attributed AX foundation is reused by the shared Antigravity runtime.
+// Platform-specific permission, Stop, capture and input adapters live in macos/.
 //
-// NOTE: this port was written on a Windows machine and has not been compiled or
-// executed on macOS. Run `node server/build.mjs --self-test` on a Mac before
-// relying on it; a compile failure surfaces the compiler's own output.
+// Compilation, native contracts and real interactive qualification are separate
+// gates. A successful build is not a claim of tested macOS desktop behavior.
 //
 // What the second review (Sep 2026) changed: window handles are stable now
 // (a registry keyed on the AX element, not the app's window order, which
@@ -196,12 +195,7 @@ final class Presence {
     }
 }
 
-func checkStop() throws {
-    if Presence.shared.consumeStop() {
-        throw AxonError("stopped_by_user", "The user pressed Escape.",
-                        "They have taken the machine back. Do not retry: say what you had done so far and ask before continuing.")
-    }
-}
+func checkStop() throws { try MacFence.check() }
 
 // MARK: - Accessibility helpers
 
@@ -416,7 +410,7 @@ func opListApps(_ a: [String: Any]) throws -> [String: Any] {
             "title": w.title,
             "class": axString(w.el, kAXRoleAttribute as String) ?? "AXWindow",
             "process": w.app.localizedName ?? "",
-            "path": w.app.bundleURL?.path as Any,
+            "path": (try macProcessPath(w.pid)),
             "rect": axRect(w.el) as Any,
             "minimized": minimized,
             "foreground": w.focused && w.pid == front,
@@ -490,12 +484,12 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
         if rect == nil && depth > 0 { include = false }
 
         if include {
-            var node: [String: Any] = ["i": nodes.count, "role": role, "depth": depth]
+            var node: [String: Any] = ["i": nodes.count, "role": macRole(role), "depth": depth]
             if let n = name, !n.isEmpty { node["name"] = n }
-            if let ident = axString(el, kAXIdentifierAttribute as String), !ident.isEmpty { node["id"] = ident }
+            if let ident = axString(el, kAXIdentifierAttribute as String), !ident.isEmpty { node["id"] = ident; node["aid"] = ident }
             if let r = rect { node["rect"] = r }
             if !actions.isEmpty { node["patterns"] = actions.map { $0.replacingOccurrences(of: "AX", with: "") } }
-            if let t = axValueText(el) {
+            if !role.lowercased().contains("secure"), !(axString(el, kAXSubroleAttribute as String) ?? "").lowercased().contains("secure"), let t = axValueText(el) {
                 node["text"] = t.count > 4000 ? String(t.prefix(4000)) + "...[truncated]" : t
             }
             var state: [String: Any] = [:]
@@ -511,7 +505,7 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
             elements.append(el)
         }
 
-        if depth < maxDepth {
+        if depth < maxDepth && !role.lowercased().contains("secure") && !(axString(el, kAXSubroleAttribute as String) ?? "").lowercased().contains("secure") {
             let kids = axChildren(el)
             for kid in kids.reversed() { stack.append((kid, depth + 1)) }
         }
@@ -601,6 +595,7 @@ func resolveTarget(_ a: [String: Any]) throws -> (AXUIElement, pid_t) {
 
 func snapshotElement(_ a: [String: Any]) throws -> (AXUIElement, pid_t) {
     var sid = str(a["snapshot_id"]) ?? ""
+    guard !sid.isEmpty else { throw AxonError("stale_observation", "A native snapshot ID is required.") }
     if sid.isEmpty {
         if snapSeq == 0 {
             throw AxonError("no_snapshot", "No snapshot has been taken yet.",
@@ -618,14 +613,8 @@ func snapshotElement(_ a: [String: Any]) throws -> (AXUIElement, pid_t) {
     // (the Windows host guards the same way in SnapshotElement). When the
     // caller named a window, only a snapshot of that window may answer.
     let wantHandle = int(a["hwnd"], -1)
-    if wantHandle > 0 && snap.handle != wantHandle {
-        guard let hit = snapshots.filter({ $0.value.handle == wantHandle }).max(by: { $0.value.taken < $1.value.taken }) else {
-            throw AxonError("snapshot_expired",
-                            "No snapshot of this window is held; the snapshot named (or the last one taken) belongs to a different window.",
-                            "Take a fresh snapshot of this window and use its indices.")
-        }
-        sid = hit.key
-        snap = hit.value
+    guard wantHandle > 0, snap.handle == wantHandle, Date().timeIntervalSince(snap.taken) * 1000 <= Double(MacContract.value["frame_ms"] as? Int ?? 90000) else {
+        throw AxonError("stale_observation", "The native snapshot belongs to another window or has expired.")
     }
     let idx = int(a["index"], -1)
     guard idx >= 0 && idx < snap.elements.count else {
@@ -646,8 +635,12 @@ func markedEvent(_ e: CGEvent?) -> CGEvent? {
     return e
 }
 
-func post(_ e: CGEvent?) {
-    markedEvent(e)?.post(tap: .cghidEventTap)
+func post(_ e: CGEvent?) throws {
+    try MacFence.check()
+    guard let event = markedEvent(e) else { throw AxonError("event_creation_failed", "Cannot construct native input.") }
+    try MacInputLedger.record(event, before: true)
+    try MacFence.dispatched(); event.post(tap: .cghidEventTap)
+    try MacInputLedger.record(event, before: false)
 }
 
 // What the element looks like now the action has landed, so the caller does not
@@ -689,12 +682,14 @@ func opClick(_ a: [String: Any]) throws -> [String: Any] {
         // AXPress is the counterpart of the Windows invoke pattern: no cursor
         // movement, nothing the user can feel. Only for a plain left click.
         if !forcePhysical && button == "left" && clicks == 1 && axActions(el).contains("AXPress") {
+            try MacFence.dispatched()
             if AXUIElementPerformAction(el, "AXPress" as CFString) == .success {
                 res["method"] = "ax_press"
                 Thread.sleep(forTimeInterval: 0.04)
                 if let now = nowState(el) { res["now"] = now }
                 return res
             }
+            throw AxonError("input_outcome_unknown", "The provider did not confirm invocation; no physical fallback was sent.")
         }
         guard let rect = axRect(el) else {
             throw AxonError("no_click_point", "Element has no on-screen rectangle.", "Scroll it into view first.")
@@ -705,22 +700,25 @@ func opClick(_ a: [String: Any]) throws -> [String: Any] {
     let waited = try guardDisturb(a)
     if waited > 0 { res["waited_for_user_ms"] = waited }
     try checkStop()
+    try macBringToFront(a)
+    res["motion"] = try macMoveCursor(point, a)
+    try macCheckTargetPoint(point, a)
 
     let saved = CGEvent(source: nil)?.location
     let src = CGEventSource(stateID: .hidSystemState)
     let (downType, upType, _, cgButton) = mouseTypes(button)
 
-    post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left))
+    try post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left))
     Thread.sleep(forTimeInterval: 0.02)
     for n in 1...clicks {
         if let d = CGEvent(mouseEventSource: src, mouseType: downType, mouseCursorPosition: point, mouseButton: cgButton) {
             d.setIntegerValueField(.mouseEventClickState, value: Int64(n))
-            post(d)
+            try post(d)
         }
         Thread.sleep(forTimeInterval: 0.012)
         if let u = CGEvent(mouseEventSource: src, mouseType: upType, mouseCursorPosition: point, mouseButton: cgButton) {
             u.setIntegerValueField(.mouseEventClickState, value: Int64(n))
-            post(u)
+            try post(u)
         }
         if n < clicks { Thread.sleep(forTimeInterval: 0.06) }
     }
@@ -730,7 +728,7 @@ func opClick(_ a: [String: Any]) throws -> [String: Any] {
     let m = modeOf(a)
     if m != "take" && m != "exclusive", let back = saved {
         Thread.sleep(forTimeInterval: 0.02)
-        post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: back, mouseButton: .left))
+        try post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: back, mouseButton: .left))
         res["cursor_restored"] = true
     }
     res["method"] = "physical"
@@ -752,6 +750,9 @@ func opDrag(_ a: [String: Any]) throws -> [String: Any] {
     let holdMs = max(0, min(2000, int(a["hold_ms"], 60)))
     let (win, pid, _, _) = try resolveWindow(a)
     try guardSameWindow(a, pid)
+    try macBringToFront(a)
+    try macCheckTargetPoint(CGPoint(x: from[0], y: from[1]), a)
+    try macCheckTargetPoint(CGPoint(x: to[0], y: to[1]), a)
     let waited = try guardDisturb(a)
     if waited > 0 { res["waited_for_user_ms"] = waited }
     try checkStop()
@@ -773,23 +774,23 @@ func opDrag(_ a: [String: Any]) throws -> [String: Any] {
     let src = CGEventSource(stateID: .hidSystemState)
     let (downType, upType, dragType, cgButton) = mouseTypes(button)
     let start = CGPoint(x: Double(from[0]), y: Double(from[1]))
-    post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: start, mouseButton: .left))
+    try post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: start, mouseButton: .left))
     Thread.sleep(forTimeInterval: 0.03)
-    post(CGEvent(mouseEventSource: src, mouseType: downType, mouseCursorPosition: start, mouseButton: cgButton))
+    try post(CGEvent(mouseEventSource: src, mouseType: downType, mouseCursorPosition: start, mouseButton: cgButton))
     Thread.sleep(forTimeInterval: Double(holdMs) / 1000.0)
     for i in 1...steps {
         let p = CGPoint(x: Double(from[0] + (to[0] - from[0]) * i / steps),
                         y: Double(from[1] + (to[1] - from[1]) * i / steps))
-        post(CGEvent(mouseEventSource: src, mouseType: dragType, mouseCursorPosition: p, mouseButton: cgButton))
+        try post(CGEvent(mouseEventSource: src, mouseType: dragType, mouseCursorPosition: p, mouseButton: cgButton))
         Thread.sleep(forTimeInterval: 0.012)
     }
     Thread.sleep(forTimeInterval: Double(holdMs) / 1000.0)
     let end = CGPoint(x: Double(to[0]), y: Double(to[1]))
-    post(CGEvent(mouseEventSource: src, mouseType: upType, mouseCursorPosition: end, mouseButton: cgButton))
+    try post(CGEvent(mouseEventSource: src, mouseType: upType, mouseCursorPosition: end, mouseButton: cgButton))
     Thread.sleep(forTimeInterval: 0.03)
     let m = modeOf(a)
     if m != "take" && m != "exclusive", let back = saved {
-        post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: back, mouseButton: .left))
+        try post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: back, mouseButton: .left))
         res["cursor_restored"] = true
     }
     res["from"] = from
@@ -804,16 +805,18 @@ func opSetValue(_ a: [String: Any]) throws -> [String: Any] {
     try guardSameWindow(a, pid)
     try checkStop()
     let text = str(a["text"]) ?? ""
+    try MacFence.dispatched()
     if AXUIElementSetAttributeValue(el, kAXValueAttribute as CFString, text as CFTypeRef) == .success {
         var res: [String: Any] = ["method": "ax_value", "value": text]
         if let now = nowState(el) { res["now"] = now }
         return res
     }
-    throw AxonError("readonly", "That element would not accept a value.",
-                    "Focus it and use type instead.")
+    throw AxonError("input_outcome_unknown", "The provider did not confirm the value. Observe before continuing; do not automatically type a fallback.")
 }
 
 func opType(_ a: [String: Any]) throws -> [String: Any] {
+    try macBringToFront(a)
+    try macEnsureTyping(a)
     var res: [String: Any] = [:]
     if a["index"] != nil || a["selector"] != nil {
         let (el, pid) = try resolveTarget(a)
@@ -850,19 +853,19 @@ func opType(_ a: [String: Any]) throws -> [String: Any] {
         // A newline or a tab is a key, not a character: apps act on the key.
         if ch == "\n" || ch == "\t" {
             let code: CGKeyCode = ch == "\n" ? 36 : 48
-            post(CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true))
-            post(CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false))
+            try post(CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true))
+            try post(CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false))
             continue
         }
         if ch == "\r" { continue }
         var utf16 = Array(String(ch).utf16)
         if let down = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: true) {
             down.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: &utf16)
-            post(down)
+            try post(down)
         }
         if let up = CGEvent(keyboardEventSource: src, virtualKey: 0, keyDown: false) {
             up.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: &utf16)
-            post(up)
+            try post(up)
         }
     }
     res["typed"] = text.count
@@ -885,6 +888,8 @@ let keyCodes: [String: CGKeyCode] = [
 ]
 
 func opKey(_ a: [String: Any]) throws -> [String: Any] {
+    try macBringToFront(a)
+    try macEnsureTyping(a)
     var res: [String: Any] = [:]
     let chord = (str(a["keys"]) ?? "").lowercased()
     if chord.isEmpty { throw AxonError("bad_keys", "Empty key chord.", nil) }
@@ -929,11 +934,11 @@ func opKey(_ a: [String: Any]) throws -> [String: Any] {
     let src = CGEventSource(stateID: .hidSystemState)
     if let down = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true) {
         down.flags = flags
-        post(down)
+        try post(down)
     }
     if let up = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false) {
         up.flags = flags
-        post(up)
+        try post(up)
     }
     res["sent"] = chord
     return res
@@ -954,7 +959,7 @@ func opScroll(_ a: [String: Any]) throws -> [String: Any] {
             let waited = try guardDisturb(a)
             if waited > 0 { res["waited_for_user_ms"] = waited }
             let p = CGPoint(x: Double(r[0] + r[2] / 2), y: Double(r[1] + r[3] / 2))
-            post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: p, mouseButton: .left))
+            try post(CGEvent(mouseEventSource: src, mouseType: .mouseMoved, mouseCursorPosition: p, mouseButton: .left))
         }
     } else {
         let waited = try guardDisturb(a)
@@ -970,7 +975,7 @@ func opScroll(_ a: [String: Any]) throws -> [String: Any] {
                      wheel1: horizontal ? 0 : Int32(amount),
                      wheel2: horizontal ? Int32(amount) : 0,
                      wheel3: 0)
-    post(ev)
+    try post(ev)
     res["method"] = "wheel"
     res["delta"] = amount
     return res
@@ -1060,83 +1065,21 @@ func opDescribe(_ a: [String: Any]) throws -> [String: Any] {
 // The CGWindowID that belongs to an AX window, by owner, title and bounds.
 // AX and the window server do not share ids, so this is a match, not a lookup.
 func windowNumber(pid: pid_t, title: String, rect: [Int]?) -> CGWindowID? {
-    guard let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return nil }
-    var fallback: CGWindowID? = nil
-    for w in info {
-        let wpid = (w[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value ?? 0
-        if wpid != pid { continue }
-        if ((w[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0) != 0 { continue }
-        guard let num = (w[kCGWindowNumber as String] as? NSNumber)?.uint32Value else { continue }
+    guard let r = rect, r.count == 4,
+          let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return nil }
+    let matches = list.filter { w in
+        guard (w[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid,
+              (w[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
+              let b = w[kCGWindowBounds as String] as? [String: Any] else { return false }
+        let values = ["X", "Y", "Width", "Height"].map { (b[$0] as? NSNumber)?.intValue ?? Int.min }
         let name = w[kCGWindowName as String] as? String ?? ""
-        if let r = rect, let b = w[kCGWindowBounds as String] as? [String: Any] {
-            let x = (b["X"] as? NSNumber)?.intValue ?? -1
-            let y = (b["Y"] as? NSNumber)?.intValue ?? -1
-            let wd = (b["Width"] as? NSNumber)?.intValue ?? -1
-            if x == r[0] && y == r[1] && wd == r[2] { return CGWindowID(num) }
-        }
-        if !title.isEmpty && name == title { return CGWindowID(num) }
-        if fallback == nil { fallback = CGWindowID(num) }
+        return values == r && (name.isEmpty || title.isEmpty || name == title)
     }
-    return fallback
+    guard matches.count == 1 else { return nil }
+    return (matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value
 }
 
-func opScreenshot(_ a: [String: Any]) throws -> [String: Any] {
-    let maxWidth = int(a["max_width"], 1200)
-    let quality = max(20, min(95, int(a["quality"], 60)))
-
-    var image: CGImage? = nil
-    var capture = "screen"
-    if a["hwnd"] != nil || a["title"] != nil {
-        let (win, pid, title, _) = try resolveWindow(a)
-        guard let r = axRect(win) else {
-            throw AxonError("window_rect_failed", "Could not read that window's bounds.", nil)
-        }
-        // The window itself, wherever it sits in the stack - what Codex gets
-        // from ScreenCaptureKit. Falls back to the screen region if the
-        // window server will not match it.
-        if let num = windowNumber(pid: pid, title: title, rect: r) {
-            image = CGWindowListCreateImage(.null, .optionIncludingWindow, num, [.boundsIgnoreFraming, .bestResolution])
-            if image != nil { capture = "window" }
-        }
-        if image == nil {
-            let rect = CGRect(x: Double(r[0]), y: Double(r[1]), width: Double(r[2]), height: Double(r[3]))
-            image = CGWindowListCreateImage(rect, .optionOnScreenOnly, kCGNullWindowID, [.bestResolution])
-        }
-    } else {
-        image = CGWindowListCreateImage(.infinite, .optionOnScreenOnly, kCGNullWindowID, [.bestResolution])
-    }
-
-    guard let cg = image, cg.width > 0, cg.height > 0 else {
-        throw AxonError("capture_failed", "Screen capture returned nothing.",
-                        "Grant Screen Recording permission in System Settings > Privacy & Security.")
-    }
-
-    let scale = min(1.0, Double(maxWidth) / Double(cg.width))
-    let nw = max(1, Int(Double(cg.width) * scale))
-    let nh = max(1, Int(Double(cg.height) * scale))
-
-    let rep = NSBitmapImageRep(cgImage: cg)
-    let resized = NSImage(size: NSSize(width: nw, height: nh))
-    resized.lockFocus()
-    NSImage(size: rep.size, flipped: false) { r in rep.draw(in: r); return true }
-        .draw(in: NSRect(x: 0, y: 0, width: nw, height: nh))
-    resized.unlockFocus()
-
-    guard let tiff = resized.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiff),
-          let jpeg = bitmap.representation(using: .jpeg, properties: [.compressionFactor: Double(quality) / 100.0]) else {
-        throw AxonError("encode_failed", "Could not encode the capture as JPEG.", nil)
-    }
-
-    return [
-        "mime": "image/jpeg",
-        "width": nw,
-        "height": nh,
-        "bytes": jpeg.count,
-        "capture": capture,
-        "data": jpeg.base64EncodedString(),
-    ]
-}
+func opScreenshot(_ a: [String: Any]) throws -> [String: Any] { return try macCapture(a) }
 
 // The clipboard: how text leaves an app that will not expose it any other
 // way, and how a long paste goes in without a thousand keystrokes.
@@ -1204,6 +1147,7 @@ func opPing(_ a: [String: Any]) throws -> [String: Any] {
 let actingOps: Set<String> = ["click", "type", "set_value", "key", "scroll", "focus", "close_window", "drag"]
 
 func dispatch(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
+    try MacFence.begin(op, a)
     if actingOps.contains(op) {
         Presence.shared.beginAct()
         defer { Presence.shared.endAct() }
@@ -1215,6 +1159,20 @@ func dispatch(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
 
 func dispatchOp(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
     switch op {
+    case "identity": return try macWindowIdentity(a)
+    case "authorize":
+        let args = a["action_args"] as? [String: Any] ?? [:]
+        let op = str(a["action_op"]) ?? ""
+        let label = try MacFence.preview(args)
+        return ["sensitive": MacFence.sensitive(op, args, label: label), "label": label]
+    case "launch": return try macLaunch(a)
+    case "move":
+        guard let point = pair(a["point"]) else { throw AxonError("bad_point", "Move needs an observed point.") }
+        return ["motion": try macMoveCursor(CGPoint(x: point[0], y: point[1]), a), "clicked": false]
+    case "fit_window": return try macFitWindow(a)
+    case "paste": return try macPaste(a)
+    case "file_dialog": return try macFileDialog(a)
+    case "open": return try macOpen(a)
     case "ping": return try opPing(a)
     case "presence": return try opPresence(a)
     case "session": return try opSession(a)
@@ -1226,7 +1184,7 @@ func dispatchOp(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
     case "set_value": return try opSetValue(a)
     case "key": return try opKey(a)
     case "scroll": return try opScroll(a)
-    case "focus": return try opFocus(a)
+    case "focus": try macBringToFront(a); return ["focused": true]
     case "close_window": return try opCloseWindow(a)
     case "wait_for": return try opWaitFor(a)
     case "screenshot": return try opScreenshot(a)
@@ -1237,7 +1195,7 @@ func dispatchOp(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
     // The three document tools are Windows only and are not offered in the
     // tool list on macOS, but a run step can still name one; that gets a
     // plain answer here rather than "unknown operation".
-    case "open", "file_dialog", "paste", "paste_files":
+    case "paste_files":
         throw AxonError("unsupported_on_macos",
             "'\(op)' is a Windows-only operation; the macOS host has no \(op).",
             "computer_paste, computer_open and computer_file_dialog are not available on macOS. Use computer_launch and the app's own Open dialog by snapshot, and computer_type for text.")
@@ -1258,6 +1216,7 @@ func readLoop() {
             let a = req["args"] as? [String: Any] ?? [:]
 
             if op == "shutdown" {
+                _ = MacInputLedger.recover()
                 emit(["id": reqId, "ok": true, "result": ["bye": true]])
                 exit(0)
             }
@@ -1267,7 +1226,7 @@ func readLoop() {
                   "ms": Int(Date().timeIntervalSince(started) * 1000),
                   "result": result])
         } catch let e as AxonError {
-            var err: [String: Any] = ["code": e.code, "message": e.message]
+            var err: [String: Any] = ["code": MacFence.didDispatch ? "input_outcome_unknown" : e.code, "message": e.message]
             if let h = e.hint { err["hint"] = h }
             emit(["id": reqId, "ok": false, "error": err])
         } catch {
@@ -1280,54 +1239,31 @@ func readLoop() {
     exit(0)
 }
 
-// MARK: - Entry
-
-if let v = ProcessInfo.processInfo.environment["CU_IDLE_MS"], let n = Int(v) { idleThresholdMs = n }
-if let v = ProcessInfo.processInfo.environment["CU_WAIT_MS"], let n = Int(v) { waitBudgetMs = n }
-if let v = ProcessInfo.processInfo.environment["CU_MODE"], !v.isEmpty { defaultMode = v }
-
-if CommandLine.arguments.contains("--warmup") {
-    // build.mjs runs this once after compiling, to be sure the binary starts.
-    emit(["event": "warm"])
-    exit(0)
-}
-
-if CommandLine.arguments.contains("--self-test") {
-    // One command a Mac user can run to see whether this host actually works
-    // on their machine, without involving Claude at all. The exit code says
-    // what the last line says, so a script can trust it.
-    var ok = true
-    print("axon macOS host self-test")
-    let ax = trusted()
-    if !ax { ok = false }
-    print("  accessibility permission : \(ax ? "granted" : "DENIED - grant it in System Settings > Privacy & Security > Accessibility")")
-    Presence.shared.start()
-    RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-    print("  presence monitoring      : \(Presence.shared.monitoring ? "active" : "UNAVAILABLE")")
-    do {
-        let apps = try opListApps([:])
-        let count = (apps["windows"] as? [[String: Any]])?.count ?? 0
-        print("  windows visible          : \(count)")
-        if count == 0 { ok = false }
-        print(count > 0 ? "PASS" : "FAIL: no windows enumerated")
-    } catch let e as AxonError {
-        print("  list_apps                : FAILED \(e.code) - \(e.message)")
-        print("FAIL")
-        ok = false
-    } catch {
-        print("FAIL: \(error)")
-        ok = false
+// MARK: - Shared-runtime entry
+@main enum MacHostMain {
+    static func main() {
+        do {
+            let args = CommandLine.arguments
+            if args.contains("--warmup") { emit(["event": "warm"]); return }
+            if args.contains("--setup") { macSetup(); return }
+            if args.contains("--contract-test") { try macContractTest(); return }
+            try MacFence.initialize(requireDirectParent: !args.contains("--mac-watchdog"))
+            if args.contains("--release-inputs") { exit(MacInputLedger.recover() ? 0 : 1) }
+            if let at = args.firstIndex(of: "--mac-watchdog"), args.count > at+2,
+               let pid = pid_t(args[at+1]), pid == getppid(), try macProcessStart(pid) == args[at+2] {
+                MacPanicMonitor().run(guardian: pid, birth: args[at+2])
+            }
+            if args.contains("--guardian") { try MacGuardian().run() }
+            try macRegisterWorker()
+            defaultMode = "take"
+            emit(["event": "ready", "pid": Int(getpid()), "platform": "darwin", "dpi_mode": "native",
+                  "control_contract": 1, "native_fence": true, "held_input_cleanup": true,
+                  "accessibility": AXIsProcessTrusted()])
+            Thread.detachNewThread { readLoop() }
+            RunLoop.current.run()
+        } catch {
+            emit(["ev": "error", "message": String(describing: error)])
+            exit(1)
+        }
     }
-    exit(ok ? 0 : 1)
 }
-
-Presence.shared.start()
-emit(["event": "ready", "dpi_mode": "native", "platform": "darwin",
-      "pid": ProcessInfo.processInfo.processIdentifier,
-      "presence": Presence.shared.monitoring,
-      "accessibility": trusted()])
-
-// The event tap needs a live run loop, so the protocol is served from a
-// background thread while the main thread pumps.
-Thread.detachNewThread { readLoop() }
-RunLoop.current.run()

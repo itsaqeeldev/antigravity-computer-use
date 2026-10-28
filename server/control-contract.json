@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "states": ["idle", "active", "paused", "stopped"],
+  "default_takeover_mode": "manual",
+  "session_ms": 600000,
+  "frame_ms": 90000,
+  "action_budget": 200,
+  "batch_steps": 8,
+  "batch_wait_ms": 30000,
+  "ui": {
+    "width": 384,
+    "height": 44,
+    "breath_seconds": 5.2,
+    "accent_rgb": [155, 205, 235],
+    "blue_rgb": [128, 171, 207],
+    "edge_sigma": 27,
+    "edge_depth": 82,
+    "edge_alpha": 154,
+    "edge_core": 5,
+    "edge_core_alpha": 20
+  },
+  "sensitive_operations": ["launch", "clipboard", "close_window", "paste", "paste_files", "open", "file_dialog"],
+  "sensitive_label_pattern": "send|submit|pay|purchase|buy|delete|remove|install|upload|share|password|permission|transfer|sign.in",
+  "sensitive_key_pattern": "enter|return|delete|alt\\+|option\\+|win|meta|super|(?:ctrl|cmd|command)\\+[svx]"
+}

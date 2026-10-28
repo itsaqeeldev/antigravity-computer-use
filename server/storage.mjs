@@ -2,8 +2,10 @@
 // It has no desktop/input API and never elevates or changes parent permissions.
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';import {spawnSync} from 'node:child_process';
+import {buildMacStorage} from './macos-build.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function ensureStorageGuard(){
+ if(process.platform==='darwin')return buildMacStorage();
  if(process.platform!=='win32')throw Object.assign(Error('Private Windows storage requires Windows.'),{code:'unsupported_platform'});
  const prebuilt=path.join(root,'bin/StorageGuard.exe'),source=path.join(root,'server/native/StorageGuard.cs');
  if(fs.existsSync(prebuilt)&&!fs.existsSync(source))return prebuilt;
@@ -27,6 +29,7 @@ export function storageOperation(mode,directory,{helper=ensureStorageGuard()}={}
  return reply;
 }
 export function defaultInstallationRoot({helper,home,localAppData,hasD=fs.existsSync('D:\\')}={}){
+ if(process.platform==='darwin')return path.join(home,'Library','Application Support','AntigravityComputerUse');
  const result=spawnSync(helper||ensureStorageGuard(),['identity'],{windowsHide:true,encoding:'utf8',timeout:10000});
  let identity;try{identity=JSON.parse(result.stdout);}catch{}
  if(result.status!==0||!identity?.owner_sid)throw Error('Cannot determine the Windows installation owner.');
