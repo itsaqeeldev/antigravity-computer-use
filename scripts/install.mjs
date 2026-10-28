@@ -2,6 +2,7 @@ import fs from 'node:fs';import os from 'node:os';import path from 'node:path';i
 import {createHash} from 'node:crypto';
 import {storageOperation,defaultInstallationRoot} from '../server/storage.mjs';
 import {SIDECAR_ID,sidecarDefinition,mergeSidecarConfig} from './sidecar.mjs';
+import {nativePlatform} from '../server/platform.mjs';
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function mergeConfig(file,entry){
  const current=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')):{};
@@ -17,6 +18,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
  const metadataFile=path.join(bundle,'bundle-manifest.json');
  const metadata=JSON.parse(fs.readFileSync(metadataFile,'utf8'));
+ const platform=nativePlatform();
+ if(metadata.platform&&metadata.platform!==process.platform||metadata.arch&&metadata.arch!==process.arch)throw Error('This bundle does not match the current operating system/architecture.');
  const version=metadata.version;
  if(!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version))throw new Error('Invalid bundle version');
  if(!metadata.files||typeof metadata.files!=='object'||Array.isArray(metadata.files)||!Object.keys(metadata.files).length)throw new Error('A complete bundle file manifest is required.');
@@ -38,8 +41,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
   const actual=createHash('sha256').update(fs.readFileSync(path.join(bundle,name))).digest('hex');
   if(actual!==expected)throw new Error('Bundle integrity check failed: '+name);
  }
- for(const required of ['node.exe','bin/AxonHost.exe','bin/StorageGuard.exe','skills/computer-use/SKILL.md'])if(!Object.hasOwn(metadata.files,required))throw new Error('Bundle manifest omits '+required);
- const storageHelper=path.join(bundle,'bin/StorageGuard.exe');
+ for(const required of [platform.node,'bin/'+platform.host,'bin/'+platform.storage,'skills/computer-use/SKILL.md'])if(!Object.hasOwn(metadata.files,required))throw new Error('Bundle manifest omits '+required);
+ const storageHelper=path.join(bundle,'bin',platform.storage);
  const profiles=[path.join(home,'.gemini/config/skills/computer-use'),...(workspace?[path.join(path.resolve(workspace),'.agents/skills/computer-use')]:[])];
  const previousRoots=new Set();
  for(const dir of profiles){
@@ -79,12 +82,12 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const release=path.join(target,'releases',version+'-'+stamp);
  // A project-local update must not repoint an already installed global skill.
  const launcher=path.join(target,scope?`cu-${scope}.mjs`:'cu.mjs');
- const launcherNode=path.join(target,scope?`cu-${scope}-node.exe`:'cu-node.exe');
- const controllerStart=path.join(target,scope?`Start Computer Use-${scope}.cmd`:'Start Computer Use.cmd');
- if(!fs.existsSync(path.join(bundle,'bin','AxonHost.exe'))||!fs.existsSync(path.join(bundle,'node.exe')))throw new Error('Run the bundle build first; prebuilt native host and Node are required.');
+ const launcherNode=path.join(target,(scope?`cu-${scope}-node`:'cu-node')+(process.platform==='win32'?'.exe':''));
+ const controllerStart=path.join(target,(scope?`Start Computer Use-${scope}`:'Start Computer Use')+(process.platform==='win32'?'.cmd':'.command'));
+ if(!fs.existsSync(path.join(bundle,'bin',platform.host))||!fs.existsSync(path.join(bundle,platform.node)))throw new Error('Run the bundle build first; prebuilt native host and Node are required.');
  const base=workspace?path.join(path.resolve(workspace),'.agents'):path.join(home,'.gemini','config');
  const configs=workspace?[path.join(base,'mcp_config.json')]:[...new Set([path.join(base,'mcp_config.json'),...(legacyProfiles?['antigravity','antigravity-ide','antigravity-cli'].filter(p=>fs.existsSync(path.join(home,'.gemini',p))).map(p=>path.join(home,'.gemini',p,'mcp_config.json')):[])])];
- const entry={command:path.join(release,'node.exe'),args:[path.join(release,'server','index.mjs')],env:{AGCU_DATA_DIR:path.join(target,'data'),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:'manual'}};
+ const entry={command:path.join(release,platform.node),args:[path.join(release,'server','index.mjs')],env:{AGCU_DATA_DIR:path.join(target,'data'),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:'manual'}};
  const skillDirs=workspace?[path.join(base,'skills','computer-use')]:[path.join(base,'skills','computer-use'),...(legacyProfiles?['antigravity','antigravity-cli','antigravity-ide'].map(p=>path.join(home,'.gemini',p,'skills','computer-use')):[])];
  // Parse every config BEFORE writing anything. Keep exact backup bytes for rollback.
  const updates=configs.map(file=>({file,text:mergeConfig(file,integration==='mcp'?entry:null)}));
@@ -124,7 +127,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  // in model-supplied text. A Node entrypoint preserves the actual argv.
  fs.writeFileSync(launcher+'.agcu.tmp',launcherSource(release));
  fs.writeFileSync(controllerStart+'.agcu.tmp',controllerStartSource(scope));
- try{fs.linkSync(path.join(release,'node.exe'),launcherNode+'.agcu.tmp');}catch{fs.copyFileSync(path.join(release,'node.exe'),launcherNode+'.agcu.tmp');}
+ try{fs.linkSync(path.join(release,platform.node),launcherNode+'.agcu.tmp');}catch{fs.copyFileSync(path.join(release,platform.node),launcherNode+'.agcu.tmp');}
+ if(process.platform==='darwin'){fs.chmodSync(launcherNode+'.agcu.tmp',0o700);fs.chmodSync(controllerStart+'.agcu.tmp',0o700);}
  // File copying can carry security attributes. Seal the actual copied tree,
  // not merely the top directory, before changing the host's configuration.
  prepareStorage(target,storageHelper);
@@ -138,11 +142,11 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  fs.renameSync(launcher+'.agcu.tmp',launcher);
  fs.renameSync(controllerStart+'.agcu.tmp',controllerStart);
  for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}
- if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(path.join(release,'node.exe'),path.join(release,'scripts/desktop.mjs')),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
+ if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(path.join(release,platform.node),path.join(release,'scripts/desktop.mjs')),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
  for(const file of skillDirs){
   fs.mkdirSync(file,{recursive:true});fs.cpSync(path.join(release,'skills','computer-use'),file,{recursive:true});
   const instructions=path.join(file,'SKILL.md');
-  const command=`& '${launcherNode.replaceAll("'","''")}' '${launcher.replaceAll("'","''")}'`;
+  const command=desktopCommand(launcherNode,launcher);
   fs.writeFileSync(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',controllerStart));
   fs.writeFileSync(path.join(file,'deployment.json'),JSON.stringify({target,release,workspace:resolvedWorkspace,permission_mode:permissionMode},null,2));
  }
@@ -152,7 +156,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,configs,skills:skillDirs,backup};
 }
 // Fixed, argument-free human entrypoint; no model text or command forwarding.
-export function controllerStartSource(scope){const stem=scope?`cu-${scope}`:'cu';return `@echo off\r\n"%~dp0${stem}-node.exe" "%~dp0${stem}.mjs" start\r\nif errorlevel 1 pause\r\n`;}
+export function controllerStartSource(scope,platform=process.platform){const stem=scope?`cu-${scope}`:'cu';return platform==='win32'?`@echo off\r\n"%~dp0${stem}-node.exe" "%~dp0${stem}.mjs" start\r\nif errorlevel 1 pause\r\n`:`#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec "./${stem}-node" "./${stem}.mjs" start\n`;}
+export function desktopCommand(node,launcher,platform=process.platform){const quote=s=>"'"+s.replaceAll("'","'\\''")+"'";return platform==='win32'?`& '${node.replaceAll("'","''")}' '${launcher.replaceAll("'","''")}'`:`${quote(node)} ${quote(launcher)}`;}
 export function launcherSource(release){return `import {main,encodeReply} from ${JSON.stringify(pathToFileURL(path.join(release,'scripts','desktop.mjs')).href)};\nawait main().catch(error=>{console.log(encodeReply({ok:false,error:{code:error.code||'refused',message:error.message}}));process.exitCode=1;});\n`;}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const args=process.argv.slice(2);const take=k=>{const i=args.indexOf(k);return i<0?undefined:args[i+1];};

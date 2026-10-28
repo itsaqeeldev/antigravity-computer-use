@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "065c2afec64a753dc2bba506973abcd6c9fbff693adceb0e1806aba47c839037",
+      "local_sha256": "82675df2e8e0a71311f719b3b507e50bb5dc250ed5cb367c69c97bf5aadc2192",
       "modified": true
     },
     {
@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "a92474b4c58a8e58aa160e1cc974420a243f0db9f27249b45a4fe28d8ab3130e"
+      "sha256": "e27cc85f987a0aea3061952edbfe66c59bdbd82623742cd51fcb75e4d8b77589"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -380,7 +380,7 @@
     },
     {
       "path": "scripts/sidecar.mjs",
-      "sha256": "e4a227d71e3aa9d9a17162c51c9cb09a0e3a96d99d2898caeab4be493733582d"
+      "sha256": "3c32eb4d986f67b886962caca628cbc4268765bd34d26404c6da1677e3596d2c"
     },
     {
       "path": "tests/sidecar.test.mjs",
@@ -516,7 +516,7 @@
     },
     {
       "path": "server/macos-build.mjs",
-      "sha256": "c1d476884b23519721cb6c1319d4b41806e548faee6db20312faa07be6c15b7a"
+      "sha256": "31225ccb6a88008d034dcbd923ff85ef382162209b5e23d8c3dee2df55fe65ae"
     },
     {
       "path": "tests/platform-contract.test.mjs",

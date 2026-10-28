@@ -271,10 +271,13 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
     throw new BuildError('Could not find swiftc.',
       'Install the Xcode Command Line Tools: xcode-select --install');
   }
+  const sdkResult=spawnSync('/usr/bin/xcrun',['--sdk','macosx','--show-sdk-path'],{encoding:'utf8',timeout:10000});
+  if(sdkResult.status!==0)throw new BuildError('Cannot locate the macOS SDK.',sdkResult.stderr);
+  const sdk=sdkResult.stdout.trim();
 
   const h = createHash('sha256');
   for (const f of SOURCES) h.update(fs.readFileSync(f));
-  h.update('\0' + swiftc + '\0mac-guard-v1\0'+process.arch);
+  h.update('\0' + swiftc + '\0mac-guard-v1\0'+process.arch+'\0'+sdk);
   const stamp = h.digest('hex');
   const app=path.join(binDir(),'AxonHost-'+stamp.slice(0,16)+'.app');
   const exe=path.join(app,'Contents','MacOS','AxonHost');
@@ -289,7 +292,7 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
   const temp = path.join(binDir(), '.build-' + process.pid + '-' + Date.now());
 
   const res = spawnSync(swiftc, [
-    '-O', '-parse-as-library','-target',process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0', '-o', temp,
+    '-O', '-parse-as-library','-sdk',sdk,'-target',process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0', '-o', temp,
     '-framework', 'AppKit',
     '-framework', 'ApplicationServices',
     '-framework', 'CoreGraphics',
@@ -302,7 +305,7 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
   if (res.status !== 0 || !fs.existsSync(temp)) {
     const out = ((res.stdout || '') + (res.stderr || '')).trim();
     throw new BuildError('Compiling the macOS host failed.',
-      out.slice(0, 2000) + String.fromCharCode(10, 10) +
+      out.slice(0, 14000) + String.fromCharCode(10, 10) +
       'The macOS host is a port that has not been validated on hardware. ' +
       'Report this project build failure at https://github.com/shayann07/antigravity-computer-use/issues.');
   }
