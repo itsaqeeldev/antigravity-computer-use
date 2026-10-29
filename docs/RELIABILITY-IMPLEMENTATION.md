@@ -864,8 +864,14 @@ input, clipboard actions and new launches are refused. A replacement process
 uses a different guard-file input ledger; cleanup of that new ledger cannot
 prove the previous ledger was released. End therefore fails closed with
 `recovered_cleanup_unverified` and keeps the task marker until a verified
-previous-ledger recovery is implemented. This is a known usability limitation,
-not completed recovery. Host-authenticated ownership is still unavailable
+previous-ledger recovery can be verified. For new Windows records, End now
+allows a clean recovery only if the original controller, every recorded native
+process and the recorded cursor watchdog are all absent, the old guard is idle
+or stopped, private storage verifies, and the prior input ledger is exactly
+empty. This path performs no injected input and never clears Stop. Missing,
+legacy, live, corrupt or nonempty evidence still fails closed. Mac remains blocked
+because its event-post API does not provide equivalent delivery confirmation.
+Host-authenticated ownership is still unavailable
 (issue #7). Stop and re-arm behavior remain unchanged.
 New task markers now atomically record the validated guard-file basename before
 desktop input can be sent. A replacement retains that prior identity without
@@ -879,7 +885,11 @@ written, and clears the list only after successful normal End. Tests check
 ordering and a write failure using inert drivers. PID values alone are not
 birth identities: eventual verification must conservatively treat a live or
 uninspectable PID as unresolved, including reuse. Older records without the
-list cannot establish that a prior worker is gone.
+list cannot establish that a prior worker is gone. The Windows cursor watchdog
+now publishes its PID and start-time record before control can be activated;
+unavailable metadata prevents this recovery path. Process PID reuse causes
+conservative refusal rather than treating a live unrelated process as dead.
+Fixture-level and native storage tests do not establish physical crash recovery.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real

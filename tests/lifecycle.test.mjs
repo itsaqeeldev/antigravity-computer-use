@@ -4,6 +4,7 @@ import {Runtime} from '../server/runtime.mjs';
 import {Driver} from '../server/driver.mjs';
 import fs from 'node:fs';import path from 'node:path';
 import {spawn} from 'node:child_process';
+import {storageOperation} from '../server/storage.mjs';
 function fixture(){
  const guardian=new EventEmitter();guardian.messages=[];guardian.send=m=>guardian.messages.push(m);guardian.request=async m=>{guardian.messages.push(m);return {state:'stopped',controls_visible:true};};guardian.close=()=>{};guardian.pid=998;
  const driver={abortCalls:0,async abort(){this.abortCalls++;},info:{pid:999}};
@@ -30,6 +31,15 @@ test('task reservation write failure remains closed to actions and updates',()=>
  const r=fixture();const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fail-'));r.taskFile=path.join(dir,'missing','state.json');
  try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('recovered End closes only after old Windows ledger and native processes verify',{skip:process.platform!=='win32'},async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'verified-prior-')),file=path.join(dir,'task-state.json'),guard='guard-2147483647-12345678-1234-1234-1234-123456789abc.state';
+ try{
+  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  fs.writeFileSync(file,JSON.stringify({schema:1,open:true,guard,children:[2147483645,2147483646],dispatched:true}));fs.writeFileSync(path.join(dir,guard),'stopped||0|');fs.writeFileSync(path.join(dir,guard+'.watchdog'),'2147483644|12345');fs.writeFileSync(path.join(dir,guard+'.inputs'),'');
+  const guardian=new EventEmitter();guardian.send=()=>{};const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});
+  assert.equal(r.status().recovered_task,true);assert.equal((await r.finish()).ended,true);assert.equal(r.status().task_open,false);assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('native process identities are persisted before dispatch and retained across restart',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-children-')),file=path.join(dir,'task-state.json');const r=fixture();r.taskFile=file;

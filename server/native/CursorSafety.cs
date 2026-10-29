@@ -43,6 +43,10 @@ namespace Axon {
             if(!ready.Wait(5000) || ready.Result!="cursor-watchdog-ready") {
                 try {watchdog.Kill();}catch {}watchdog=null;return false;
             }
+            // Recovery must be able to wait for this process to exit before
+            // treating the old input ledger as final. Missing metadata fails closed.
+            try { File.WriteAllText(ControlFence.FileName+".watchdog",watchdog.Id+"|"+watchdog.StartTime.ToUniversalTime().Ticks); }
+            catch { try {watchdog.Kill();}catch {}watchdog=null;return false; }
             return true;
         }
         internal static bool Apply() {

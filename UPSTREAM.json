@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "31c948272dfc29b06697f1e190d9d49daad264b97a4dbff2baa5cff5885a7cc2"
+      "sha256": "3936092801c80a592de6cf62bebc9a1a069e98faa4439318011f11b08610bcf2"
     },
     {
       "path": "server/mcp.mjs",
@@ -236,7 +236,7 @@
     },
     {
       "path": "server/native/CursorSafety.cs",
-      "sha256": "a4d824f6a1f267642b6bf824e891a339086ecc8c0e5cd6c38b1e41f43dcf3ab2"
+      "sha256": "7ea60c645410dfe7f87be9e6dc14568c1089abce8bdc4cd9f47aeacaab21137f"
     },
     {
       "path": "server/native/DesktopVisuals.cs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "ba1289a2c40aabb7d1a2615ab5f73fb9d7473323046490737490775bfd653b72"
+      "sha256": "b9900f84b8d0315366653039b35bd3df85995866aa025fe2ff2e3c1d888ab5c3"
     },
     {
       "path": "docs/MACOS.md",
@@ -600,7 +600,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "5cdc985b87216c4c2494ee00e7611493d10f765744e061d315b90d51aa7047fd"
+      "sha256": "c0549426df53a42b8610a15035dd1ba346b919f7c993a855daeced3601717c4b"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "3fa328684e761db8ac202f938aa291a31e844eebd7470aac23534f93ad016206"
+      "sha256": "bc901c8e5adaf3e67489b2f92922937a990c66dd29136290c00f3ad380ea6302"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "3841cd5932bddae60aa4ed4e129d4988db9aafc403ea96d5e4e432b47ec9e79d"
+      "sha256": "dda4331e16e7449e5d51f6685e3aca230c476316d58d85bfc25d6e7d5f899ffc"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -676,7 +676,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "2dbf1239d66d01916bdec9ab85494a605cdbe85f7639ae0286d1ae8c1d2a44d5"
+      "sha256": "912cbedd38312c245a3fa9134398015dad9219bf4603820e4a327864d7aec929"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",
