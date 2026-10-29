@@ -833,3 +833,12 @@ compiler regression verifies both remain. This trades automatic cache pruning
 for correctness until a coordinated, lifetime-aware cleanup exists. The CI
 failure is retained as evidence; a passing local regression is not a substitute
 for the new commit's CI results.
+
+The Mac source builder previously placed its executable into the shared app
+bundle before signing, so concurrent callers could observe or overwrite an
+incomplete bundle. It now builds and signs in a private per-build staging
+directory, verifies the signature, and publishes the complete app directory in
+one rename. A competing publisher verifies and retains the winner; an invalid
+existing bundle is refused. The suite includes a real concurrent compiler and
+signature check on each Mac CI runner. That CI check is not a substitute for
+real interactive Mac qualification or Apple notarization.

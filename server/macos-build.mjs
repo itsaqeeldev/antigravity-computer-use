@@ -5,6 +5,13 @@ import {fileURLToPath} from 'node:url';
 import {createHash, randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 const root=fileURLToPath(new URL('../',import.meta.url));
+// Publish only complete signed bundles. A competing builder must keep the
+// first completed bundle rather than overwrite an executable in use.
+export function publishMacBundle(stage,destination,verify){
+ if(fs.existsSync(destination)){verify(destination);return false;}
+ try{fs.renameSync(stage,destination);return true;}
+ catch(error){if(fs.existsSync(destination)){verify(destination);return false;}throw error;}
+}
 export function macToolProbe(result,label){
   if(result.error?.code==='ETIMEDOUT')throw Object.assign(Error(`macOS ${label} lookup timed out. The tools may still be installed; inspect the runner before retrying.`),{code:'macos_toolchain_probe_timeout'});
   if(result.error)throw Object.assign(Error(`macOS ${label} lookup could not run.`),{code:'macos_toolchain_probe_failed'});

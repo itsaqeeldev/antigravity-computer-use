@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "89709bca6373355a378c298a1eec61641a5908b806b48459aa454ba7b06a1c30",
+      "local_sha256": "07d28cb15919c9979b2e228e3aa70e83f4a783278c62a9bad439ffab89963162",
       "modified": true
     },
     {
@@ -516,7 +516,7 @@
     },
     {
       "path": "server/macos-build.mjs",
-      "sha256": "ff438d544412758954ef9af81ab17e5acddea98337ca5ad73ce09436b7887f15"
+      "sha256": "6cf0faf96c046743874a29fa31aa2a7cfca14b1bae2a298a84473ae1bee752a3"
     },
     {
       "path": "tests/platform-contract.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "dc89c732429432c19d238c3f9f474c7b54e01f87e932bffd95984f9db64e62eb"
+      "sha256": "046f6e9bb5cd952b1e2056f60a1cbaf6825e4655a776cb656ed1975530fc4c80"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -640,7 +640,7 @@
     },
     {
       "path": "tests/macos-tool-probe.test.mjs",
-      "sha256": "f4b22350b3f3e73f21f261b9e8d614e7ceb459ba79a6029c74ed250aa7013332"
+      "sha256": "eaacf79bf4cdabb57f0bee65b888e6ab711c70f7c62e77e94587a50e16fd61e5"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

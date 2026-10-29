@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { macToolProbe } from './macos-build.mjs';
+import { macToolProbe, publishMacBundle } from './macos-build.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WIN_SOURCES = [
@@ -274,15 +274,25 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
   const stamp = h.digest('hex');
   const app=path.join(binDir(),'AxonHost-'+stamp.slice(0,16)+'.app');
   const exe=path.join(app,'Contents','MacOS','AxonHost');
+  const verifyApp=folder=>{
+    if(!fs.existsSync(path.join(folder,'Contents','MacOS','AxonHost'))||!fs.existsSync(path.join(folder,'Contents','Info.plist')))throw new BuildError('Existing macOS host bundle is incomplete.',null);
+    const checked=spawnSync('/usr/bin/codesign',['--verify','--strict',folder],{encoding:'utf8',timeout:30000});
+    if(checked.status!==0)throw new BuildError('Existing macOS host bundle signature could not be verified.',checked.stderr||checked.stdout);
+  };
 
   if (!force && fs.existsSync(exe)) {
+    verifyApp(app);
     log('host up to date');
     return { exe, rebuilt: false, compiler: swiftc };
   }
 
   fs.mkdirSync(binDir(), { recursive: true });
   log('compiling host with ' + swiftc);
-  const temp = path.join(binDir(), '.build-' + process.pid + '-' + Date.now());
+  const stage=fs.mkdtempSync(path.join(binDir(),'.build-'));
+  const stagedApp=path.join(stage,'AxonHost.app'),temp=path.join(stagedApp,'Contents','MacOS','AxonHost');
+  fs.mkdirSync(path.dirname(temp),{recursive:true});
+
+  try {
 
   const res = spawnSync(swiftc, [
     '-O', '-parse-as-library','-sdk',sdk,'-target',process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0', '-o', temp,
@@ -303,18 +313,15 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
       'Report this project build failure at https://github.com/shayann07/antigravity-computer-use/issues.');
   }
   try { fs.chmodSync(temp, 0o755); } catch {}
-  fs.mkdirSync(path.dirname(exe),{recursive:true});
-  fs.writeFileSync(path.join(app,'Contents','Info.plist'),'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>io.github.shayann07.antigravity-computer-use</string><key>CFBundleExecutable</key><string>AxonHost</string><key>CFBundleName</key><string>Antigravity Computer Use</string><key>CFBundleDisplayName</key><string>Antigravity Computer Use</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>1</string><key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/><key>LSMinimumSystemVersion</key><string>14.0</string></dict></plist>');
-  try { fs.renameSync(temp, exe); }
-  catch (err) {
-    try { fs.unlinkSync(temp); } catch {}
-    if (!fs.existsSync(exe)) throw new BuildError('Could not place the compiled host: ' + err.message, null);
-  }
-  const signed=spawnSync('/usr/bin/codesign',['--force','--sign','-',app],{encoding:'utf8',timeout:30000});
+  fs.writeFileSync(path.join(stagedApp,'Contents','Info.plist'),'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>io.github.shayann07.antigravity-computer-use</string><key>CFBundleExecutable</key><string>AxonHost</string><key>CFBundleName</key><string>Antigravity Computer Use</string><key>CFBundleDisplayName</key><string>Antigravity Computer Use</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>1</string><key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/><key>LSMinimumSystemVersion</key><string>14.0</string></dict></plist>');
+  const signed=spawnSync('/usr/bin/codesign',['--force','--sign','-',stagedApp],{encoding:'utf8',timeout:30000});
   if(signed.status!==0)throw new BuildError('Ad-hoc signing of the native Mac helper failed.',signed.stderr||signed.stdout);
+  verifyApp(stagedApp);
+  const published=publishMacBundle(stagedApp,app,verifyApp);
   warmUp(exe, log);
   log('host built at ' + exe);
-  return { exe, rebuilt: true, compiler: swiftc };
+  return { exe, rebuilt: published, compiler: swiftc };
+  } finally { fs.rmSync(stage,{recursive:true,force:true}); }
 }
 
 // Allow `node build.mjs` for a manual/diagnostic build.
