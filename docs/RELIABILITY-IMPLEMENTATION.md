@@ -248,3 +248,15 @@ it is not a pull-request trigger. Repository permissions remain read-only, and
 only unpublished artifact preparation is authorized by this workflow. Automatic
 qualification uses its unique run ID as the sequence. Actual release dispatches
 must use a sequence greater than any previously published metadata.
+
+The development signing run at `11805ff` passed on Windows x64, Mac ARM64 and
+Mac Intel: [workflow evidence](https://github.com/shayann07/antigravity-computer-use/actions/runs/40873372390).
+Every prepared signature and payload was independently verified against the
+pinned public key; Windows had 105 payloads, each Mac had 108. Signed artifacts
+were uploaded with seven-day retention. None was published as a release or fed
+to the installed updater. The sequence was `40873372390`.
+
+The follow-up workflow now runs native installation/update/rollback checks on
+the exact sealed bundle it signs before uploading assets. Windows ACL refusal
+must still be recorded as unqualified. Interactive app/permission/physical tests
+remain separate and required; this workflow cannot establish vendor parity.

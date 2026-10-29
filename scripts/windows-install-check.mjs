@@ -3,7 +3,7 @@ import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} fro
 import {install} from './install.mjs';import {qualifySignedUpdate} from './qualify-signed-update.mjs';
 if(process.platform!=='win32')throw Error('Windows qualification requires Windows.');
 const root=fileURLToPath(new URL('../',import.meta.url)),base=path.join(root,'.localdata/tests/windows-native-install');fs.mkdirSync(base,{recursive:true});
-const directory=fs.mkdtempSync(path.join(base,'run-')),home=path.join(directory,'home'),target=path.join(directory,'installed'),bundle=path.join(root,'.localdata/windows-bundle');fs.mkdirSync(home);
+const directory=fs.mkdtempSync(path.join(base,'run-')),home=path.join(directory,'home'),target=path.join(directory,'installed'),bundle=process.argv[2]?path.resolve(process.argv[2]):path.join(root,'.localdata/windows-bundle');fs.mkdirSync(home);
 let record;
 try{
  try{record=install({bundle,target,home,sidecar:true,updateMode:'manual'});}catch(error){if(error.code==='insecure_storage_ancestor'){const result={qualified:false,skipped:true,reason:error.code,parent_permissions_changed:false};fs.writeFileSync(path.join(directory,'result.json'),JSON.stringify(result));console.log(JSON.stringify(result));process.exit(0);}throw error;}

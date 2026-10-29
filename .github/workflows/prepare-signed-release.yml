@@ -57,6 +57,12 @@ jobs:
         run: node scripts/sign-update-ci.mjs .localdata/release-bundle "$RELEASE_SEQUENCE" "$MINIMUM_KERNEL" .localdata/signed-release
       - name: Independently verify public signature and prepared payloads
         run: node scripts/verify-signed-assets.mjs .localdata/release-bundle .localdata/signed-release
+      - name: Qualify the exact signed Mac bundle with native services
+        if: runner.os == 'macOS'
+        run: node scripts/macos-install-check.mjs .localdata/release-bundle
+      - name: Qualify the exact signed Windows bundle or record ACL refusal
+        if: runner.os == 'Windows'
+        run: node scripts/windows-install-check.mjs .localdata/release-bundle
       - uses: actions/upload-artifact@v6
         with:
           name: signed-release-${{ matrix.platform }}-${{ matrix.arch }}

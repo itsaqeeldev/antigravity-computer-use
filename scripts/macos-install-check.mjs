@@ -8,7 +8,7 @@ if(process.platform!=='darwin')throw Error('Run this qualification on macOS.');
 const root=fileURLToPath(new URL('../',import.meta.url));
 const directory=path.join(root,'.localdata/tests/mac-install');fs.mkdirSync(directory,{recursive:true,mode:0o700});
 const home=path.join(directory,'home');fs.mkdirSync(home,{mode:0o700});
-const target=path.join(directory,'installed');const bundle=path.join(root,'.localdata/macos-bundle');
+const target=path.join(directory,'installed');const bundle=process.argv[2]?path.resolve(process.argv[2]):path.join(root,'.localdata/macos-bundle');
 const config=path.join(home,'.gemini/config/config.json');fs.mkdirSync(path.dirname(config),{recursive:true});
 fs.writeFileSync(config,JSON.stringify({permissions:{preset:'preserve'},sidecars:{unrelated:{enabled:true}}}));
 // Explicit update calls below own qualification; prevent scheduled production

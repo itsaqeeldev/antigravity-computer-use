@@ -564,7 +564,7 @@
     },
     {
       "path": "scripts/macos-install-check.mjs",
-      "sha256": "b4ac2787f6df2f7a1ca0b42e4de2375446453f1b3c71515ba1a0ad0549760a27"
+      "sha256": "5a7ce797b5c885f1f1d48508eb1b81f58467bd0318515f646f1cf1cbf9bbd984"
     },
     {
       "path": "skills/computer-use/SKILL.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "81daeda2f8bf59aee2d09615458a8df692f5add92ac58c38f8fc6582c5e7eba8"
+      "sha256": "f80dc5f7a9160dbdef4b5790bbc357d746d233fc0386c10f14643b19c1d6aa17"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -632,7 +632,7 @@
     },
     {
       "path": "scripts/windows-install-check.mjs",
-      "sha256": "9d4a2536ad99f059e197a1679b443b1a1d03c66143bcce4910dc057f643603e8"
+      "sha256": "82bab3638383b29bd789526b5ebfcd6138d73d5825ee160482d388b8ec1d7a4b"
     },
     {
       "path": ".github/workflows/windows.yml",
@@ -648,7 +648,7 @@
     },
     {
       "path": ".github/workflows/prepare-signed-release.yml",
-      "sha256": "a0929f4928a5882d3f30db55d100a344986b12028296e2624970b09d1951ab8f"
+      "sha256": "d6406b2c991a0cef91a0966887652c7f469660ab5fbf718bd901a0ba164f5dc1"
     },
     {
       "path": "server/recovery.mjs",
