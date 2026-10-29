@@ -30,6 +30,13 @@ the app was closed and control ended. The installed skill and 108 files matched
 build `a19b62d415801a03cd37b7c80bf6343148cdd404c8a84f133e0156f2e21abad9`.
 Broader Windows and real Mac app qualification are still pending.
 
+The default physical path exposed an earlier native behavior: a disabled indexed
+control could be physically clicked and reported as delivered. Both native hosts
+now refuse a known disabled accessibility target before sending a click. A pixel
+target has no comparable semantic enabled state and still requires visual
+verification. The Windows host compiled locally; real-control and Mac checks
+are pending on this newer helper.
+
 The supported Windows local upgrade to source `0a919f8` produced and installed
 build `4d112e9e4137e1999750430cc3170995bc8cc421a76f998c517c3cd459a66910`.
 All 108 payload files and the global skill verified; cleanup was confirmed and

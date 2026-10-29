@@ -685,6 +685,9 @@ func opClick(_ a: [String: Any]) throws -> [String: Any] {
         let (el, pid) = try resolveTarget(a)
         try guardSameWindow(a, pid)
         target = el
+        if axBool(el, kAXEnabledAttribute as String) == false {
+            throw AxonError("element_disabled", "The observed control is disabled. No click was sent.", "Wait for it to become enabled and observe again.")
+        }
         // AXPress is the counterpart of the Windows invoke pattern: no cursor
         // movement, nothing the user can feel. Only for a plain left click.
         if !forcePhysical && button == "left" && clicks == 1 && axActions(el).contains("AXPress") {

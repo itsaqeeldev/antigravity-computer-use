@@ -18,6 +18,10 @@ try{
  await assert.rejects(d.call('snapshot',fields),e=>e.code==='control_stopped');results.push('Native rejects inactive session');
  fs.writeFileSync(guard,'active|'+token+'|'+deadline+'|'+Buffer.from(identity.key).toString('base64'));
  const snap=(await d.call('snapshot',fields)).result;assert(snap.nodes.length>3);results.push('Native UIA tree');
+ const disabled=snap.nodes.find(n=>n.name==='Disabled');assert(disabled);
+ const beforeDisabled=(await d.call('identity',{hwnd})).result.cursor;
+ await assert.rejects(d.call('click',{...fields,snapshot_id:snap.snapshot_id,index:disabled.i,physical:true}),e=>e.code==='element_disabled');
+ assert.deepEqual((await d.call('identity',{hwnd})).result.cursor,beforeDisabled);results.push('Disabled selector refuses before moving the cursor');
  const button=snap.nodes.find(n=>n.name==='Press Me');assert(button);
  await d.call('click',{...fields,snapshot_id:snap.snapshot_id,index:button.i});
  await d.call('focus',fields);

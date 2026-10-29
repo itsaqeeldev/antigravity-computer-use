@@ -2967,16 +2967,14 @@ namespace Axon
             // - what used to happen - pressed nothing, took the foreground from
             // the user, and came back as "clicked via physical": on 2026-09-26
             // a form's Next button, disabled until the form was valid, went
-            // exactly that way. physical:true still sends a real click.
-            if (!forcePhysical)
-            {
-                bool enabled = true;
-                try { enabled = el.Current.IsEnabled; } catch { }
-                if (!enabled)
-                    throw new AxonError("element_disabled",
-                        DescribeEl(el) + " is disabled, so clicking it would do nothing.",
-                        "Wait for it to become enabled (computer_wait_for, or read the window again once the form is complete), then click it. physical:true sends a real click anyway.");
-            }
+            // exactly that way. A physical selector click must refuse too; a
+            // pixel click still has no semantic enabled state to inspect.
+            bool enabled = true;
+            try { enabled = el.Current.IsEnabled; } catch { }
+            if (!enabled)
+                throw new AxonError("element_disabled",
+                    DescribeEl(el) + " is disabled, so clicking it would do nothing.",
+                    "Wait for it to become enabled, observe again, then click it.");
 
             // What a click on this control is expected to change - a check
             // mark, a selection, an expansion - read before the click so the
