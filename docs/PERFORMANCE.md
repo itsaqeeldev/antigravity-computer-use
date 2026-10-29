@@ -1,5 +1,22 @@
 # Measuring desktop task latency
 
+## 30 October 2026: post-action settle investigation
+
+On installed build `6822e63c59dff126e76b6ed2a8413fffc62dcc5b0c15aae716e45e6a4125b052`,
+six alternating real Upscaly 1.0.9 Settings openings compared the default 180 ms
+post-action settle with explicit `--settle-ms 0`. Each used the default physical
+click and checked that the returned tree contained the opened Settings panel.
+Service times were 1457.2 / 910.5 / 857.5 ms with the default and 703.2 / 826.8 /
+702.3 ms with zero settle; medians were 910.5 and 703.2 ms respectively. The app
+was closed and control ended. Private raw samples are in
+`.localdata/reliability-current/settle-comparison.json`.
+
+This is one panel, three samples per option and no full task or model timing.
+It shows a possible per-action saving but does not validate immediate observation
+across asynchronous apps, establish statistically reliable speed, or explain
+the much larger host/model gaps. The default remains unchanged until broader
+real-app verification supports a safe change.
+
 ## 29 October 2026: matched Notepad tasks
 
 Two real Antigravity conversations used the same installed Windows build
