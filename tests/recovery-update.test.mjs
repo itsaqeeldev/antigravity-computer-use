@@ -6,13 +6,13 @@ import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERS
 import {priorWindowsCleanupVerified} from '../server/recovery.mjs';
 test('prior Windows cleanup requires dead recorded processes and an empty exact ledger',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'prior-ledger-')),guard='guard-101-12345678-1234-1234-1234-123456789abc.state',file=path.join(dir,guard);
- const record={guard,children:[102,103],dispatched:true},dead=()=>{throw Object.assign(Error('gone'),{code:'ESRCH'});};
+ const record={guard,children:[102,103,104,105],dispatched:true,watchdogs_complete:true},dead=()=>{throw Object.assign(Error('gone'),{code:'ESRCH'});};
  try{
   fs.writeFileSync(file,'stopped||0|');fs.writeFileSync(file+'.watchdog','104|123456');fs.writeFileSync(file+'.inputs','');
   const verify=(r=record,probe=dead,platform='win32')=>priorWindowsCleanupVerified(dir,r,{platform,probe});
   assert.equal(verify(),true);assert.equal(verify(record,()=>{},'win32'),false);assert.equal(verify(record,dead,'darwin'),false);
-  for(const pid of [101,102,103,104])assert.equal(verify(record,n=>{if(n===pid)return;return dead();}),false);
-  assert.equal(verify({...record,guard:'../escape'}),false);assert.equal(verify({...record,dispatched:false}),false);assert.equal(verify({...record,children:[]}),false);
+  for(const pid of [101,102,103,104,105])assert.equal(verify(record,n=>{if(n===pid)return;return dead();}),false);
+  assert.equal(verify({...record,guard:'../escape'}),false);assert.equal(verify({...record,dispatched:false}),false);assert.equal(verify({...record,watchdogs_complete:false}),false);assert.equal(verify({...record,children:[102,103,105]}),false);assert.equal(verify({...record,children:[]}),false);
   fs.writeFileSync(file+'.inputs','k:65:0:0');assert.equal(verify(),false);fs.writeFileSync(file+'.inputs','\n');assert.equal(verify(),false);fs.writeFileSync(file+'.inputs','');
   fs.writeFileSync(file,'active|token|9|');assert.equal(verify(),false);fs.writeFileSync(file,'stopped||0|');
   fs.writeFileSync(file+'.watchdog','bad');assert.equal(verify(),false);fs.unlinkSync(file+'.watchdog');assert.equal(verify(),false);

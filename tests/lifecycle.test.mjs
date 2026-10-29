@@ -36,7 +36,7 @@ test('recovered End closes only after old Windows ledger and native processes ve
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'verified-prior-')),file=path.join(dir,'task-state.json'),guard='guard-2147483647-12345678-1234-1234-1234-123456789abc.state';
  try{
   try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
-  fs.writeFileSync(file,JSON.stringify({schema:1,open:true,guard,children:[2147483645,2147483646],dispatched:true}));fs.writeFileSync(path.join(dir,guard),'stopped||0|');fs.writeFileSync(path.join(dir,guard+'.watchdog'),'2147483644|12345');fs.writeFileSync(path.join(dir,guard+'.inputs'),'');
+  fs.writeFileSync(file,JSON.stringify({schema:1,open:true,guard,children:[2147483645,2147483646,2147483644],dispatched:true,watchdogs_complete:true}));fs.writeFileSync(path.join(dir,guard),'stopped||0|');fs.writeFileSync(path.join(dir,guard+'.watchdog'),'2147483644|12345');fs.writeFileSync(path.join(dir,guard+'.inputs'),'');
   const guardian=new EventEmitter();guardian.send=()=>{};const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});
   assert.equal(r.status().recovered_task,true);assert.equal((await r.finish()).ended,true);assert.equal(r.status().task_open,false);assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
@@ -44,11 +44,14 @@ test('recovered End closes only after old Windows ledger and native processes ve
 test('native process identities are persisted before dispatch and retained across restart',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-children-')),file=path.join(dir,'task-state.json');const r=fixture();r.taskFile=file;
  try{
-  r.beginTask();r.guardian.pid=111;r.driver.info={pid:222};r.recordDispatch();let saved=JSON.parse(fs.readFileSync(file));assert.equal(saved.dispatched,true);assert.deepEqual(saved.children,[111,222]);assert.equal(saved.guard,path.basename(r.guardFile));
-  r.driver.info.pid=333;r.recordDispatch();saved=JSON.parse(fs.readFileSync(file));assert.deepEqual(saved.children,[111,222,333]);
+  r.guardFile=path.join(dir,path.basename(r.guardFile));fs.writeFileSync(r.guardFile+'.watchdog','104|123');
+  r.beginTask();r.guardian.pid=111;r.driver.info={pid:222};r.recordDispatch();let saved=JSON.parse(fs.readFileSync(file));assert.equal(saved.dispatched,true);assert.equal(saved.watchdogs_complete,true);assert.deepEqual(saved.children,[111,222,104]);assert.equal(saved.guard,path.basename(r.guardFile));
+  r.driver.info.pid=333;fs.writeFileSync(r.guardFile+'.watchdog','105|124');r.recordDispatch();saved=JSON.parse(fs.readFileSync(file));assert.deepEqual(saved.children,[111,222,104,333,105]);
   const before=fs.readFileSync(file,'utf8');r.driver.info.pid=undefined;assert.throws(()=>r.recordDispatch(),e=>e.code==='task_process_identity_unavailable');assert.equal(fs.readFileSync(file,'utf8'),before);
-  const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});assert.deepEqual(restarted.priorChildren,[111,222,333]);assert.equal(restarted.priorDispatched,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');
-  r.driver.info.pid=333;await r.finish();r.beginTask();const next=JSON.parse(fs.readFileSync(file));assert.equal(next.dispatched,false);assert.deepEqual(next.children,[]);
+  const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});assert.deepEqual(restarted.priorChildren,[111,222,104,333,105]);assert.equal(restarted.priorDispatched,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');
+  r.driver.info.pid=333;fs.unlinkSync(r.guardFile+'.watchdog');r.recordDispatch();assert.equal(JSON.parse(fs.readFileSync(file)).watchdogs_complete,false);
+  fs.writeFileSync(r.guardFile+'.watchdog','106|125');r.recordDispatch();assert.equal(JSON.parse(fs.readFileSync(file)).watchdogs_complete,false);
+  await r.finish();r.beginTask();const next=JSON.parse(fs.readFileSync(file));assert.equal(next.dispatched,false);assert.equal(next.watchdogs_complete,true);assert.deepEqual(next.children,[]);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('End keeps task open and Stop latched until held-input release succeeds',async()=>{

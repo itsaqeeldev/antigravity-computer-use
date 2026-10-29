@@ -889,6 +889,11 @@ list cannot establish that a prior worker is gone. The Windows cursor watchdog
 now publishes its PID and start-time record before control can be activated;
 unavailable metadata prevents this recovery path. Process PID reuse causes
 conservative refusal rather than treating a live unrelated process as dead.
+Every dispatch now records the current watchdog PID along with guardian and
+worker PIDs, retaining earlier watchdogs if they change. Missing or malformed
+watchdog metadata permanently marks that task's watchdog history incomplete,
+so recovered End refuses instead of trusting only the latest watchdog. Older
+records without this completeness marker also remain blocked.
 Fixture-level and native storage tests do not establish physical crash recovery.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert

@@ -86,7 +86,7 @@ export class Runtime {
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.priorGuard=priorTask?prior.guard:null;this.priorChildren=priorTask?prior.children:null;this.priorDispatched=priorTask?prior.dispatched:null;this.dispatchChildren=[];this.dispatchStarted=false;this.taskDurable=true;this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.priorGuard=priorTask?prior.guard:null;this.priorChildren=priorTask?prior.children:null;this.priorDispatched=priorTask?prior.dispatched:null;this.priorWatchdogsComplete=priorTask?prior.watchdogs_complete:null;this.dispatchChildren=[];this.dispatchStarted=false;this.watchdogsComplete=true;this.taskDurable=true;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -108,19 +108,22 @@ export class Runtime {
   beginTask(){
     if(this.taskOpen&&this.taskDurable)return;
     this.taskOpen=true;this.taskDurable=false;
-    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted});this.taskDurable=true;}
+    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted,watchdogs_complete:this.watchdogsComplete});this.taskDurable=true;}
     catch{throw Object.assign(Error('Cannot preserve task state; no desktop action was started.'),{code:'task_state_write_failed'});}
   }
   recordDispatch(){
     if(!this.taskFile)return; // Inert unit-test dependencies use no persistent task.
     const ids=[this.guardian.pid,this.driver.info?.pid];
     if(ids.some(pid=>!Number.isSafeInteger(pid)||pid<=0||pid>4294967295))fail('task_process_identity_unavailable','Native process identity is unavailable; no input was sent.');
-    const children=[...new Set([...this.dispatchChildren,...ids])];
+    let watchdog;
+    try{const file=this.guardFile+'.watchdog',info=fs.lstatSync(file);if(!info.isFile()||info.isSymbolicLink()||info.size>128)throw Error();const m=/^([1-9][0-9]{0,9})\|([1-9][0-9]{0,19}(?:\.[0-9]{1,9})?)$/.exec(fs.readFileSync(file,'utf8'));if(!m)throw Error();watchdog=Number(m[1]);if(!Number.isSafeInteger(watchdog)||watchdog>4294967295)throw Error();}catch{watchdog=null;}
+    const coverage=this.watchdogsComplete&&watchdog!=null;
+    const children=[...new Set([...this.dispatchChildren,...ids,...(watchdog==null?[]:[watchdog])])];
     if(children.length>32)fail('task_process_limit','Too many native worker changes in this task. End safely before starting another.');
-    if(this.dispatchStarted&&children.length===this.dispatchChildren.length)return;
-    try{writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children,dispatched:true});}
+    if(this.dispatchStarted&&children.length===this.dispatchChildren.length&&coverage===this.watchdogsComplete)return;
+    try{writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children,dispatched:true,watchdogs_complete:coverage});}
     catch{fail('task_state_write_failed','Could not record native process identities; no input was sent.');}
-    this.dispatchChildren=children;this.dispatchStarted=true;
+    this.dispatchChildren=children;this.dispatchStarted=true;this.watchdogsComplete=coverage;
   }
   // A passive App sidecar must not open a HUD, install input hooks or acquire
   // cursor ownership just because a previous task left an emergency latch.
@@ -334,14 +337,14 @@ export class Runtime {
       let verified=false;
       try{
         const record=readTaskRecord(this.taskFile);
-        if(record.open&&record.guard===this.priorGuard&&record.dispatched===this.priorDispatched&&JSON.stringify(record.children)===JSON.stringify(this.priorChildren)&&record.guard&&record.dispatched===true){
+        if(record.open&&record.guard===this.priorGuard&&record.dispatched===this.priorDispatched&&record.watchdogs_complete===this.priorWatchdogsComplete&&JSON.stringify(record.children)===JSON.stringify(this.priorChildren)&&record.guard&&record.dispatched===true){
           const directory=path.dirname(this.taskFile);storageOperation('verify-data-tree',directory);
           verified=priorWindowsCleanupVerified(directory,record);
         }
       }catch{}
       if(!verified)fail('recovered_cleanup_unverified','Prior-session input cleanup is unverified. Keep the task open and inspect the previous native ledger; do not repeat input or force an update.');
     }
-    if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.dispatchChildren=[];this.dispatchStarted=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
+    if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.dispatchChildren=[];this.dispatchStarted=false;this.watchdogsComplete=true;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.

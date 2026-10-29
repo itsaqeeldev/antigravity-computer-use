@@ -3,12 +3,12 @@ import fs from 'node:fs';import path from 'node:path';
 // Inspect only a recorded prior Windows guard. Never inject input, kill a PID,
 // clear Stop, or trust a PID that is still alive (including possible reuse).
 export function priorWindowsCleanupVerified(directory,record,{platform=process.platform,probe=process.kill}={}){
- if(platform!=='win32'||record?.dispatched!==true||!Array.isArray(record.children)||record.children.length<2||typeof record.guard!=='string'||!/^guard-[1-9][0-9]{0,9}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.state$/.test(record.guard))return false;
+ if(platform!=='win32'||record?.dispatched!==true||record.watchdogs_complete!==true||!Array.isArray(record.children)||record.children.length<3||typeof record.guard!=='string'||!/^guard-[1-9][0-9]{0,9}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.state$/.test(record.guard))return false;
  const read=(file,limit)=>{const info=fs.lstatSync(file);if(!info.isFile()||info.isSymbolicLink()||info.size>limit)throw Error('untrusted recovery record');return fs.readFileSync(file,'utf8');};
  const gone=pid=>{if(!Number.isSafeInteger(pid)||pid<=0||pid>4294967295)return false;try{probe(pid,0);return false;}catch(error){return error.code==='ESRCH';}};
  try{
   const guard=path.join(directory,record.guard),parent=Number(/^guard-(\d+)-/.exec(record.guard)[1]);
-  const watchdog=/^([1-9][0-9]{0,9})\|([1-9][0-9]{0,19})$/.exec(read(guard+'.watchdog',128));if(!watchdog)return false;
+  const watchdog=/^([1-9][0-9]{0,9})\|([1-9][0-9]{0,19})$/.exec(read(guard+'.watchdog',128));if(!watchdog||!record.children.includes(Number(watchdog[1])))return false;
   const pids=[parent,...record.children,Number(watchdog[1])];if(!pids.every(gone))return false;
   const fields=read(guard,4096).split('|');if(fields.length<4||!['idle','stopped'].includes(fields[0]))return false;
   // Windows InputLedger.Save writes exactly zero bytes for an empty ledger.
