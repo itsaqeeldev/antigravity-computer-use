@@ -2,30 +2,29 @@
 
 The active goal is the complete “Reliable computer use, automatic updates and
 shared Mac support” plan. This log records implementation and evidence separately.
-Development branch: `codex/macos-and-latency-review`. All private test output stays
+Review branch: `codex/review-intel-mac`. All private test output stays
 in `.localdata/`. No release completion is claimed here.
 
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |
 | Guardian concurrency, timeout, early exit and bounded recovery | Implemented; focused and CI checks passed | Shared readiness, early exit, invisible replies, cached failures, explicit recovery, isolated-desktop handoff and lost-acknowledgement tests pass. Physical crash/input cleanup remains separate. |
-| Simple model workflow | First real Flash trial partial; Sonnet pending | Flash completed Notepad save/cleanup but took about 10 minutes and failed exact Unicode comparison. Structured error follow-up remains to be installed and compared. |
+| Simple model workflow | Partial; real matched Notepad trials recorded | On installed `bc457343...`, Sonnet and Flash saved matching Unicode in 203,199 ms and 181,909 ms respectively. Flash had a close verification error; earlier Flash failure remains evidence. Affected-PC and matched Upscaly trials remain pending. See `docs/PERFORMANCE.md`. |
 | Shared signed update staging | Implemented; release transport pending | Ed25519 verification, architecture/OS/channel/sequence checks, bounded hashed downloads and inventory checks. Protected key and Actions secret configured; local signing verified. No release published. |
 | Idle update, settings, Stop, rollback and pins | Mac isolated native checks passed; full acceptance pending | Real installer/lease paths cover upgrade, failed health, settings/Stop/pins, deferral and recovery. Mac native update/rollback uses substituted release transport/test signing keys. Windows native checks skip unsafe ancestors. Native interruption/power-loss and production updates remain pending. |
 | Automatic scheduling | Implemented; native qualification pending | Both passive and foreground Sidecar entrypoints schedule bounded workers; daily check policy, explicit manual/notify modes. No OS scheduled task. |
 | Local failure diagnostics and consented GitHub reports | Implemented; mocked integration passed | Allowlisting, deduplication, consent, missing auth and backoff have regressions. Authorized development issues #2/#3 track real reports; automatic reporting from a consented user installation is not yet qualified. |
-| Shared Windows/Mac implementation | Current candidate passed source/native CI | Runtime checkpoint `f97b748` passed both Mac architectures and Windows checks. No Intel on-device report/repair PR is available; interactive Mac acceptance remains pending. |
-| Real app and physical/hardware acceptance | Pending | Affected PC, fresh PC, Mac, physical Stop/re-arm, held-input cancellation, actual skill rediscovery and updater acceptance required. |
+| Shared Windows/Mac implementation | Partial | Intel report and repairs were submitted in PRs #4/#5; source integration at `fc2b9ac` passed both Mac CI architectures. Independent interactive Mac acceptance remains incomplete. |
+| Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
-Current runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
+Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
 and [Mac CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552937)
-at `f97b748`. All 151 provenance entries matched. Current installed/running build
-`83487f3a...` was reverified against its own 102-file bundle, with an idle service
-and zero app grants; it remains older than source. The prepared 107-file Windows
-candidate `8a128aa5...` is not installed or published. These records do not clear
-the outstanding human/device gates or qualify a new public release.
+at `f97b748`. All 151 provenance entries matched then. The later installed/running
+build `bc457343...` verified 107 files and the skill, with an idle service and
+zero app grants. It remains older than the review branch. These records do not
+clear the outstanding human/device gates or qualify a new public release.
 
 ## Release signing prerequisite
 
