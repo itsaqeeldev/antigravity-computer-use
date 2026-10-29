@@ -77,37 +77,117 @@ enum MacPrivateStorage {
         guard root != "/" else { try reject("storage_invalid_path", root, "A volume root cannot be private application storage.") }
         let parent = URL(fileURLWithPath: root).deletingLastPathComponent().path
         try ancestors(parent)
-        if !FileManager.default.fileExists(atPath: root) {
-            try FileManager.default.createDirectory(atPath: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-        } else {
-            let s = try info(root)
-            try checkACL(root)
-            guard s.st_mode & S_IFMT == S_IFDIR, s.st_uid == getuid() else {
-                try reject("storage_untrusted_owner", root, "The private directory must be a real directory owned by this account.")
+        if mkdir(root, 0o700) != 0 && errno != EEXIST {
+            try reject("storage_permissions_failed", root, "Cannot create the private storage directory.")
+        }
+        let dirFd = open(root, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
+        guard dirFd >= 0 else {
+            try reject(errno == ELOOP ? "storage_reparse_point" : "storage_unavailable", root, "Cannot open the private directory.")
+        }
+        defer { close(dirFd) }
+        var dirInfo = stat()
+        guard fstat(dirFd, &dirInfo) == 0, (dirInfo.st_mode & S_IFMT) == S_IFDIR else {
+            try reject("storage_reparse_point", root, "Directory links and non-directory storage are refused.")
+        }
+        guard dirInfo.st_uid == getuid() else {
+            try reject("storage_untrusted_owner", root, "The private directory must be a real directory owned by this account.")
+        }
+        try checkACL(root)
+
+        // Bounded synchronization: wait for concurrent initializers holding LOCK_EX
+        let deadline = Date().addingTimeInterval(15.0)
+        var locked = false
+        while Date() < deadline {
+            if flock(dirFd, LOCK_EX | LOCK_NB) == 0 {
+                locked = true
+                break
             }
+            if errno != EWOULDBLOCK && errno != EAGAIN {
+                try reject("storage_unavailable", root, "Cannot synchronize private storage (errno \(errno)).")
+            }
+            usleep(10_000)
+        }
+        guard locked else {
+            try reject("storage_lock_timeout", root, "Timed out waiting for private storage initialization.")
+        }
+        defer { flock(dirFd, LOCK_UN) }
+
+        guard fstat(dirFd, &dirInfo) == 0, (dirInfo.st_mode & S_IFMT) == S_IFDIR, dirInfo.st_uid == getuid() else {
+            try reject("storage_untrusted_owner", root, "The private directory must be owned by this account.")
+        }
+        try checkACL(root)
+
+        let file = (root as NSString).appendingPathComponent(marker)
+        if dedicated(root) {
+            guard chmod(root, 0o700) == 0 else {
+                try reject("storage_permissions_failed", root, "Cannot make the application directory private.")
+            }
+        } else {
             let entries = try FileManager.default.contentsOfDirectory(atPath: root)
             let package = URL(fileURLWithPath: parent).appendingPathComponent("package.json")
             let sourceData = URL(fileURLWithPath: root).lastPathComponent == ".localdata" &&
                 ((try? Data(contentsOf: package)).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["name"] as? String) == "antigravity-native-computer-use"
-            guard entries.isEmpty || dedicated(root) || sourceData else {
-                try reject("storage_not_dedicated", root, "Refusing to change permissions on unrelated existing data.")
-            }
-            // Only the dedicated leaf is tightened. Never an ancestor.
-            guard chmod(root, 0o700) == 0 else { try reject("storage_permissions_failed", root, "Cannot make the application directory private.") }
-        }
-        try ancestors(root)
-        let file = (root as NSString).appendingPathComponent(marker)
-        if !FileManager.default.fileExists(atPath: file) {
-            let fd = open(file, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
-            if fd >= 0 {
+
+            if entries.isEmpty {
+                guard chmod(root, 0o700) == 0 else {
+                    try reject("storage_permissions_failed", root, "Cannot make the application directory private.")
+                }
+                let fd = openat(dirFd, marker, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
+                guard fd >= 0 else {
+                    try reject("storage_permissions_failed", file, "Cannot create private storage marker.")
+                }
                 let value = Data("agcu-posix-v1:\(getuid())\n".utf8)
                 let wrote = value.withUnsafeBytes { write(fd, $0.baseAddress, value.count) }
+                let synced = fsync(fd) == 0
                 close(fd)
-                guard wrote == value.count else { try reject("storage_permissions_failed", file, "Cannot write storage marker.") }
-            } else if errno != EEXIST {
-                try reject("storage_permissions_failed", file, "Cannot create private storage marker.")
+                guard wrote == value.count && synced else {
+                    try reject("storage_permissions_failed", file, "Cannot write storage marker.")
+                }
+            } else if entries == [marker] {
+                var mInfo = stat()
+                guard fstatat(dirFd, marker, &mInfo, AT_SYMLINK_NOFOLLOW) == 0,
+                      mInfo.st_uid == getuid(), (mInfo.st_mode & S_IFMT) == S_IFREG, mInfo.st_mode & 0o077 == 0 else {
+                    try reject("storage_not_dedicated", root, "Refusing to change permissions on unrelated existing data.")
+                }
+                if mInfo.st_size == 0 {
+                    let fd = openat(dirFd, marker, O_WRONLY | O_TRUNC | O_NOFOLLOW, 0o600)
+                    guard fd >= 0 else {
+                        try reject("storage_permissions_failed", file, "Cannot open storage marker for completion.")
+                    }
+                    let value = Data("agcu-posix-v1:\(getuid())\n".utf8)
+                    let wrote = value.withUnsafeBytes { write(fd, $0.baseAddress, value.count) }
+                    let synced = fsync(fd) == 0
+                    close(fd)
+                    guard wrote == value.count && synced else {
+                        try reject("storage_permissions_failed", file, "Cannot write storage marker.")
+                    }
+                    guard chmod(root, 0o700) == 0 else {
+                        try reject("storage_permissions_failed", root, "Cannot make the application directory private.")
+                    }
+                } else {
+                    try reject("storage_not_dedicated", root, "Refusing to change permissions on unrelated existing data.")
+                }
+            } else if sourceData {
+                guard chmod(root, 0o700) == 0 else {
+                    try reject("storage_permissions_failed", root, "Cannot make the application directory private.")
+                }
+                let fd = openat(dirFd, marker, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0o600)
+                guard fd >= 0 else {
+                    try reject("storage_permissions_failed", file, "Cannot create private storage marker.")
+                }
+                let value = Data("agcu-posix-v1:\(getuid())\n".utf8)
+                let wrote = value.withUnsafeBytes { write(fd, $0.baseAddress, value.count) }
+                let synced = fsync(fd) == 0
+                close(fd)
+                guard wrote == value.count && synced else {
+                    try reject("storage_permissions_failed", file, "Cannot write storage marker.")
+                }
+            } else {
+                try reject("storage_not_dedicated", root, "Refusing to change permissions on unrelated existing data.")
             }
         }
+        _ = flock(dirFd, LOCK_UN)
+        try ancestors(root)
         try verify(root)
         return root
     }
@@ -116,6 +196,9 @@ enum MacPrivateStorage {
         try ancestors(root)
         let s = try info(root)
         try checkACL(root)
+        guard (s.st_mode & S_IFMT) == S_IFDIR else {
+            try reject("storage_reparse_point", root, "Directory links and non-directory ancestors are refused.")
+        }
         guard s.st_uid == getuid(), s.st_mode & 0o077 == 0, dedicated(root) else {
             try reject("storage_permissions_failed", root, "Application storage is not private and owned by this account.")
         }

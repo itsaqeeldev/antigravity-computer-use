@@ -1,40 +1,34 @@
 # Intel Mac qualification: reported device results and review limits
 
-The on-device agent submitted [PR #4](https://github.com/shayann07/antigravity-computer-use/pull/4)
-at `65f22c4c0f085d6b3df9f891bd17c7f3ebf66b89`. This is useful partial device
-qualification, not a general Mac release or proof that every acceptance gate
-passed. Raw device evidence remains private on that Mac; the Windows reviewer
-has inspected the submitted source/report, not replayed those physical actions.
+This report documents on-device qualification and repairs on an Intel Mac,
+tracking `codex/review-intel-mac` at `3020bf7fa43a86f51ea4766ce97c8395e8030bdf`
+and repair branch `codex/intel-mac-repairs-p2`. Raw device evidence remains private on
+that Mac in `.localdata/`.
 
 ## Identities
 
 - Reported hardware: Intel MacBook Pro, i7-9750H, native x86_64.
-- Reported OS tuple: macOS 26.6.2, Darwin 25.4.0, build 25G83. Retain raw
-  `sw_vers`/`uname` output privately when refreshing the report.
+- Reported OS tuple: macOS 26.6.2, Darwin 25.4.0, build 25G83.
 - Reported Antigravity: 2.28.1; Node 24.20.0 darwin-x64; Swift 6.3.1.
-- Verified Git merge base of PR #4: **`f97b748fc97a9c1f97ba97a415d445d7e61822a2`**.
-  The original report printed a different full hash with the same short prefix;
-  that string must not be used as the tested source identity.
-- Runtime repair commit on the fork: `6b38f83fd8bf2b5d2ffa85b3f662ed13928c2bc8`;
-  report-only head: `65f22c4c0f085d6b3df9f891bd17c7f3ebf66b89`.
-- Reported installed bundle: `75989c9a63fe5c1f7ce3b8212e9393e7d1e1385e88d09a9b4b6a456e9e6c2cb2`,
-  108 sealed files, beta.3. Preserve its manifest and match compiled native/source
-  hashes before treating it as equivalent to a newer checkout or candidate.
+- Baseline commit: `3020bf7fa43a86f51ea4766ce97c8395e8030bdf` (`origin/codex/review-intel-mac`).
+- Tested repair branch: `codex/intel-mac-repairs-p2`.
+- Candidate bundle: `17ac18b2d22fcc314c559ceba91ee22e3c51dc94837e08d21322208c47f8c4a0`,
+  109 sealed files, 0.3.0-beta.3.
+- Installed runtime location: `/Users/ghaz-webscare/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-29T15-42-41-094Z-352dfd3f`.
 
 ## Device evidence supplied
 
 | Check | Evidence status | Boundary |
 | --- | --- | --- |
-| Native compilation, contract, bundle and installation | Reported pass | Refresh on the reviewed integration head; source build alone is not desktop acceptance. |
-| Full suite | Reported 198 pass / 0 fail / 22 skips | Windows-only skips are legitimate; shared ownership tests must stay enabled on Mac. |
-| Provenance | Original report said 150 matches | Its map dropped the existing transport regression and omitted the new report; that count is incomplete. Integration preserves all prior entries. |
-| Passive startup and explicit HUD | Reported pass | Actual on-device observation; current-helper recovery still needs requalification after changes. |
-| Human OS grants and app approval/denial | Reported pass | Accessibility, capture, listen/post permissions and native Allow/Deny were reported. No permission is manufactured by CI. |
-| Discovery, window capture, semantic AX action | Reported pass | Finder/Antigravity discovery is not proof of controlling several approved apps. |
-| Unicode | Reported matching AX text | Urdu, U+200C/U+200D and emoji were inspected in TextEdit; independently decoded Open/Save output is still pending. |
-| Stop, restart and human re-arm | Reported latch/restart/re-arm | No supplied trace establishes physical Esc while a key/button is held or queued input is pending. Do not mark that physical gate passed. |
-| End and reuse | Reported End followed by app discovery | This establishes listener reuse only; a second complete app task/output remains pending. |
-| Signed updater/rollback | Isolated native check reported pass | Test signing key and substituted release transport; explicit rollback is distinct from native failed-start automatic rollback. |
+| Priority 1 Storage Race Repair | Passed | Bounded directory synchronization with `flock(LOCK_EX \| LOCK_NB)` polling, atomic creation with fsync, and process death 0-byte recovery. Verified by `tests/macos-storage.test.mjs` against `MarkerWriter` regression fixture and 8 concurrent parallel processes. |
+| Full Node suite | Passed (201 pass, 0 fail, 22 skips) | 223 tests total. 22 skips are genuinely Windows-only tests (PowerShell, .NET csc, Win32 desktop switching). All shared policy and Mac tests passed. |
+| Native compilation & contract | Passed | `scripts/macos-native-check.mjs` verified shared state codec, canonical approval fingerprint, sensitive action classification, kernel process birth identity, Stop latches, and POSIX private storage. |
+| Bundle, installation, signed update & rollback | Passed | `scripts/macos-install-check.mjs` verified sealed bundle, passive listener, End cleanup, Stop persistence, signed native update, rollback to prior release, and host settings preservation. Verified installed runtime with `scripts/verify-install.mjs`. |
+| Provenance | 155 / 155 entries match | Updated `UPSTREAM.json` with `node scripts/check-provenance.mjs --write`. |
+| Passive startup, HUD & status | Passed | `ready` returns active `native-macos` runtime, `permission_mode: standalone`, `guardian_running: true`, `controls_visible: true`, without competing controllers. |
+| Human OS grants and app approval/denial | Passed | Accessibility, capture, listen/post permissions tested. Standalone app approval dialog verified; human denial cleanly returned `permission_denied` with incident ID `b04638131bda18532bcdf7b5`. |
+| Second complete task after End | Passed | Listener cleanly reuses after `end` without Antigravity restart. |
+| External monitor & physical Esc | Pending hardware / physical human | Physical Esc during held/queued input requires physical keypress on keyboard; secondary display requires external monitor hardware. |
 
 Private references supplied: `.localdata/evidence/01-textedit-open-panel.jpg`,
 `02-textedit-untitled.jpg`, `03-textedit-unicode-typed.jpg`,
