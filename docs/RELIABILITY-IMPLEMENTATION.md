@@ -120,11 +120,13 @@ publication is tested separately. Earlier pinned releases can still use the old
 writer, and Mac device behavior needs further qualification. A further Windows
 barrier test killed the lease helper just after the writer's ownership check,
 allowed a second writer to commit, then resumed the first writer: both reported
-success but the first overwrote the second. The guard therefore does not close
-the helper-death race. Do not claim universal loss-free reporting; the commit
-must be made by the native lock holder or use an equivalently fenced mechanism.
-The reproduction is under `.localdata/reliability-current/incident-helper-death.mjs`;
-its test-only dependency injection is not part of the checked-in runtime.
+success but the first overwrote the second. That JavaScript-side guard did not
+close the helper-death race. The candidate now sends the bounded journal to the
+native lease holder, which alone flushes and atomically publishes it while holding
+the lock. A Windows test kills that helper immediately after the caller's liveness
+check; the stale writer fails and the next holder's journal remains intact. The
+original reproduction remains under `.localdata/reliability-current/`. Older
+pinned runtimes do not use this protocol, and real Mac qualification remains open.
 The first asynchronous version delayed error responses while acquiring the lease,
 causing a client timeout in the full suite. Recording is now queued off the reply
 path; replies identify it as pending, status exposes pending/failure, and orderly

@@ -47,7 +47,17 @@ internal static class StorageGuard {
                     try{owned=mutex.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
                     if(!owned)Refuse("service_already_running",root,"Another controller owns this private data directory. Reconnect to it; no competing runtime was started.");
                     Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,lease_acquired=true,pid=System.Diagnostics.Process.GetCurrentProcess().Id}));Console.Out.Flush();
-                    while(Console.In.ReadLine()!=null){}
+                    string line;while((line=Console.In.ReadLine())!=null){
+                        var request=new JavaScriptSerializer().DeserializeObject(line) as Dictionary<string,object>;
+                        if(request==null||!request.ContainsKey("op")||Convert.ToString(request["op"])!="publish_incidents"||Path.GetFileName(root)!="incident-writer-lease")throw new InvalidOperationException("Invalid lease operation.");
+                        string parent=Path.GetDirectoryName(root),target=Path.Combine(parent,"incidents.json"),temp=Path.Combine(parent,".incidents-"+Guid.NewGuid().ToString("N")+".tmp");
+                        byte[] bytes=Convert.FromBase64String(Convert.ToString(request["data"]));if(bytes.Length>256*1024)throw new InvalidOperationException("Incident journal exceeds limit.");
+                        Verify(parent,true);if(File.Exists(target))Verify(target,false);
+                        try{using(var stream=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){stream.Write(bytes,0,bytes.Length);stream.Flush(true);}Verify(temp,false);
+                            if(File.Exists(target))File.Replace(temp,target,null);else File.Move(temp,target);
+                        }finally{if(File.Exists(temp))File.Delete(temp);}
+                        Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,published=true}));Console.Out.Flush();
+                    }
                     return 0;
                 }finally{if(owned)mutex.ReleaseMutex();}
             }

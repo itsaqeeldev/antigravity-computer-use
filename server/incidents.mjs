@@ -22,11 +22,15 @@ export class Incidents {
    }));
   }catch(error){if(strict&&error.code!=='ENOENT')throw Object.assign(Error('Incident journal requires inspection; existing data was retained.'),{code:'diagnostic_journal_invalid',cause:error});return [];}
  }
- record(command,result,{guard}={}){
+ prepare(command,result){
   const details=incident(command,result);if(!details)return;const {event,id}=details;
   const all=this.read({strict:true});let item=all.find(e=>e.id===id);if(!item){item={id,...event,count:0,first:new Date().toISOString(),pending:true};all.push(item);}if(item.count===Number.MAX_SAFE_INTEGER)throw Object.assign(new Error('Incident counter exhausted'),{code:'incident_counter_exhausted'});item.count++;item.pending=true;item.last=new Date().toISOString();
+  return {id,records:all.slice(-100)};
+ }
+ record(command,result,{guard}={}){
+  const prepared=this.prepare(command,result);if(!prepared)return;
   const io=guard?{...fs,renameSync(from,to){guard();return fs.renameSync(from,to);}}:fs;
-  writeAtomicJSON(this.file,all.slice(-100),{io});return id;
+  writeAtomicJSON(this.file,prepared.records,{io});return prepared.id;
  }
  identify(command,result){return incident(command,result)?.id;}
  // Production writers use the separate kernel lease across the complete
@@ -38,6 +42,6 @@ export class Incidents {
   await storageOperationAsync('verify',this.directory);const lockDir=path.join(this.directory,'incident-writer-lease');fs.mkdirSync(lockDir,{recursive:true,mode:0o700});
   const deadline=Date.now()+5000;let lease;
   do{try{lease=await acquireServiceLease(lockDir);break;}catch(error){if(error.code!=='service_already_running'||Date.now()>=deadline)throw error;await new Promise(resolve=>setTimeout(resolve,50));}}while(true);
-  try{lease.assertHeld();return this.record(command,result,{guard:()=>lease.assertHeld()});}finally{await lease.release();}
+  try{lease.assertHeld();const prepared=this.prepare(command,result);await lease.publishIncidents(Buffer.from(JSON.stringify(prepared.records)));return prepared.id;}finally{await lease.release();}
  }
 }

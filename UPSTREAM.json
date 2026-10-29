@@ -348,7 +348,7 @@
     },
     {
       "path": "server/native/StorageGuard.cs",
-      "sha256": "bc216cd040aa971f7923da91a947447645120e7aedcfbe96ce83939e249f2891"
+      "sha256": "bb715de8c578503b3fcfda7142e2e5980d54fdd81b8192d1a3d212357c875e16"
     },
     {
       "path": "server/storage.mjs",
@@ -388,7 +388,7 @@
     },
     {
       "path": "server/service-lease.mjs",
-      "sha256": "62434a1e2adf2e6f99f7372d2998f839dd7b88c84a9264b528a6c66a71816db8"
+      "sha256": "e56263f78ac0eda17d396118c30fb4c336296b23333e7eff550e49aaa01b465f"
     },
     {
       "path": "tests/service-lease.test.mjs",
@@ -552,7 +552,7 @@
     },
     {
       "path": "server/native/macos/StorageMain.swift",
-      "sha256": "43258885f2748c2eeea208ddf48c982501f3adada51a55a3fbcec5561f8bb0d0"
+      "sha256": "72464b75137137ed5a63186c6d0b3336dbd7f267ccf6d1f3e78dc664baa3e949"
     },
     {
       "path": "tests/macos-storage.test.mjs",
@@ -584,7 +584,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "c5a72bae569468b2521068e073e2ee059a27db086d9fb8de848614b3c3cf1e42"
+      "sha256": "2e44d508dafb8b44abc74f12543f172e6a8670f68ac6e1bd25779b436aa079c6"
     },
     {
       "path": "scripts/update.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "dc9318ca613180f7f7a5e1d8a6d6c099fb63c2cddc04c7043e646af96e6ee733"
+      "sha256": "bb0a9f03749c35e5e7dcd95131037668c61d74e67398e085facb0e2d03574168"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -620,7 +620,7 @@
     },
     {
       "path": "tests/incident-concurrency.test.mjs",
-      "sha256": "fee2b23a51c0b7ef878e64d16e3032b1b59e6e685645a2590e2a075ce28de3a2"
+      "sha256": "fceec02cade8ae08ce7a76869e487954034a41fd4fce96960617e8fac1d7a535"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

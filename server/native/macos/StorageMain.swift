@@ -52,7 +52,40 @@ func storageReply(_ value: [String: Any]) {
         defer { flock(fd, LOCK_UN) }
         storageReply(["ok": true, "lease_acquired": true, "pid": getpid()])
         let closed = DispatchSemaphore(value: 0)
-        DispatchQueue.global().async { while readLine() != nil {} ; closed.signal() }
+        DispatchQueue.global().async {
+            while let line = readLine() {
+                do {
+                    guard URL(fileURLWithPath: root).lastPathComponent == "incident-writer-lease",
+                          let request = try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                          request["op"] as? String == "publish_incidents",
+                          let encoded = request["data"] as? String, let bytes = Data(base64Encoded: encoded), bytes.count <= 256*1024 else {
+                        throw PrivateStorageError(code:"bad_arguments",path:root,message:"Invalid lease operation.")
+                    }
+                    let parent = URL(fileURLWithPath: root).deletingLastPathComponent().path
+                    try MacPrivateStorage.verify(parent)
+                    let pfd = open(parent, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
+                    guard pfd >= 0 else { throw PrivateStorageError(code:"storage_unavailable",path:parent,message:"Cannot open incident directory.") }
+                    defer { close(pfd) }
+                    var existing = stat()
+                    if fstatat(pfd,"incidents.json",&existing,AT_SYMLINK_NOFOLLOW) == 0 {
+                        guard (existing.st_mode & S_IFMT) == S_IFREG, existing.st_uid == getuid(), existing.st_nlink == 1, existing.st_mode & 0o077 == 0 else {
+                            throw PrivateStorageError(code:"storage_not_private",path:parent,message:"Incident journal is not private.")
+                        }
+                    } else if errno != ENOENT { throw PrivateStorageError(code:"storage_unavailable",path:parent,message:"Cannot inspect incident journal.") }
+                    let temp = ".incidents-" + UUID().uuidString + ".tmp"
+                    let fd = openat(pfd,temp,O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW,0o600)
+                    guard fd >= 0 else { throw PrivateStorageError(code:"storage_permissions_failed",path:parent,message:"Cannot create incident journal temporary file.") }
+                    var written=0;let ok = bytes.withUnsafeBytes { raw -> Bool in
+                        while written < bytes.count { let n=write(fd,raw.baseAddress!.advanced(by:written),bytes.count-written);if n <= 0 { return false };written += n };return fsync(fd) == 0
+                    };close(fd)
+                    guard ok, renameat(pfd,temp,pfd,"incidents.json") == 0 else { unlinkat(pfd,temp,0);throw PrivateStorageError(code:"storage_permissions_failed",path:parent,message:"Cannot publish incident journal.") }
+                    _ = fsync(pfd);storageReply(["ok":true,"published":true])
+                } catch {
+                    storageReply(["ok":false,"error":["code":"incident_publish_failed","message":"Incident journal publication failed."]]);break
+                }
+            }
+            closed.signal()
+        }
         while closed.wait(timeout: .now() + 0.1) == .timedOut {
             let current = try MacPrivateStorage.info(root)
             let currentLock = try MacPrivateStorage.info(lockPath)

@@ -5,7 +5,7 @@ import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
 export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),startupTimeout=5000,cleanupTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
  child.stdout.setEncoding('utf8');
- const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending;
+ const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending,publishPending;
  let resolveExit;const exited=new Promise(resolve=>resolveExit=resolve);
  child.once('close',resolveExit);
  lease.pid=child.pid;lease.lost=false;
@@ -21,16 +21,27 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   child.on('error',error=>fail(error));child.stderr.on('data',()=>{});
   child.stdin.on('error',()=>{});
   child.stdout.on('data',chunk=>{
-   if(ready||settled)return;buffer+=chunk;if(buffer.length>8192)return fail(Error('Invalid ownership-helper reply.'));
-   if(!buffer.includes('\n'))return;
-   try{const result=JSON.parse(buffer.slice(0,buffer.indexOf('\n')));if(!result.ok)throw Object.assign(Error(result.error?.message||'Controller ownership refused.'),{code:result.error?.code||'service_lease_refused'});if(!result.lease_acquired)throw Error('Missing controller ownership acknowledgement.');clearTimeout(timer);settled=true;ready=true;resolve(lease);}catch(error){fail(error);}
+   buffer+=chunk;if(buffer.length>8192){if(!ready)fail(Error('Invalid ownership-helper reply.'));else markLost();return;}
+   while(buffer.includes('\n')){const index=buffer.indexOf('\n'),line=buffer.slice(0,index);buffer=buffer.slice(index+1);
+    try{const result=JSON.parse(line);if(!ready){if(!result.ok)throw Object.assign(Error(result.error?.message||'Controller ownership refused.'),{code:result.error?.code||'service_lease_refused'});if(!result.lease_acquired)throw Error('Missing controller ownership acknowledgement.');clearTimeout(timer);settled=true;ready=true;resolve(lease);}
+     else if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);if(result.ok&&result.published)pending.resolve();else pending.reject(Object.assign(Error('Incident publication was not confirmed.'),{code:'incident_publish_outcome_unknown'}));}
+    }catch(error){if(!ready)fail(error);else markLost();}
+   }
   });
   child.once('exit',code=>{
    resolveExit(code);
    if(!ready){fail(Object.assign(Error('Controller ownership helper exited before readiness.'),{code:'service_lease_exited'}));return;}
+   if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}
    if(!releasing)markLost();
   });
  });
+ lease.publishIncidents=bytes=>{
+  lease.assertHeld();if(publishPending)throw Error('Incident publication already pending.');
+  if(!Buffer.isBuffer(bytes)||bytes.length>256*1024)throw Error('Incident journal exceeds limit.');
+  return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{publishPending=null;try{child.kill();}catch{}reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));},10000);
+   publishPending={resolve,reject,timer};child.stdin.write(JSON.stringify({op:'publish_incidents',data:bytes.toString('base64')})+'\n',error=>{if(error&&publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}});
+  });
+ };
  lease.release=()=>releasePending??=(async()=>{releasing=true;child.stdin.end();let timer;await Promise.race([exited,new Promise(resolve=>{timer=setTimeout(()=>{child.kill();resolve();},2000);})]);clearTimeout(timer);})();
  const held=await startup;
  try{await storageOperationAsync('data',directory,{helper});held.assertHeld();return held;}
