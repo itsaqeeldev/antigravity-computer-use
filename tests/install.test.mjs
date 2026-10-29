@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {nativePlatform} from '../server/platform.mjs';
+import {rollbackGuarded} from '../scripts/rollback.mjs';
 const platform=nativePlatform();
 const root=testDirectory('test-install');fs.mkdirSync(root,{recursive:true});
 // Fixture profiles must never discover or alter the developer's real install.
@@ -159,6 +160,21 @@ test('failed post-copy storage verification leaves the prior launcher, pointer a
  assert.equal(phases,2);assert.equal(fs.readFileSync(first.launcher,'utf8'),before.launcher);assert.equal(fs.readFileSync(first.launcher_node,'utf8'),before.node);assert.equal(fs.readFileSync(path.join(target,'installation.json'),'utf8'),before.pointer);assert.equal(fs.readFileSync(first.configs[0],'utf8'),before.config);assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),before.skill);
 });
 
+test('partial install uses fenced recovery or leaves its journal for the updater',async()=>{
+ for(const stagedUpdate of [false,true]){
+  const dir=fs.mkdtempSync(path.join(root,'install-recovery-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');let rename=fs.renameSync;
+  try{
+   fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle,'old');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+   const first=install({bundle,target,home});const before=fs.readFileSync(first.launcher_node);writeFixture(bundle,'new');seal(bundle);let injected=false,error;
+   fs.renameSync=(from,to)=>{if(!injected&&to===first.launcher){injected=true;throw Error('injected launcher switch failure');}return rename(from,to);};
+   try{install({bundle,target,home,stagedUpdate});assert.fail('switch should fail');}catch(e){error=e;}finally{fs.renameSync=rename;}
+   assert(injected);
+   if(stagedUpdate){assert.equal(error.code,'installation_recovery_required');assert(fs.existsSync(error.rollback));await rollbackGuarded(error.rollback);}
+   else assert.match(error.message,/injected launcher switch failure/);
+   assert.deepEqual(fs.readFileSync(first.launcher_node),before);assert.equal(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))).release,first.release);
+  }finally{fs.renameSync=rename;fs.rmSync(dir,{recursive:true,force:true});}
+ }
+});
 test('bundle and target overlap is refused before security or configuration changes',()=>{
  const dir=fs.mkdtempSync(path.join(root,'overlap-')),bundle=path.join(dir,'bundle'),home=path.join(dir,'home');
  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'fixture');seal(bundle);

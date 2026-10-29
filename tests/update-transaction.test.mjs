@@ -58,6 +58,19 @@ test('update requires explicit reservation and cleanup acknowledgements',async()
 test('new service health failure rolls back actual installer changes and restarts prior build',async()=>{
  const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();await assert.rejects(update(f.target,'apply',f),/native health fixture failure/);const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);assert.equal((await update(f.target,'status',f)).last_error,'update_rolled_back');}finally{f.cleanup();}
 });
+test('updater rolls back the journal of a partially switched installer under its lease',async()=>{
+ const f=fixture();let rename=fs.renameSync,held=false,restores=0;
+ try{
+  f.adapters.diskInfo=()=>({bavail:1_000_000,bsize:4096});await update(f.target,'check',f);
+  f.adapters.acquireControllerLease=async()=>{assert(!held);held=true;return {assertHeld(){assert(held);},async release(){assert(held);held=false;}};};
+  const restore=f.adapters.rollback;f.adapters.rollback=file=>{assert(held);restores++;return restore(file);};
+  const launcher=path.join(f.target,'cu.mjs');let injected=false;
+  fs.renameSync=(from,to)=>{if(!injected&&to===launcher){injected=true;throw Error('injected launcher switch failure');}return rename(from,to);};
+  try{await assert.rejects(update(f.target,'apply',f),e=>e.code==='installation_recovery_required');}finally{fs.renameSync=rename;}
+  assert(injected);assert.equal(restores,1);assert.equal(held,false);assert(!fs.existsSync(path.join(f.target,'update-switching.json')));
+  const current=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(current.release,'bundle-manifest.json'))).build_id,f.old.build_id);
+ }finally{fs.renameSync=rename;f.cleanup();}
+});
 test('failed startup with no service rolls back after a positive not-running check',async()=>{
  const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();const original=f.adapters.cli;let shutdowns=0;
   f.adapters.cli=(record,args)=>{if(args[0]==='shutdown'&&++shutdowns>1)throw Error('no_session');return original(record,args);};

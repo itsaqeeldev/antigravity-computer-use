@@ -867,10 +867,13 @@ files. The standalone rollback command now acquires native controller leases for
 every root before rechecking and keeps them through restoration; the updater
 passes its existing target lease in-process and acquires any additional roots.
 A real local kernel-lease test covers a competing previous-root owner and reuse
-of an updater-held target lease. Installation's synchronous error-recovery path
-still calls the unguarded internal restore, so issue #8 remains open. Helper
-failure during individual file operations and real macOS/Windows recovery also
-require further qualification.
+of an updater-held target lease. A standalone installer now invokes the guarded
+rollback worker after a partial switch. A staged installer returns its journal
+to the updater, which reuses its target lease and also restores a scope that
+failed before returning a successful installation record. Injected switch-failure
+tests exercise both paths. Issue #8 remains open pending helper-loss tests and
+real macOS/Windows recovery qualification; a lease can be lost during an
+individual filesystem operation and must not be assumed continuously held.
 
 Local full-suite rerun on 30 October failed `update_insufficient_space` with
 drive D near 156 MiB free while tests ran concurrently. The focused rollback,

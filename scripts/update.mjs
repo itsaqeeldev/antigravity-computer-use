@@ -199,7 +199,9 @@ async function updateLocked(target,command,{fetcher,adapters}){
    // Hold the same fence used for installation through rollback as well: a
    // Sidecar must not restart between the status check and restoring files.
    if(!controllerLease)controllerLease=await acquireController();
-   for(const file of records.reverse())await runRollback(file,controllerLease);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
+   // The installer records its journal before mutating files. Include a
+   // partially installed scope even when it failed before returning `next`.
+   for(const file of [...journal.rollback].reverse())await runRollback(file,controllerLease);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
  }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);}

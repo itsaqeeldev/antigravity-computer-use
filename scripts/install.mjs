@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {storageOperation,defaultInstallationRoot} from '../server/storage.mjs';
 import {SIDECAR_ID,sidecarDefinition,mergeSidecarConfig} from './sidecar.mjs';
 import {nativePlatform} from '../server/platform.mjs';
-import {rollback} from './rollback.mjs';
+import {spawnSync} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import {writeAtomicJSON,writeAtomicText,flushPreparedTree,flushPreparedFile,readTaskState} from '../server/atomic-json.mjs';
 import {deploymentPinned} from '../server/update-core.mjs';
@@ -187,7 +187,13 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  writeAtomicJSON(path.join(target,'installation.json'),{...manifest,backup});
  return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,configs,skills:skillDirs,backup};
  }catch(error){
-  if(switching){try{rollback(rollbackFile);}catch(recovery){throw Object.assign(Error('Installation recovery needs manual review. Use the retained rollback journal.'),{code:'installation_recovery_failed',rollback:rollbackFile,cause:recovery});}}
+  if(switching){
+   // The updater already holds the target lease. Its async recovery must use
+   // that lease directly rather than spawn a second owner and deadlock.
+   if(stagedUpdate)throw Object.assign(Error('Staged installation requires fenced recovery.'),{code:'installation_recovery_required',rollback:rollbackFile,cause:error});
+   const recovery=spawnSync(process.execPath,[fileURLToPath(new URL('./rollback.mjs',import.meta.url)),rollbackFile],{encoding:'utf8',timeout:30000,windowsHide:true});
+   if(recovery.status!==0)throw Object.assign(Error('Installation recovery needs manual review. Use the retained rollback journal.'),{code:'installation_recovery_failed',rollback:rollbackFile,cause:recovery.error});
+  }
   throw error;
  }
 }
