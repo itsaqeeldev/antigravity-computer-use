@@ -25,3 +25,18 @@ test('incident recording survives overlapping report publication',async()=>{
   assert(f.i.read().find(item=>item.code==='stale_observation').pending,'a newer occurrence remains pending');
  }finally{if(child.exitCode===null)child.kill();await closed;f.clean();}
 });
+
+test('interrupted acknowledgement publication leaves the incident pending',async()=>{
+ const f=fixture(true);
+ const script=`import fs from 'node:fs';import {diagnostics} from ${JSON.stringify(new URL('../scripts/diagnostics.mjs',import.meta.url).href)};
+ const rename=fs.renameSync;fs.renameSync=(from,to)=>{if(String(to).endsWith('incident-acks.json')){console.log('before-rename');const b=Buffer.alloc(1);fs.readSync(0,b,0,1,null);}return rename(from,to);};
+ diagnostics(${JSON.stringify(f.directory)},{submit:true,target:${JSON.stringify(f.target)},run:(_exe,args)=>args[1]==='list'?{status:0,stdout:'[]'}:{status:0}});`;
+ const child=spawn(process.execPath,['--input-type=module','-e',script],{stdio:['pipe','pipe','pipe'],windowsHide:true});let output='';child.stdout.on('data',chunk=>output+=chunk);
+ const closed=new Promise(resolve=>child.once('close',resolve));
+ try{
+  const deadline=Date.now()+5000;while(!output.includes('before-rename')&&child.exitCode===null&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,10));
+  assert(output.includes('before-rename'),'reporter must reach acknowledgement publication');
+  child.kill();await closed;
+  assert.equal(f.i.read()[0].pending,true);
+ }finally{if(child.exitCode===null)child.kill();await closed;f.clean();}
+});

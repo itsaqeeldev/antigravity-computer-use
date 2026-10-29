@@ -24,9 +24,10 @@ The old recorder and reporting worker both rewrote `incidents.json` through the
 same `.tmp` pathname. A deterministic two-process test reproduced `ENOENT` when
 a new incident arrived during publication. The candidate now stores bounded
 report acknowledgements separately, and the regression verifies that a new
-incident and a newer occurrence of the same incident remain pending. Concurrent
-reporting workers and interrupted acknowledgement writes still need independent
-qualification before release; single-process reporting tests do not prove them.
+incident and a newer occurrence of the same incident remain pending. A separate
+process-termination test confirms an interrupted acknowledgement publication
+leaves the incident pending. Concurrent reporting workers, native crash and
+power-loss behavior still need qualification before release.
 
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
