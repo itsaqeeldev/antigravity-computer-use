@@ -396,3 +396,21 @@ service with an inert controls provider, verifies one show request and confirms
 Stop remains on disk. It does not create an actual bar or establish recovery on
 the affected second PC; native visibility, physical re-arm and real host/model
 qualification remain required.
+
+## Lost acknowledgements preserve uncertainty
+
+The direct client previously reduced lost, invalid or oversized replies to
+ordinary errors, dropping the structured unknown-delivery state. A timeout also
+said the session was cancelled without confirming native cleanup. Connected
+transport failures now retain `delivery_unknown`, require observation before
+continuing and return `inspect_effect_without_replay`. Closing the connection
+requests cancellation; it is not reported as proof that input was never sent or
+that cleanup completed. Invalid reply contents are not echoed in the error.
+
+Requests now have an absolute deadline, rather than a socket inactivity timeout
+that partial bytes could continually extend. Seven real-client/inert-peer cases
+cover lost, malformed, non-object, missing-status, oversized, timed-out and
+never-completing partial acknowledgements. The existing real-service cancellation
+test now exercises an inert action, verifies one dispatch and one Stop request,
+and checks the unknown-delivery advice. No test sends desktop input or establishes
+the physical watchdog/held-input-cleanup acceptance gate.

@@ -45,6 +45,7 @@ let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
 export function failureReply(error,{directory,record=true}={}){
  const result={ok:false,error:{code:error.code||'refused',message:error.message},next_action:'inspect_diagnostics'};
+ for(const field of ['delivery_unknown','observe_before_continuing','cancellation_requested'])if(error[field]===true)result[field]=true;
  Object.assign(result,recoveryAdvice(result));
  if(record)try{
   applyDeployment(loadDeployment());const folder=directory||dataDir();storageOperation('verify',folder);
@@ -58,12 +59,28 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
     let buffer='',settled=false,connected=false;
     const socket=net.createConnection(session.pipe);
     socket.setEncoding('utf8');
-    const done=(error,result)=>{if(settled)return;settled=true;socket.destroy();error?reject(error):resolve(result);};
-    socket.setTimeout(timeout,()=>done(Error('Desktop request timed out; session was cancelled. Observe status before continuing.')));
+    const transportFailure=(code,message)=>Object.assign(Error(message),{code,...(connected?{delivery_unknown:true,observe_before_continuing:true,cancellation_requested:true}:{})});
+    const done=(error,result)=>{if(settled)return;settled=true;clearTimeout(deadline);socket.destroy();error?reject(error):resolve(result);};
+    // Absolute deadline: partial bytes cannot keep a hung action alive forever.
+    // Closing the connection requests server cancellation, not proof of cleanup.
+    const deadline=setTimeout(()=>done(transportFailure('request_timeout','Desktop request timed out. Cancellation was requested; completion is unconfirmed. Inspect status and the actual app before continuing; do not replay the action.')),timeout);
     socket.on('connect',()=>{connected=true;socket.write(JSON.stringify({secret:session.secret,command,args,expected_build_id:BUILD_ID,expected_permission_mode:expectedPermissionMode})+'\n');});
-    socket.on('data',chunk=>{buffer+=chunk;if(Buffer.byteLength(buffer)>4*1024*1024)return done(Error('Desktop response too large'));if(buffer.includes('\n')){try{done(null,JSON.parse(buffer.slice(0,buffer.indexOf('\n'))));}catch(error){done(error);}}});
-    socket.on('error',error=>done(Object.assign(Error(connected?'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.':'The saved desktop service is unreachable. Inspect/restart the installed Computer Use App sidecar or use its human starter from the normal Windows desktop, then discover apps and observe again. Isolated exebox terminals cannot start visible-desktop control. Do not use WMI or bypass host security. Emergency Stop remains latched.'),{code:connected?'connection_lost':'session_unavailable',cause:error})));
-    socket.on('end',()=>{if(!settled)done(Error('Desktop session disconnected; do not replay the action.'));});
+    socket.on('data',chunk=>{
+      buffer+=chunk;
+      if(Buffer.byteLength(buffer)>4*1024*1024)return done(transportFailure('service_response_too_large','Desktop response exceeded its limit. Completion is unconfirmed; inspect the app without replaying the action.'));
+      const newline=buffer.indexOf('\n');if(newline<0)return;
+      let result;
+      try{
+        result=JSON.parse(buffer.slice(0,newline));
+        if(!result||Array.isArray(result)||typeof result!=='object'||typeof result.ok!=='boolean')throw Error();
+      }catch{
+        return done(transportFailure('invalid_service_response','Desktop returned an invalid acknowledgement. Completion is unconfirmed; inspect the app without replaying the action.'));
+      }
+      done(null,result);
+    });
+    socket.on('error',()=>done(transportFailure(connected?'connection_lost':'session_unavailable',connected?'Desktop connection lost; input delivery may be unknown. Do not replay the action. Inspect status and observe again.':'The saved desktop service is unreachable. Inspect/restart the installed Computer Use App sidecar or use its human starter from the normal Windows desktop, then discover apps and observe again. Isolated exebox terminals cannot start visible-desktop control. Do not use WMI or bypass host security. Emergency Stop remains latched.')));
+    socket.on('end',()=>{if(!settled)done(transportFailure('session_disconnected','Desktop session disconnected before acknowledging completion; inspect the app without replaying the action.'));});
+    socket.on('close',()=>{if(!settled)done(transportFailure(connected?'connection_lost':'session_unavailable','Desktop connection closed before acknowledging completion; inspect status before continuing.'));});
   });
 }
 

@@ -2,7 +2,7 @@ import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
 import fs from 'node:fs';import path from 'node:path';
 import {serveDesktop,compact} from '../server/desktop-service.mjs';
-import {request,describeCommand,encodeReply} from '../scripts/desktop.mjs';
+import {request,describeCommand,encodeReply,failureReply} from '../scripts/desktop.mjs';
 import net from 'node:net';
 import {BUILD_ID} from '../server/version.mjs';
 import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';
@@ -136,12 +136,14 @@ test('direct skill IPC authenticates, rejects overlapping actions, and permits i
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct IPC client timeout cancels active work without replay',async()=>{
- const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let stops=0,release;
- const runtime={async observe(){return new Promise(resolve=>release=()=>resolve({}));},async stop(){stops++;},async close(){}};
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let stops=0,actions=0,release;
+ const runtime={async action(){actions++;return new Promise(resolve=>release=()=>resolve({input_completed:true}));},async stop(){stops++;},async close(){}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{
-  await assert.rejects(request(session,'snapshot',{hwnd:1},40),/timed out/);
-  await new Promise(resolve=>setTimeout(resolve,40));assert.equal(stops,1);release();
+  await assert.rejects(request(session,'click',{hwnd:1,observation_id:'observed',index:1,reason:'Inert action'},100),error=>{
+   const result=failureReply(error,{record:false});assert.equal(result.delivery_unknown,true);assert.equal(result.next_action,'inspect_effect_without_replay');return /timed out/.test(error.message);
+  });
+  await new Promise(resolve=>setTimeout(resolve,40));assert.equal(stops,1);assert.equal(actions,1);release();
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct observations return an actual local image without duplicate tree payload',()=>{

@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "a2157d3880d1290cc9a09eccfa96a0d2e5bf9904b6300586edf9cbae82d3e456"
+      "sha256": "65c08e647d04adace7b1fd03d1b520657a91a3cac22454dbb6db611c2330c8b5"
     },
     {
       "path": "server/version.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "08378cf213553f5d0672d65fc52484e112922ea3a828980227236a608fc16ce4"
+      "sha256": "7005b925c40ea1cbc7299aeeb51e0d78320ef6447709fa41fe5bdb2d9eaa377e"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "ba7b217972beb66a30e7c3a3e876b24266e7bd31da339a1ca172a3eb8d239d39"
+      "sha256": "a6e61a86983d7913f9f4e4107bddc6dc6f7a8015ab72c4c9531cb11d0dd18c60"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "f78dd6d0f66c7ba5b0f3779f9670c14159e136d0af52a1f58eab54c8831e8f43"
+      "sha256": "5df28293f09ce7ca65fdb4aa5791fde1f16bba4ee543dc3db003b13d2fcaa3b6"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -689,6 +689,10 @@
     {
       "path": "tests/native-risk-policy.test.mjs",
       "sha256": "ab94ed30544c51367b8dd6f1e4be4aea5ea5ac38be179376aa0a9e7939cc0f44"
+    },
+    {
+      "path": "tests/transport-failure.test.mjs",
+      "sha256": "c2ac41a4a6de8676e7fe50b55938f397d9cb54c05521c4e5dfbc0208267fd0e3"
     }
   ]
 }
