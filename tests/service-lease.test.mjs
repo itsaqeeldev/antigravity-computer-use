@@ -4,8 +4,21 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {acquireServiceLease} from '../server/service-lease.mjs';import {serveDesktop} from '../server/desktop-service.mjs';import {request} from '../scripts/desktop.mjs';
 import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import {EventEmitter} from 'node:events';import {PassThrough} from 'node:stream';
 import {storageOperation} from '../server/storage.mjs';
+import {rollbackGuarded} from '../scripts/rollback.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('cross-root rollback fences real competing controller leases',{timeout:30000},async t=>{
+ const folder=temporary(),current=path.join(folder,'current'),previous=path.join(folder,'previous'),data=path.join(previous,'data');fs.mkdirSync(data,{recursive:true});
+ const saved=path.join(folder,'saved-deployment.json'),source=path.join(folder,'saved-launcher'),destination=path.join(folder,'launcher'),journal=path.join(folder,'rollback.json');
+ fs.writeFileSync(saved,JSON.stringify({target:previous}));fs.writeFileSync(source,'old');fs.writeFileSync(destination,'new');
+ fs.writeFileSync(journal,JSON.stringify({release:path.join(current,'releases','candidate'),records:[{kind:'deployment',existed:true,saved,file:path.join(folder,'deployment.json')},{kind:'launcher',existed:true,saved:source,file:destination}]}));let lease;
+ try{
+  try{lease=await acquireServiceLease(data);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  await assert.rejects(rollbackGuarded(journal),e=>e.code==='service_already_running');assert.equal(fs.readFileSync(destination,'utf8'),'new');
+  await lease.release();lease=null;const currentData=path.join(current,'data');fs.mkdirSync(currentData,{recursive:true});lease=await acquireServiceLease(currentData);
+  assert((await rollbackGuarded(journal,{held:new Map([[currentData,lease]])})).restored);lease.assertHeld();assert.equal(fs.readFileSync(destination,'utf8'),'old');
+ }finally{if(lease)await lease.release();fs.rmSync(folder,{recursive:true,force:true});}
+});
 test('timed-out ownership helper is reaped before startup rejects',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.exitCode=null;let closed=false;
  child.kill=()=>{setTimeout(()=>{closed=true;child.exitCode=1;child.emit('exit',1);child.emit('close',1);},40);};

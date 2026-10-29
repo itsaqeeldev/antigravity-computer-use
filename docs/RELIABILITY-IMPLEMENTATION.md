@@ -863,10 +863,22 @@ roots before switching files, and checks again after staging. An open marker or
 malformed state refuses the installation without replacing its configuration.
 The standalone rollback entry point also checks open task state and live service
 metadata in the target and every previous deployment root before restoring
-files. Tests cover refusal on either previous-root condition. This check does not
-hold a native lease on every root throughout rollback, so a competing startup
-after the check remains a race; cross-installation rollback still needs that
-coordination and real qualification.
+files. The standalone rollback command now acquires native controller leases for
+every root before rechecking and keeps them through restoration; the updater
+passes its existing target lease in-process and acquires any additional roots.
+A real local kernel-lease test covers a competing previous-root owner and reuse
+of an updater-held target lease. Installation's synchronous error-recovery path
+still calls the unguarded internal restore, so issue #8 remains open. Helper
+failure during individual file operations and real macOS/Windows recovery also
+require further qualification.
+
+Local full-suite rerun on 30 October failed `update_insufficient_space` with
+drive D near 156 MiB free while tests ran concurrently. The focused rollback,
+installer and updater suites had passed (75 tests) before that run. Old generated
+installer fixture folders account for substantial apparent test data; automated
+approval blocked their attempted cleanup. Preserve this as a capacity limitation,
+not a successful full-suite qualification. GitHub CI for the subsequent commit
+must be checked independently.
 The older beta had no task marker, so its absence in an older stopped service
 cannot establish that an Antigravity conversation has finished; that bootstrap
 qualification remains outstanding.

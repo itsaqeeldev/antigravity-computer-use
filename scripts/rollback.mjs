@@ -1,7 +1,8 @@
 import fs from 'node:fs';import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readTaskState} from '../server/atomic-json.mjs';
-export function rollback(file){
+import {acquireServiceLease} from '../server/service-lease.mjs';
+export function rollbackPlan(file){
 if(!file)throw new Error('Pass the exact backups/<timestamp>/rollback.json to restore.');
 const data=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));
 const target=path.resolve(data.release,'..','..'),roots=new Set([target]);
@@ -12,6 +13,12 @@ for(const record of data.records){if(record.kind==='deployment'&&record.existed)
  if(typeof previous.target!=='string'||!path.isAbsolute(previous.target))throw Error('invalid_previous_deployment');
  roots.add(path.resolve(previous.target));
 }}
+const unique=new Map();for(const root of roots){const key=process.platform==='win32'?root.toLowerCase():root;if(!unique.has(key))unique.set(key,root);}
+return {data,roots:[...unique.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([,root])=>root)};
+}
+export function rollback(file,{guard=()=>{}}={}){return restoreRollback(rollbackPlan(file),guard);}
+function restoreRollback({data,roots},guard){
+guard();
 for(const root of roots){
 if(readTaskState(path.join(root,'data','task-state.json')))throw Error('task_open_finish_before_rollback');
 const sessionFile=path.join(root,'data/desktop-session.json');if(fs.existsSync(sessionFile)){
@@ -21,6 +28,7 @@ const sessionFile=path.join(root,'data/desktop-session.json');if(fs.existsSync(s
 }
 }
 for(const r of data.records){
+ guard();
  if(r.kind==='sidecar-config'){
   const current=fs.existsSync(r.file)?JSON.parse(fs.readFileSync(r.file)):{};
   const previous=r.existed?JSON.parse(fs.readFileSync(r.saved)):{};
@@ -42,6 +50,17 @@ for(const r of data.records){
  else if(['installation','launcher','deployment','deployment-registry','sidecar-definition'].includes(r.kind)&&fs.existsSync(r.file))fs.unlinkSync(r.file);
  else if(r.kind==='skill'&&fs.existsSync(path.join(r.file,'SKILL.md')))fs.unlinkSync(path.join(r.file,'SKILL.md'));
 }
+guard();
 return {restored:true};
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){rollback(process.argv[2]);console.log('Prior configuration and skill files restored. Installed release folders were preserved.');}
+export async function rollbackGuarded(file,{held=new Map(),acquire=acquireServiceLease}={}){
+ const plan=rollbackPlan(file),acquired=[];const leases=[];
+ const identity=directory=>process.platform==='win32'?path.resolve(directory).toLowerCase():path.resolve(directory);
+ const preheld=new Map([...held].map(([directory,lease])=>[identity(directory),lease]));
+ try{
+  for(const root of plan.roots){const directory=path.join(root,'data');fs.mkdirSync(directory,{recursive:true});const existing=preheld.get(identity(directory)),lease=existing||await acquire(directory);if(!existing)acquired.push(lease);leases.push(lease);}
+  const guard=()=>{for(const lease of leases)lease.assertHeld();};
+  return restoreRollback(plan,guard);
+ }finally{let failure;for(const lease of acquired.reverse())try{await lease.release();}catch(error){failure??=error;}if(failure)throw failure;}
+}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){rollbackGuarded(process.argv[2]).then(()=>console.log('Prior configuration and skill files restored. Installed release folders were preserved.')).catch(error=>{console.error(error.message);process.exitCode=1;});}

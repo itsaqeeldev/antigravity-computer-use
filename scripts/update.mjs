@@ -7,6 +7,7 @@ import {diagnostics} from './diagnostics.mjs';
 import {acquireServiceLease} from '../server/service-lease.mjs';
 import {request} from './desktop.mjs';
 import {writeAtomicJSON} from '../server/atomic-json.mjs';
+import {rollbackGuarded} from './rollback.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function update(target,command,{fetcher=fetch,adapters={}}={}){
  target=path.resolve(target);
@@ -123,7 +124,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    const prepared=adapters.prepare?await adapters.prepare(current):await request(session,'prepare_update',{},5000,current.permission_mode);
    return prepared.ok===true&&prepared.prepared===true;
   };
-  const runRollback=adapters.rollback||(file=>{const p=spawnSync(path.join(installed.release,nativePlatform().node),[path.join(installed.release,'scripts/rollback.mjs'),file],{encoding:'utf8',timeout:30000,windowsHide:true});if(p.status!==0)throw Error('update_rollback_failed');});
+  const runRollback=(file,fence)=>adapters.rollback?adapters.rollback(file):rollbackGuarded(file,{held:fence?new Map([[path.join(target,'data'),fence]]):new Map()});
   if(command==='recover'){
    if(!fs.existsSync(switchingFile))return {recovered:false};
    const interrupted=JSON.parse(fs.readFileSync(switchingFile));
@@ -131,7 +132,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
    switching=true;safeToUnlock=false;
    if(serviceRunning)shutdownVerified(installed);
-   const fence=await acquireController();try{for(const file of [...interrupted.rollback].reverse())runRollback(file);}finally{await fence?.release();}
+   const fence=await acquireController();try{for(const file of [...interrupted.rollback].reverse())await runRollback(file,fence);}finally{await fence?.release();}
    const prior=passiveRecord(interrupted.previous_installation);startVerified(prior,'update_recovery_health_failed');
    save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
   }
@@ -142,7 +143,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(state.rollback==null||Array.isArray(state.rollback)&&!state.rollback.length)throw Error('update_no_rollback');validateRollbackFiles(state.rollback);storage('verify-tree',target);if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];writeAtomicJSON(switchingFile,journal);
-   if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;const fence=await acquireController();try{for(const file of [...state.rollback].reverse())runRollback(file);}finally{await fence?.release();}
+   if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;const fence=await acquireController();try{for(const file of [...state.rollback].reverse())await runRollback(file,fence);}finally{await fence?.release();}
    const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));startVerified(restored,'update_rollback_health_failed');save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
@@ -198,7 +199,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    // Hold the same fence used for installation through rollback as well: a
    // Sidecar must not restart between the status check and restoring files.
    if(!controllerLease)controllerLease=await acquireController();
-   for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
+   for(const file of records.reverse())await runRollback(file,controllerLease);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
  }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);}

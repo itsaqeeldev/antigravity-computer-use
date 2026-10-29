@@ -316,7 +316,7 @@
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "7ec49644e9391af09210d0280eb5f625ea9bd62bdc76729f7a699fa148b69105"
+      "sha256": "529517972540fc00cdd7c1e6d2a80413a6b5a7472ffd8bcb3b6b0d00fdf8790f"
     },
     {
       "path": "scripts/verify-install.mjs",
@@ -392,7 +392,7 @@
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "db4fbc37722a939bc93a754c8412282013e9770fbecdfd5e778e5dbdc777f1b8"
+      "sha256": "3b1e0cdd020ad4dc0993e7724ffe45300123bbf9864950bb0b659a7108cf8740"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "77641928407143102f3e99349fad88dfcd86ab110912f1ba22a8fe4dabf356bd"
+      "sha256": "50032983cf1084e9b2df569a1e59440f4c722352805ac22f1dd36cef473facba"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "14df8278be342b078496540f5e57326bec0718712afe1187cf87324a771f3e0d"
+      "sha256": "6570473a7a1e1dc5c3885bf56d839b0fb7b1a41e73596861540e1014cb5ce542"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
