@@ -60,7 +60,7 @@ test('named batch groups need no plan file and retain fresh-frame and explicit i
  assert.throws(()=>parseRunArguments(batchSchema,Array.from({length:9},()=>['--step','key','--keys','tab']).flat(),describe),/at most eight/);
 });
 
-test('named batches cross actual Windows PowerShell without JSON quoting or Unicode path loss',()=>{
+test('named batches cross actual Windows PowerShell without JSON quoting or Unicode path loss',{skip:process.platform!=='win32'},()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-batch-')),file=path.join(dir,'parse.mjs');
  try{
   fs.writeFileSync(file,`import {parseRunArguments} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/arguments.mjs')).href)};import {describeCommand,encodeReply} from ${JSON.stringify(pathToFileURL(path.resolve('scripts/desktop.mjs')).href)};console.log(encodeReply(parseRunArguments(describeCommand('run').inputSchema,process.argv.slice(2),describeCommand)));`);

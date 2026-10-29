@@ -99,11 +99,14 @@ enum MacPrivateStorage {
         let file = (root as NSString).appendingPathComponent(marker)
         if !FileManager.default.fileExists(atPath: file) {
             let fd = open(file, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
-            guard fd >= 0 else { try reject("storage_permissions_failed", file, "Cannot create private storage marker.") }
-            let value = Data("agcu-posix-v1:\(getuid())\n".utf8)
-            let wrote = value.withUnsafeBytes { write(fd, $0.baseAddress, value.count) }
-            close(fd)
-            guard wrote == value.count else { try reject("storage_permissions_failed", file, "Cannot write storage marker.") }
+            if fd >= 0 {
+                let value = Data("agcu-posix-v1:\(getuid())\n".utf8)
+                let wrote = value.withUnsafeBytes { write(fd, $0.baseAddress, value.count) }
+                close(fd)
+                guard wrote == value.count else { try reject("storage_permissions_failed", file, "Cannot write storage marker.") }
+            } else if errno != EEXIST {
+                try reject("storage_permissions_failed", file, "Cannot create private storage marker.")
+            }
         }
         try verify(root)
         return root
