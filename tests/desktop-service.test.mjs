@@ -43,7 +43,7 @@ test('foreground serve stays resident for host-owned background execution and sh
  let stderr='';child.stderr.on('data',s=>stderr+=s);
  try{
   const ready=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Foreground startup timed out: '+stderr)),10000);child.once('error',reject);createInterface({input:child.stdout}).once('line',line=>{clearTimeout(timer);try{resolve(JSON.parse(line));}catch(error){reject(error);}});});
-  assert.equal(ready.service_mode,'foreground');assert.equal(ready.private_data_storage,true);assert.equal(ready.state,'idle');
+  assert.equal(ready.ok,true,JSON.stringify(ready));assert.equal(ready.service_mode,'foreground',JSON.stringify(ready));assert.equal(ready.private_data_storage,true);assert.equal(ready.state,'idle');
   await new Promise(resolve=>setTimeout(resolve,100));assert.equal(child.exitCode,null,'Do not exit after printing readiness');
   const session=JSON.parse(fs.readFileSync(path.join(dir,'desktop-session.json')));
   assert.equal((await request(session,'status')).state,'idle');const exited=new Promise(resolve=>child.once('exit',resolve));assert.equal((await request(session,'shutdown')).closed,true);assert.equal(await exited,0,stderr);

@@ -260,3 +260,38 @@ The follow-up workflow now runs native installation/update/rollback checks on
 the exact sealed bundle it signs before uploading assets. Windows ACL refusal
 must still be recorded as unqualified. Interactive app/permission/physical tests
 remain separate and required; this workflow cannot establish vendor parity.
+
+## Exact signed native qualification result
+
+At `455b126`, the [signed-bundle preparation run](https://github.com/shayann07/antigravity-computer-use/actions/runs/40873846760)
+passed all three jobs. Independent public-key verification covered each signature
+and every prepared payload. The exact signed Mac ARM64 and Intel bundles passed
+native installation, passive service startup, update, rollback and Stop retention
+in isolated homes. Windows native updater qualification explicitly skipped with
+`insecure_storage_ancestor`; no parent ACL was changed. This is not a Windows
+native update pass. All assets remain unpublished CI artifacts.
+
+## Unicode transport isolation
+
+The new no-input Windows transport regression sends the exact synthetic Urdu,
+U+200C/U+200D and emoji string through real Windows PowerShell, the production
+CLI/parser and authenticated IPC, `Runtime.action`, `Driver.call`, and a native
+C# JSON serializer. Both literal `--text` and UTF-8 `--text-file` round trips
+preserved every code point. The native endpoint is an inert JSON echo process;
+approval/window/observation boundaries are injected fixtures and no clipboard,
+app windows or desktop input APIs are used.
+
+This narrows issue #2: the transport/runtime path does not strip the joiner in
+the tested cases. It does not establish whether Flash omitted U+200D in its
+original paste argument or whether the real clipboard/provider path changed it.
+That remaining distinction needs a controlled native app test after the owner
+resumes desktop qualification. The issue stays open and the earlier Flash run
+remains a failed exact-text qualification.
+
+The first full source run after adding that transport test had one unrelated
+foreground-service readiness assertion failure (195 passed, one failed, seven
+skipped). Its returned error was not included by the old assertion. The assertion
+now retains the actual readiness reply for diagnosis. The focused foreground
+test passed, and the next full run passed 196 tests, zero failures and seven
+skips. The original failure output is retained privately; a successful retry is
+not proof that an intermittent startup defect has been eliminated.
