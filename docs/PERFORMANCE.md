@@ -1,5 +1,19 @@
 # Measuring desktop task latency
 
+## 29 October 2026: matched Notepad tasks
+
+Two real Antigravity conversations used the same installed Windows build
+`bc45734396d12837098b4cdcd046fd4d36e7c22da7eeeb6acec33fd023cedc9f` and the
+same Unicode file-to-Notepad save task. Sonnet 4.6 Thinking took 203,199 ms
+(14 controller calls, 18,904 ms service time); Gemini 3.8 Flash High took
+181,909 ms (19 calls, 18,530 ms service time). Both independently read-back
+outputs matched the input after CRLF normalization, including ZWJ and ZWNJ.
+Flash encountered `window_not_found` during close verification. Sonnet
+repeated launch/schema discovery. These runs measure different models, not a
+before/after speed improvement; neither establishes Upscaly performance or
+affected-PC recovery. Private summaries and receipts remain under
+`.localdata/real-model-qualification-20261029/reviewed-paired/`.
+
 Use a real app task in Antigravity and preserve its exact build, model, input,
 settings, prompt start time and final task receipt ID. Save all local test
 artifacts under the checkout's ignored `.localdata/` directory. Keep hardware,

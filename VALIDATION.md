@@ -1,5 +1,13 @@
 # macOS candidate validation — 29 October 2026
 
+On 29 October, the owner physically pressed Esc during a Windows Notepad drag
+on installed build `bc45734396d12837098b4cdcd046fd4d36e7c22da7eeeb6acec33fd023cedc9f`.
+The journal observed one held mouse button before Stop and none afterward; the
+queued second action was skipped. Stop survived service restart, programmatic
+resume was refused, and the owner re-armed locally. This does not establish a
+held-key Stop, multi-display behavior or Mac physical Stop. Evidence is retained
+in `.localdata/reliability-current/physical-stop-result.json`.
+
 The shared-core Mac port lives on `codex/macos-and-latency-review`, not in a
 published release. Native Apple Silicon and Intel compilation, native refusal
 contracts, private storage/link/ACL/lease checks, shared regressions, sealed
