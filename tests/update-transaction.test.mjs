@@ -64,3 +64,6 @@ test('a persisted interrupted-switch journal restores the old installation on sc
   const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
  }finally{f.cleanup();}
 });
+test('updating does not re-enable an explicitly disabled Sidecar',async()=>{
+ const f=fixture();try{const config=path.join(f.home,'.gemini/config/config.json');const saved=JSON.parse(fs.readFileSync(config));saved.sidecars['antigravity-computer-use'].enabled=false;fs.writeFileSync(config,JSON.stringify(saved));await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);assert.equal(JSON.parse(fs.readFileSync(config)).sidecars['antigravity-computer-use'].enabled,false);}finally{f.cleanup();}
+});

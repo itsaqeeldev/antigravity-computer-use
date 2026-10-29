@@ -3,6 +3,7 @@
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
 import {install} from './install.mjs';
+import {qualifySignedUpdate} from './qualify-signed-update.mjs';
 if(process.platform!=='darwin')throw Error('Run this qualification on macOS.');
 const root=fileURLToPath(new URL('../',import.meta.url));
 const directory=path.join(root,'.localdata/tests/mac-install');fs.mkdirSync(directory,{recursive:true,mode:0o700});
@@ -29,5 +30,8 @@ try {
  assert.equal(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))).release,first.release);
  const preserved=JSON.parse(fs.readFileSync(config));assert(preserved.sidecars.later.enabled);assert(preserved.sidecars.unrelated.enabled);assert(preserved.unrelated_after);assert.equal(preserved.permissions.preset,'preserve');
  command([path.join(first.release,'scripts/verify-install.mjs'),target]);
+ const signedUpdate=await qualifySignedUpdate({target,bundle,directory});
+ command([path.join(first.release,'scripts/verify-install.mjs'),target]);
+ console.log(JSON.stringify(signedUpdate));
  console.log(JSON.stringify({ok:true,checks:['sealed prebuilt installation','passive native-macos listener','End cleanup','Stop persisted across restart','no guardian during passive Stop','update','rollback','unrelated host settings preserved'],interactive_desktop_qualified:false}));
 } finally {try{desktop('shutdown');}catch{} }

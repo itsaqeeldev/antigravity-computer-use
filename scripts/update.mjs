@@ -63,7 +63,8 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
   }
   const current=cli(installed,['status']);if(!['idle','not_running','stopped'].includes(current.state)||current.approved_apps?.length)return {deferred:true,next_action:'wait_for_task_end'};
-  if(current.state!=='not_running'){
+  const serviceRunning=current.state!=='not_running'&&current.reconnect_required!==true;
+  if(serviceRunning){
    const session=adapters.prepare?null:JSON.parse(fs.readFileSync(path.join(target,'data/desktop-session.json')));
    const prepared=adapters.prepare?await adapters.prepare(current):await request(session,'prepare_update',{},5000,current.permission_mode);
    if(!prepared.prepared)return {deferred:true,next_action:'wait_for_task_end'};
@@ -75,7 +76,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    if(!Array.isArray(interrupted.rollback)||!interrupted.previous_installation)throw Error('update_recovery_journal_invalid');
    for(const file of interrupted.rollback){if(path.dirname(path.dirname(path.resolve(file)))!==path.join(target,'backups')||path.basename(file)!=='rollback.json')throw Error('update_recovery_journal_invalid');}
    switching=true;safeToUnlock=false;
-   if(current.state!=='not_running')cli(installed,['shutdown']);
+   if(serviceRunning)cli(installed,['shutdown']);
    for(const file of [...interrupted.rollback].reverse())runRollback(file);
    const prior=interrupted.previous_installation,health=cli(prior,['start']);
    if(!['idle','stopped'].includes(health.state))throw Error('update_recovery_health_failed');
@@ -88,7 +89,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    if(!state.rollback?.length)throw Error('update_no_rollback');markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600});
-   if(current.state!=='not_running')cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
+   if(serviceRunning)cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
    const restored=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));cli(restored,['start']);save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
@@ -102,7 +103,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   if(!Object.values(registry).some(scope=>!scope.update_pin))return {deferred:true,next_action:'all_deployments_pinned'};
   markSwitch();
   // Installer refuses live controllers. Shutdown independently confirms native cleanup.
-  if(current.state!=='not_running')cli(installed,['shutdown']);
+  if(serviceRunning)cli(installed,['shutdown']);
   // Hold the same native lease used by controllers while swapping files. An
   // old Sidecar cannot restart into a half-switched deployment.
   let controllerLease;if(!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
@@ -111,7 +112,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    for(const scope of Object.values(registry)){
     if(scope.integration!=='direct')throw Error('update_legacy_scope_requires_manual_upgrade');
     if(scope.update_pin)continue;
-    safeToUnlock=false;next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,sidecar:scope.workspace?undefined:scope.sidecar,stagedUpdate:true,journalCreated:addJournal});records.push(path.join(next.backup,'rollback.json'));
+    safeToUnlock=false;next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,stagedUpdate:true,journalCreated:addJournal});records.push(path.join(next.backup,'rollback.json'));
    }
    if(!next)throw Error('update_no_deployment');await controllerLease?.release();controllerLease=null;
    const health=cli(next,['start']);if(health.build_id!==m.build_id||!['idle','stopped'].includes(health.state))throw Error('update_health_failed');
