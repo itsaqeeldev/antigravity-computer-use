@@ -18,6 +18,22 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+The operator authorized reconciling the Upscaly project-local pin. Source
+`36bef78` was built after its Windows and both Mac CI jobs passed. Global and
+`D:\Work\Extras\Upscaly\image upscaler` project scopes now both identify build
+`22e47b7c1236c2d4052f579e307e7e327c7584ddf333b7c2a5ae0ff9336c44b8`; their
+108 payload files and skill templates verified, native helper hashes match the
+bundle, and settings, Stop state and unrelated pins were preserved. The project
+scope remains explicitly pinned. A direct project-launcher smoke test observed
+stable Upscaly 1.0.9, physically opened Settings (13 animated frames), verified
+the displayed panel, closed the app and ended control. This is not an Antigravity
+model-driven task, a signed automatic update, or completion of Mac qualification.
+One prior attempt saw a Sidecar restart during staging and the installer refused
+the project update. Its failure remains in `.localdata/`; the successful retry
+held the native ownership lease through the project install. Rollback journals
+were retained. A fresh Antigravity conversation is needed to load the updated
+project skill; refresh the Sidecar only if the host has not loaded its definition.
+
 An observed Upscaly project-local beta.2 skill was pinned to a different build
 from the running global beta.3 service. Status now explicitly reports a client
 build mismatch, and mismatched requests receive `resolve_version_mismatch`

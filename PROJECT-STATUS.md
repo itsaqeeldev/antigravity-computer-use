@@ -7,16 +7,15 @@ The published release/bootstrap remain beta.2. See the
 [qualification matrix](docs/RELIABILITY-IMPLEMENTATION.md) and
 [Mac evidence boundaries](docs/MACOS-QUALIFICATION.md).
 
-The installed global Windows build `50426a656d2374fca25706235407cafb80cb9c0719a19c3cf65760c49cc32474`
-was built from `a4e72341fe60da31b086788c72c4f348a974eb09` and verified its
+The installed global and Upscaly project-local Windows build `22e47b7c1236c2d4052f579e307e7e327c7584ddf333b7c2a5ae0ff9336c44b8`
+was built from `36bef786d8b73b5479141867512cb186c93a7c3d` and verified its
 108 files and skill on 29 October. Its passive service reported idle,
 host-managed, with zero approved apps. The supported local upgrade confirmed
 cleanup and preserved settings and project pins; Stop was not latched during
 this upgrade. It was not a signed automatic-update acceptance run. Real model
-and application acceptance on this build is pending. A direct Upscaly Settings
-click without a physical flag moved the pointer over 15 frames and opened the
-panel on an earlier helper. On the prior installed helper a disabled 2× control
-in Upscaly refused with `element_disabled`; this is not a full Antigravity workflow.
+and application acceptance on this build is pending. A project-launcher smoke
+test opened stable Upscaly, physically clicked Settings, visually verified the
+panel, closed it and ended control. This is not a full Antigravity model workflow.
 
 Real Sonnet and Flash Notepad tasks saved matching Unicode on the prior installed
 build `bc457343...`, and a physical Esc during a held drag released input and
