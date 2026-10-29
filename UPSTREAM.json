@@ -604,7 +604,7 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "24222bf5e98e56532cf024a8479916a2465cd03c1e8d2cbe7c723102703b920a"
+      "sha256": "7a0ebb0ed7ff618dd4477c38a442d29bc4e8896841ee45430bc851e1a2e3ae39"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",

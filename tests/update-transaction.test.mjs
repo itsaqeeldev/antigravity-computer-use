@@ -75,6 +75,8 @@ test('a failed scheduled check never applies a previously staged update on a lat
   assert.equal((await update(f.target,'status',f)).available,false);
   await update(f.target,'scheduled',offline);
   assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert(fs.existsSync(state.staged));
+  const retry=JSON.parse(fs.readFileSync(stateFile));retry.attempt_at=0;fs.writeFileSync(stateFile,JSON.stringify(retry));
+  assert((await update(f.target,'scheduled',f)).applied,'a later successful check can stage and apply the update');
  }finally{f.cleanup();}
 });
 test('explicit install update preferences and reporting consent survive upgrades',()=>{
