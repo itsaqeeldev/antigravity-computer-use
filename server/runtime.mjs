@@ -86,7 +86,7 @@ export class Runtime {
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.priorGuard=priorTask?prior.guard:null;this.taskDurable=true;this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.priorGuard=priorTask?prior.guard:null;this.priorChildren=priorTask?prior.children:null;this.priorDispatched=priorTask?prior.dispatched:null;this.dispatchChildren=[];this.dispatchStarted=false;this.taskDurable=true;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -108,8 +108,19 @@ export class Runtime {
   beginTask(){
     if(this.taskOpen&&this.taskDurable)return;
     this.taskOpen=true;this.taskDurable=false;
-    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile)});this.taskDurable=true;}
+    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted});this.taskDurable=true;}
     catch{throw Object.assign(Error('Cannot preserve task state; no desktop action was started.'),{code:'task_state_write_failed'});}
+  }
+  recordDispatch(){
+    if(!this.taskFile)return; // Inert unit-test dependencies use no persistent task.
+    const ids=[this.guardian.pid,this.driver.info?.pid];
+    if(ids.some(pid=>!Number.isSafeInteger(pid)||pid<=0||pid>4294967295))fail('task_process_identity_unavailable','Native process identity is unavailable; no input was sent.');
+    const children=[...new Set([...this.dispatchChildren,...ids])];
+    if(children.length>32)fail('task_process_limit','Too many native worker changes in this task. End safely before starting another.');
+    if(this.dispatchStarted&&children.length===this.dispatchChildren.length)return;
+    try{writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children,dispatched:true});}
+    catch{fail('task_state_write_failed','Could not record native process identities; no input was sent.');}
+    this.dispatchChildren=children;this.dispatchStarted=true;
   }
   // A passive App sidecar must not open a HUD, install input hooks or acquire
   // cursor ownership just because a previous task left an emergency latch.
@@ -251,6 +262,7 @@ export class Runtime {
     this.remaining--;
     const result=await this.sessions.withInput(op,{hwnd:w?.hwnd,title:w?.title},async()=>{
       this.check();if(generation!==this.generation)fail('control_changed','Cancelled before execution.');
+      Runtime.prototype.recordDispatch.call(this);
       this.guardian.send({op:'activity',action:op});
       const result=(await this.driver.call(op,payload)).result;
       if(op==='click'&&payload.physical)this.guardian.send({op:'activity',action:op,click_feedback:true});
@@ -319,7 +331,7 @@ export class Runtime {
     // The replacement's new guard file is not the previous process's input
     // ledger. Its cleanup cannot establish what the crashed process held.
     if(this.recoveredTask&&!preserveTask)fail('recovered_cleanup_unverified','Prior-session input cleanup is unverified. Keep the task open and inspect the previous native ledger; do not repeat input or force an update.');
-    if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
+    if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.dispatchChildren=[];this.dispatchStarted=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.
@@ -352,7 +364,7 @@ export class Runtime {
     payload.__worker_epoch=this.driver.epoch;
     const a=await this.guardian.prompt({kind:'action',host_pid:this.driver.info.pid,action_op:'launch',args:payload,label:'',message:`Launch this application?\r\n\r\n${args.reason}\r\n\r\n${JSON.stringify({app,args:payload.args},null,2)}\r\n\r\nThis starts software with your account's privileges. No shell is used. Approve only if intended.`});
     if(!a.allowed)fail('permission_denied','Human denied application launch.');
-    this.check();const result=(await this.driver.call('launch',{...payload,__permit:a.permit})).result;
+    this.check();Runtime.prototype.recordDispatch.call(this);const result=(await this.driver.call('launch',{...payload,__permit:a.permit})).result;
     if(!args.observe)return result;
     // Launch already happened. An unavailable/ambiguous window is never an
     // invitation to launch a duplicate. Observe still performs its normal app

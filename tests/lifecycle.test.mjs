@@ -31,6 +31,16 @@ test('task reservation write failure remains closed to actions and updates',()=>
  try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('native process identities are persisted before dispatch and retained across restart',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-children-')),file=path.join(dir,'task-state.json');const r=fixture();r.taskFile=file;
+ try{
+  r.beginTask();r.guardian.pid=111;r.driver.info={pid:222};r.recordDispatch();let saved=JSON.parse(fs.readFileSync(file));assert.equal(saved.dispatched,true);assert.deepEqual(saved.children,[111,222]);assert.equal(saved.guard,path.basename(r.guardFile));
+  r.driver.info.pid=333;r.recordDispatch();saved=JSON.parse(fs.readFileSync(file));assert.deepEqual(saved.children,[111,222,333]);
+  const before=fs.readFileSync(file,'utf8');r.driver.info.pid=undefined;assert.throws(()=>r.recordDispatch(),e=>e.code==='task_process_identity_unavailable');assert.equal(fs.readFileSync(file,'utf8'),before);
+  const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});assert.deepEqual(restarted.priorChildren,[111,222,333]);assert.equal(restarted.priorDispatched,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');
+  r.driver.info.pid=333;await r.finish();r.beginTask();const next=JSON.parse(fs.readFileSync(file));assert.equal(next.dispatched,false);assert.deepEqual(next.children,[]);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('End keeps task open and Stop latched until held-input release succeeds',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-end-cleanup-')),taskFile=path.join(dir,'task-state.json'),latchFile=path.join(dir,'emergency.stop');
  const guardian=new EventEmitter();guardian.send=()=>{};guardian.close=async()=>{};

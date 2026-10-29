@@ -872,6 +872,14 @@ desktop input can be sent. A replacement retains that prior identity without
 exposing a personal path in status; older markers lacking it remain supported
 but cannot identify their ledger. This is preparation for issue #9, not proof
 that old workers or watchdogs have stopped or that old input is released.
+Before native action or application launch dispatch, the runtime now flushes a
+bounded list of guardian and worker PIDs with a dispatch-started marker. It
+retains prior PIDs when workers change, refuses dispatch if the record cannot be
+written, and clears the list only after successful normal End. Tests check
+ordering and a write failure using inert drivers. PID values alone are not
+birth identities: eventual verification must conservatively treat a live or
+uninspectable PID as unresolved, including reuse. Older records without the
+list cannot establish that a prior worker is gone.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real

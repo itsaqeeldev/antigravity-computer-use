@@ -4,6 +4,18 @@ import {Driver} from '../server/driver.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
 import path from 'node:path';import {dataDir} from '../server/build.mjs';
 
+test('native action dispatch follows durable child recording and refuses a failed record',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'dispatch-record-')),file=path.join(dir,'task-state.json');let sent=0;
+ const guardian=new EventEmitter();guardian.pid=111;guardian.send=()=>{};
+ const driver={info:{pid:222},epoch:1,async start(){},async abort(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};sent++;const saved=JSON.parse(fs.readFileSync(file));assert.equal(saved.dispatched,true);assert.deepEqual(saved.children,[111,222]);return {result:{ok:true}};}};
+ const r=new Runtime({guardian,driver,sessions:{register(){},close(){},async withInput(_op,_target,execute){return execute();}},taskFile:file});
+ try{
+  r.beginTask();r.state='active';r.deadline=Date.now()+10000;assert.equal((await r.action('clipboard',{reason:'inert fixture'})).input_completed,true);assert.equal(sent,1);
+  r.dispatchStarted=false;r.dispatchChildren=[];r.taskFile=path.join(dir,'missing','state.json');
+  await assert.rejects(r.action('clipboard',{reason:'inert fixture'}),e=>e.code==='task_state_write_failed');assert.equal(sent,1);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('passive startup, status, End and shutdown preserve Stop without opening controls',async()=>{
  const folder=fs.mkdtempSync(path.join(testDirectory('tmp'),'passive-stop-'));
  const latch=path.join(folder,'emergency.stop');fs.writeFileSync(latch,'owner-stop');
