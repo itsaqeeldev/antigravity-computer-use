@@ -112,6 +112,16 @@ test('a standalone client cannot silently reuse a host-managed service with the 
   assert.equal((await request(session,'status',{},1000,'standalone')).permission_mode,'host-managed');
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('status exposes a different client build and mismatched actions are refused',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-build-mismatch-'));let calls=0;
+ const runtime={permissionMode:'host-managed',status:()=>({state:'idle',build_id:BUILD_ID,permission_mode:'host-managed'}),async listApps(){calls++;return[];},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});try{
+  const session=JSON.parse(fs.readFileSync(service.file));
+  const send=command=>new Promise((resolve,reject)=>{const socket=net.createConnection(session.pipe);socket.setEncoding('utf8');let data='';socket.on('error',reject);socket.on('data',x=>data+=x);socket.on('end',()=>resolve(JSON.parse(data)));socket.on('connect',()=>socket.write(JSON.stringify({secret:session.secret,command,expected_build_id:'older-build',expected_permission_mode:'host-managed',args:{}})+'\n'));});
+  const status=await send('status');assert.equal(status.client_build_mismatch,true);assert.equal(status.next_action,'resolve_version_mismatch');assert.equal(status.build_id,BUILD_ID);
+  const refused=await send('apps');assert.equal(refused.error.code,'version_mismatch');assert.equal(refused.next_action,'resolve_version_mismatch');assert.equal(refused.replay_allowed,false);assert.equal(calls,0);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('diagnostic persistence does not delay an error reply and shutdown waits for it',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-async-incident-'));let release,started;const gate=new Promise(r=>release=r),entered=new Promise(r=>started=r),original=Incidents.prototype.recordSerialized;
  Incidents.prototype.recordSerialized=async()=>{started();await gate;};

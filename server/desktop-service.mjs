@@ -122,7 +122,7 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
         if(!control){busy=true;executing=true;}
         try{
           const raw=await call(runtime,name,request.args||{});
-          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost,...(pendingIncidents.size?{diagnostic_pending:pendingIncidents.size}:{}),...(runtime.diagnosticError?{diagnostic_error:runtime.diagnosticError}:{})}:raw,directory);
+          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost,...(request.expected_build_id!==BUILD_ID?{client_build_mismatch:true,next_action:'resolve_version_mismatch'}:{}),...(pendingIncidents.size?{diagnostic_pending:pendingIncidents.size}:{}),...(runtime.diagnosticError?{diagnostic_error:runtime.diagnosticError}:{})}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
           if(reply.error||reply.verification_error)Object.assign(reply,recoveryAdvice(reply));

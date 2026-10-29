@@ -18,6 +18,13 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+An observed Upscaly project-local beta.2 skill was pinned to a different build
+from the running global beta.3 service. Status now explicitly reports a client
+build mismatch, and mismatched requests receive `resolve_version_mismatch`
+without dispatching input. The skill instructs agents to stop and preserve pins;
+this does not change or unpin any deployment. A real project-scoped task after
+an operator reconciles the versions is still required.
+
 The current Windows installation was locally upgraded from `a4e7234` to build
 `50426a656d2374fca25706235407cafb80cb9c0719a19c3cf65760c49cc32474`. Its 108
 files and global skill verified, settings and project pins were preserved, and
