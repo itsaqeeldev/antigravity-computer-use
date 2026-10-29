@@ -7,16 +7,25 @@ in `.localdata/`. No release completion is claimed here.
 
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
-| Human launcher reveals controls, passive startup hidden | Local native lifecycle passed; affected-PC trial pending | Launcher uses `ready`; runtime requests native `show_controls` without re-arm. Native Windows visibility test passed hidden idle/latched startup, explicit controls, End, Stop dismissal, restart and latch preservation. |
-| Guardian concurrency, timeout, early exit and bounded recovery | Implemented; focused tests passed | New process-fixture tests cover shared readiness and exit-before-ready; broader request/crash tests still being added. |
+| Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |
+| Guardian concurrency, timeout, early exit and bounded recovery | Implemented; focused and CI checks passed | Shared readiness, early exit, invisible replies, cached failures, explicit recovery, isolated-desktop handoff and lost-acknowledgement tests pass. Physical crash/input cleanup remains separate. |
 | Simple model workflow | First real Flash trial partial; Sonnet pending | Flash completed Notepad save/cleanup but took about 10 minutes and failed exact Unicode comparison. Structured error follow-up remains to be installed and compared. |
 | Shared signed update staging | Implemented; release transport pending | Ed25519 verification, architecture/OS/channel/sequence checks, bounded hashed downloads and inventory checks. Protected key and Actions secret configured; local signing verified. No release published. |
-| Idle update, settings, Stop, rollback and pins | Implemented; native qualification pending | Transaction tests drive the real installer through upgrade/rollback, failed health, settings/Stop preservation, task deferral and persisted interrupted-switch recovery. Production uses native updater and controller leases. Real interrupted-process/power-loss and installed updates still need qualification. |
+| Idle update, settings, Stop, rollback and pins | Mac isolated native checks passed; full acceptance pending | Real installer/lease paths cover upgrade, failed health, settings/Stop/pins, deferral and recovery. Mac native update/rollback uses substituted release transport/test signing keys. Windows native checks skip unsafe ancestors. Native interruption/power-loss and production updates remain pending. |
 | Automatic scheduling | Implemented; native qualification pending | Both passive and foreground Sidecar entrypoints schedule bounded workers; daily check policy, explicit manual/notify modes. No OS scheduled task. |
-| Local failure diagnostics and consented GitHub reports | Implemented; mocked integration passed | Allowlisted local incidents, deduplication, daily consented submission, missing-auth handling and backoff tests passed. No actual public test issue was created. |
-| Shared Windows/Mac implementation | Candidate exists | At `c79c6d6`, the PR matrix passed both Mac architectures; Windows checks passed. Native signed update/rollback previously passed both Mac runners. Interactive Mac acceptance remains unrun. |
+| Local failure diagnostics and consented GitHub reports | Implemented; mocked integration passed | Allowlisting, deduplication, consent, missing auth and backoff have regressions. Authorized development issues #2/#3 track real reports; automatic reporting from a consented user installation is not yet qualified. |
+| Shared Windows/Mac implementation | Current candidate passed source/native CI | Runtime checkpoint `f97b748` passed both Mac architectures and Windows checks. No Intel on-device report/repair PR is available; interactive Mac acceptance remains pending. |
 | Real app and physical/hardware acceptance | Pending | Affected PC, fresh PC, Mac, physical Stop/re-arm, held-input cancellation, actual skill rediscovery and updater acceptance required. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
+
+Current runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
+[Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
+and [Mac CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552937)
+at `f97b748`. All 151 provenance entries matched. Current installed/running build
+`83487f3a...` was reverified against its own 102-file bundle, with an idle service
+and zero app grants; it remains older than source. The prepared 107-file Windows
+candidate `8a128aa5...` is not installed or published. These records do not clear
+the outstanding human/device gates or qualify a new public release.
 
 ## Release signing prerequisite
 
@@ -44,7 +53,7 @@ deployment scope. Separately installed projects keep their own root/policy.
 and let the short launcher exit before replacing it on Windows. Inspect
 `update status` for the worker result; queuing is not an installation success.
 
-## Current source evidence
+## Historical source evidence
 
 The initial complete local regression run passed 168 tests, failed zero and
 explicitly skipped seven (five native installation ACL qualifications and two
@@ -68,8 +77,9 @@ native updater qualification pass. The Mac workflow now runs the signed update
 and rollback with real native storage/services and isolated test signing data;
 inspect the latest job logs for actual results. Desktop input remains unrun.
 
-Known remaining implementation/release work: establish reviewed release-key
-custody and pinned public key; signed published assets and bootstrap pin; real
+At that earlier checkpoint, release-key custody/public-key setup was pending;
+it has since been configured and verified as recorded below. Remaining release
+work includes signed published assets and the bootstrap pin; real
 hard-crash/power-loss qualification for multi-scope switching; native updater
 acceptance; broader reporting/concurrency tests and actual model trials. Do not replace the
 published beta or advertise updater readiness based on current fixtures alone.

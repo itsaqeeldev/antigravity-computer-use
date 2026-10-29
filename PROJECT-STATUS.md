@@ -1,4 +1,25 @@
-# Shared macOS adapter — 29 October 2026
+# Current qualification status — 29 October 2026
+
+**Incomplete; development candidate only.** Runtime checkpoint `f97b748` on
+`codex/macos-and-latency-review` passed Windows CI (212 passed, zero failed,
+seven skips) and Intel/Apple Silicon Mac CI, including native isolated update and
+rollback. Windows native updater acceptance remains skipped under unsafe
+ancestors. See [the current matrix](docs/RELIABILITY-IMPLEMENTATION.md) and
+[handoff](HANDOFF.md); older snapshots below are historical.
+
+The installed global `83487f3a...` still verifies against its own 102-file bundle
+and skill. Its service is idle, host-managed, with zero approved apps; it is not
+the latest candidate. The 107-file local Windows candidate `8a128aa5...` is
+prepared but neither installed nor published. Public release/bootstrap remain
+beta.2. No physical desktop control was resumed.
+
+Remaining acceptance includes affected-PC recovery, real Flash/Sonnet and fresh
+installation tasks, Unicode provider isolation, physical Stop/re-arm and held
+input, the Intel Mac device report, native Windows update/interruption tests and
+published/downloaded/installed identity verification. Source/CI success does not
+complete these requirements. Issues #2 and #3 remain open.
+
+# Historical shared macOS adapter checkpoint — 29 October 2026
 
 Development branch: `codex/macos-and-latency-review`. The macOS adapter uses the
 existing shared Node runtime, observations, batches, limits, tool vocabulary,

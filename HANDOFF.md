@@ -1,6 +1,45 @@
 # Antigravity Computer Use: handoff
 
-Updated **28 October 2026**, Asia/Karachi. Release track: **v0.3.0-beta.2**, Windows x64 prerelease.
+Updated **29 October 2026**, Asia/Karachi. Published track: **v0.3.0-beta.2**,
+Windows x64 prerelease. Development candidate: **0.3.0-beta.3**, PR #1.
+
+## Current reliability and Mac qualification handoff
+
+Read [the current implementation matrix](docs/RELIABILITY-IMPLEMENTATION.md)
+before the historical entries below. Runtime checkpoint `f97b748` passed Windows
+CI (212 passed, zero failed, seven skips) and both Mac architecture jobs, including
+95 shared regressions and native isolated installation/update/rollback. The
+Windows native updater check remains an explicit unsafe-ancestor skip.
+
+Recent repairs include native ambiguous-target/Unicode risk parity, bounded
+invisible-control failures, explicit human-launcher recovery, and unknown-delivery
+advice with absolute IPC deadlines. The human launcher now performs passive
+`start` then `controls`; agent `ready` remains bounded. Showing controls never
+clears Stop. No current interactive desktop acceptance follows from these checks.
+
+The installed global build `83487f3a...` was independently verified again: 102
+sealed payloads and matching skill; its live service was idle with zero app grants
+and retained host-managed policy. It is older than the reviewed source. A private
+107-file Windows candidate (`8a128aa5...`, runtime checkpoint `f97b748`) is prepared
+and hash-checked, but not installed, signed or published. Keep deployment/version
+pins and the published beta.2 bootstrap unchanged until applicable acceptance.
+
+Outstanding: affected-PC recovery ([issue #3](https://github.com/shayann07/antigravity-computer-use/issues/3)),
+actual Sonnet/fresh-install tasks, Flash Unicode and speed
+([issue #2](https://github.com/shayann07/antigravity-computer-use/issues/2)),
+physical queued/held-input Stop/re-arm, real Intel Mac report, native Windows
+update/OS permission qualification, interruption and published-release transport.
+The real Flash trial took 605,626 ms, used 21 calls and failed exact Unicode;
+transport fixtures do not resolve its model-versus-clipboard cause.
+
+Codex desktop control has not been resumed after the owner's physical Esc; no new
+handoff was received. The custom listener is idle. The Intel Mac plan was
+reviewed, but no device report/repair
+PR is available yet. Continue authorized source work, preserve human-only checks,
+and use [the Mac-agent handoff](docs/MAC-QUALIFICATION-PROMPT.md). Keep the full goal
+open until all required acceptance and release delivery are actually verified.
+
+## Historical checkpoints
 
 ## 28 October stable Upscaly demo and remaining problems
 

@@ -456,7 +456,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "ecd20870f15d26e4f97b6cf3380b047692f12a2fa40f339bb1dc83f694bfc9d7"
+      "sha256": "916567b8bc41e7e9a222281d9e1a443aade03b16ff1c951e8972f4fd6d242995"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -608,11 +608,11 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "bf835ce5a4a3ed37981088a8ea4e746864da1487bfc56ec73def3ca84eaf2fc2"
+      "sha256": "694a2bd463a494b0b3356f6c02733700e93900949075a581c431ec35a1b89532"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
-      "sha256": "aa611c3e92b75263a7d7b51ba75df70212d9019c9423e3bf4650d7882fd09c0f"
+      "sha256": "3203717bf3b7f59dc37f84f7977a280c0d72658a595b993a8b8a7dcd0ff45eff"
     },
     {
       "path": "tests/reporting.test.mjs",

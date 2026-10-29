@@ -55,3 +55,20 @@ human/hardware blockers. The owner will paste the PR link into the Windows
 Codex chat for independent review. Do not claim completion while required
 interactive or update acceptance remains unrun.
 ```
+
+## Execution details for the qualification agent
+
+- Refresh the current PR head; do not reuse a plan's older commit as current.
+- Intel uses Swift target `x86_64`, while the Node bundle manifest records
+  `platform: "darwin"`, `arch: "x64"`. Package with the exact Node version in
+  `licenses/Node-provenance.json`; verify official download hashes.
+- `AxonHost --contract-test` is headless contract qualification, not a TCC
+  permission report. Human-facing `--setup`/the installed permissions launcher
+  requests permissions and emits the current preflight results. Let macOS
+  identify the actual helper identities; do not assume the host needs every grant.
+- `scripts/qualify-signed-update.mjs` exports a function; running it alone does
+  not execute qualification. `node scripts/macos-install-check.mjs <bundle>`
+  invokes it with native storage/services and substituted transport/test keys.
+  Report those limits separately from real published-signature/download tests.
+- A current human starter uses passive `start` then `controls`. It can explicitly
+  retry a cached `ready` failure; it never clears Stop or performs human re-arm.
