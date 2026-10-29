@@ -800,3 +800,15 @@ failed on `update-settings.json` before the fix, then passed recognition,
 unrelated-data refusal and unchanged-ACL checks. The real supported upgrade must
 be retried with a fresh complete candidate; this classifier check does not itself
 qualify installation or automatic signed updating.
+
+## Incident reporting scheduler
+
+An empty startup submission check previously consumed the retry window and the
+daily scheduler timestamp, so a failure recorded immediately afterwards could
+remain pending until the next day. Empty journals no longer consume a network
+retry window or scheduler attempt; while the service is running, the next hourly
+tick can report a new incident when reporting consent and authentication exist.
+Actual submission attempts remain throttled to at most hourly. Concurrent
+reporters still use the exclusive lease and unknown submission outcomes are not
+replayed. Automated coverage uses isolated fixtures; real installed reporting
+and GitHub submission are not yet qualified.

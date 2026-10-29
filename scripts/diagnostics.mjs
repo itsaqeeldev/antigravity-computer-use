@@ -9,15 +9,18 @@ export async function diagnostics(directory,{submit=false,target=path.dirname(di
  let lease;try{lease=await acquire(directory);}catch(error){return {submitted:0,next_action:error.code==='service_already_running'?'reporting_in_progress':'reporting_lock_unavailable'};}
  try{
  let reports;try{reports=incidents.read({strict:true});}catch{return {submitted:0,next_action:'diagnostic_journal_invalid'};}
- const throttleFile=path.join(directory,'reporting-state.json');let last;try{last=JSON.parse(fs.readFileSync(throttleFile));}catch{}
- if(last?.attempt_at&&now-last.attempt_at<3600000)return {submitted:0,next_action:'reporting_backoff'};
- fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(throttleFile,JSON.stringify({attempt_at:now}),{mode:0o600});
  const intentFile=path.join(directory,'reporting-intent.json');let intent;
  if(fs.existsSync(intentFile)){try{intent=JSON.parse(fs.readFileSync(intentFile));if(!/^[a-f0-9]{24}$/.test(intent?.id||'')||!Number.isSafeInteger(intent.count)||intent.count<0)throw Error();}catch{return {submitted:0,next_action:'reporting_intent_invalid'};}
   try{const ack=JSON.parse(fs.readFileSync(incidents.ackFile));if(Number.isSafeInteger(ack[intent.id])&&ack[intent.id]>=intent.count){fs.unlinkSync(intentFile);intent=null;}}catch{}
  }
  let submitted=0;
  const pending=reports.filter(r=>r.pending);if(intent){const index=pending.findIndex(r=>r.id===intent.id);if(index<0)return {submitted:0,next_action:'github_submission_outcome_unknown',incident_id:intent.id};pending.unshift(...pending.splice(index,1));}
+ // An empty journal must not consume the network retry window: an incident
+ // recorded just after startup should be eligible on the next scheduler tick.
+ if(!pending.length)return {submitted:0};
+ const throttleFile=path.join(directory,'reporting-state.json');let last;try{last=JSON.parse(fs.readFileSync(throttleFile));}catch{}
+ if(last?.attempt_at&&now-last.attempt_at<3600000)return {submitted:0,next_action:'reporting_backoff'};
+ fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(throttleFile,JSON.stringify({attempt_at:now}),{mode:0o600});
  for(const item of pending.slice(0,3)){
   lease.assertHeld();
   if(!updateSettings(target).reporting)return {submitted,next_action:'reporting_consent_required'};

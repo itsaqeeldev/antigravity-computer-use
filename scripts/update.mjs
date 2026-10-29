@@ -39,8 +39,10 @@ async function updateLocked(target,command,{fetcher,adapters}){
  if(command==='scheduled'){
   const now=Date.now(),last=read();
   if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await updateLocked(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
-  if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=86400000)){
-   const result=await diagnostics(path.join(target,'data'),{submit:true,target});save({...read(),...(result.next_action==='reporting_in_progress'?{}:{reporting_at:now}),reporting_status:result.next_action||'complete'});
+  if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=3600000)){
+   const result=await (adapters.diagnostics||diagnostics)(path.join(target,'data'),{submit:true,target});
+   // Empty journals and a competing reporter do not count as attempts.
+   if(result.submitted>0||result.next_action&&result.next_action!=='reporting_in_progress')save({...read(),reporting_at:now,reporting_status:result.next_action||'complete'});
   }
   if(settings.mode==='manual')return {skipped:true};
   if(!last.attempt_at||now-last.attempt_at>=86400000){

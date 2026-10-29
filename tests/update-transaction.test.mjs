@@ -114,6 +114,19 @@ test('version ordering blocks downgrade and respects numeric prerelease segments
 test('corrupted staged bundle is refused before any service shutdown',async()=>{
  const f=fixture();try{await update(f.target,'check',f);const state=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));fs.appendFileSync(path.join(state.staged,'scripts/desktop.mjs'),'tamper');await assert.rejects(update(f.target,'apply',f),/release_payload_mismatch/);assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}
 });
+test('scheduled reporting checks again after an empty journal but throttles attempts',async()=>{
+ const f=fixture();try{
+  fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting:true}));
+  let pending=false,calls=0;
+  f.adapters.diagnostics=async()=>{calls++;return {submitted:pending?1:0};};
+  await update(f.target,'scheduled',f);assert.equal(calls,1);
+  pending=true;await update(f.target,'scheduled',f);assert.equal(calls,2);
+  await update(f.target,'scheduled',f);assert.equal(calls,2);
+  const stateFile=path.join(f.target,'update-state.json'),state=JSON.parse(fs.readFileSync(stateFile));
+  state.reporting_at=Date.now()-3600001;fs.writeFileSync(stateFile,JSON.stringify(state));
+  await update(f.target,'scheduled',f);assert.equal(calls,3);
+ }finally{f.cleanup();}
+});
 test('offline checks retain the working installation and throttle scheduled retries',async()=>{
  const f=fixture();try{let attempts=0;const offline={...f,fetcher:async()=>{attempts++;throw Error('network_failure');}};await update(f.target,'scheduled',offline);await update(f.target,'scheduled',offline);assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).last_error,'network_failure');}finally{f.cleanup();}
 });

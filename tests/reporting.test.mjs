@@ -28,6 +28,16 @@ test('agent concerns remain pending without consent and are labeled unverified w
  }finally{f.clean();}
 });
 test('no reporting consent means no network command and reports stay pending',async()=>{const f=fixture(false);try{assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('must not contact GitHub')})).next_action,'reporting_consent_required');assert(f.i.read()[0].pending);}finally{f.clean();}});
+test('an empty check does not throttle a subsequently recorded incident',async()=>{
+ const f=fixture(true);try{
+  fs.writeFileSync(f.i.file,'[]');
+  const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:'[]'}:{status:0};
+  assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:10000000})).submitted,0);
+  assert.equal(fs.existsSync(path.join(f.directory,'reporting-state.json')),false);
+  f.i.record('computer_ready',{error:{code:'guardian_exited'}});
+  assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:10000001})).submitted,1);
+ }finally{f.clean();}
+});
 test('missing GitHub authentication keeps pending reports and applies retry backoff',async()=>{const f=fixture(true);try{let calls=0;const run=()=>{calls++;return {status:1,stderr:'private credentials'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'github_authentication_or_network_required');assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'reporting_backoff');assert.equal(calls,1);assert(f.i.read()[0].pending);}finally{f.clean();}});
 test('consented submission sends sanitized metadata once and resolves duplicate issues',async()=>{for(const duplicate of [false,true]){const f=fixture(true);try{let created=0;const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:JSON.stringify(duplicate?[{number:1,title:'[automatic incident '+f.i.read()[0].id+'] '+process.platform+': stale_observation'}]:[])};created++;assert(!options.input.includes('private password'));assert(args.includes('--body-file'));return {status:0,stdout:'https://github.com/example/issue'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,1);assert.equal(created,duplicate?0:1);assert.equal(f.i.read()[0].pending,false);}finally{f.clean();}}});
 test('submission revalidates stored incidents and drops injected private fields',async()=>{const f=fixture(true);try{const records=f.i.read();records[0].screenshot='C:/private-secret';records[0].clipboard='private-secret';fs.writeFileSync(f.i.file,JSON.stringify(records));let created=false;await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:'[]'};created=true;assert(!options.input.includes('private-secret'));return {status:0};}});assert(created);}finally{f.clean();}});
