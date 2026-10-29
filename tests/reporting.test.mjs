@@ -6,7 +6,7 @@ const acquire=async()=>({assertHeld(){},async release(){}});
 function fixture(reporting){const target=fs.mkdtempSync(path.join(testDirectory('tmp'),'reporting-')),directory=path.join(target,'data');fs.mkdirSync(directory);fs.writeFileSync(path.join(target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting}));const i=new Incidents(directory);i.record('computer_click',{error:{code:'stale_observation',message:'private password'}});return {target,directory,i,clean:()=>fs.rmSync(target,{recursive:true})};}
 test('no reporting consent means no network command and reports stay pending',async()=>{const f=fixture(false);try{assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('must not contact GitHub')})).next_action,'reporting_consent_required');assert(f.i.read()[0].pending);}finally{f.clean();}});
 test('missing GitHub authentication keeps pending reports and applies retry backoff',async()=>{const f=fixture(true);try{let calls=0;const run=()=>{calls++;return {status:1,stderr:'private credentials'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'github_authentication_or_network_required');assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'reporting_backoff');assert.equal(calls,1);assert(f.i.read()[0].pending);}finally{f.clean();}});
-test('consented submission sends sanitized metadata once and resolves duplicate issues',async()=>{for(const duplicate of [false,true]){const f=fixture(true);try{let created=0;const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:JSON.stringify(duplicate?[{number:1}]:[])};created++;assert(!options.input.includes('private password'));assert(args.includes('--body-file'));return {status:0,stdout:'https://github.com/example/issue'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,1);assert.equal(created,duplicate?0:1);assert.equal(f.i.read()[0].pending,false);}finally{f.clean();}}});
+test('consented submission sends sanitized metadata once and resolves duplicate issues',async()=>{for(const duplicate of [false,true]){const f=fixture(true);try{let created=0;const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:JSON.stringify(duplicate?[{number:1,title:'[automatic incident '+f.i.read()[0].id+'] '+process.platform+': stale_observation'}]:[])};created++;assert(!options.input.includes('private password'));assert(args.includes('--body-file'));return {status:0,stdout:'https://github.com/example/issue'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,1);assert.equal(created,duplicate?0:1);assert.equal(f.i.read()[0].pending,false);}finally{f.clean();}}});
 test('submission revalidates stored incidents and drops injected private fields',async()=>{const f=fixture(true);try{const records=f.i.read();records[0].screenshot='C:/private-secret';records[0].clipboard='private-secret';fs.writeFileSync(f.i.file,JSON.stringify(records));let created=false;await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:'[]'};created=true;assert(!options.input.includes('private-secret'));return {status:0};}});assert(created);}finally{f.clean();}});
 
 test('overlapping reporters defer the second submission and preserve pending incidents',async()=>{
@@ -33,7 +33,7 @@ test('revoked consent during issue lookup prevents submission',async()=>{
 test('uncertain issue creation is not replayed while search is stale and later reconciles',async()=>{
  const f=fixture(true);let creates=0,found=false;
  try{
-  const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:JSON.stringify(found?[{number:1}]:[])}:(creates++,{status:null});
+  const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:JSON.stringify(found?[{number:1,title:'[automatic incident '+f.i.read()[0].id+'] '+process.platform+': stale_observation'}]:[])}:(creates++,{status:null});
   const first=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:10000000});assert.equal(first.next_action,'github_submission_outcome_unknown');
   assert.equal((await diagnostics(f.directory)).next_action,'github_submission_outcome_unknown');
   const second=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:14000000});assert.equal(second.next_action,'github_submission_outcome_unknown');assert.equal(creates,1);assert(f.i.read()[0].pending);
@@ -46,6 +46,15 @@ test('completed acknowledgement clears an intent left by an interrupted cleanup'
   const intent=path.join(f.directory,'reporting-intent.json');fs.writeFileSync(intent,JSON.stringify({id:item.id,count:item.count}));
   const result=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('no remote work expected')});
   assert.equal(result.submitted,0);assert(!fs.existsSync(intent));assert.equal(f.i.read()[0].pending,false);
+ }finally{f.clean();}
+});
+test('a similar GitHub search result does not reconcile an uncertain submission',async()=>{
+ const f=fixture(true);let creates=0;try{
+  const first=(_exe,args)=>args[1]==='list'?{status:0,stdout:'[]'}:(creates++,{status:null});
+  await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:first,now:10000000});
+  const other=()=>({status:0,stdout:JSON.stringify([{number:12,title:'Unrelated '+f.i.read()[0].id}])});
+  const result=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:other,now:14000000});
+  assert.equal(result.next_action,'github_submission_outcome_unknown');assert.equal(creates,1);assert(f.i.read()[0].pending);
  }finally{f.clean();}
 });
 

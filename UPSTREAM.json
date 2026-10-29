@@ -596,7 +596,7 @@
     },
     {
       "path": "scripts/diagnostics.mjs",
-      "sha256": "56e48c7074aa75f209188db95c9c7df3436cc4b0747a7f4383294eb39d87c248"
+      "sha256": "86d41e41317c8ea2ce984d63f34aa0e8518024ae0033c7444258c07c79c42a1d"
     },
     {
       "path": "tests/recovery-update.test.mjs",
@@ -616,7 +616,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "b56477a9d5ffb11484361f6bd001955a1f5c7797b0cff77a56ffecb2353d81c7"
+      "sha256": "4d9c37f0eb8b4e2b51a33d25651011df7a35076624181d0719afd9c4a8343e35"
     },
     {
       "path": "scripts/setup-release-signing.ps1",
