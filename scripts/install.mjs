@@ -5,6 +5,7 @@ import {SIDECAR_ID,sidecarDefinition,mergeSidecarConfig} from './sidecar.mjs';
 import {nativePlatform} from '../server/platform.mjs';
 import {rollback} from './rollback.mjs';
 import {randomUUID} from 'node:crypto';
+import {writeAtomicJSON,writeAtomicText,flushPreparedTree,flushPreparedFile} from '../server/atomic-json.mjs';
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function mergeConfig(file,entry){
  const current=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')):{};
@@ -135,7 +136,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  }
  const manifest={release,home,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};
  const rollbackFile=path.join(backup,'rollback.json');
- fs.writeFileSync(rollbackFile,JSON.stringify(manifest,null,2));
+ flushPreparedTree(backup);
+ writeAtomicJSON(rollbackFile,manifest,{exclusive:true});
  journalCreated?.(rollbackFile);
  let switching=false;
  try{
@@ -157,23 +159,25 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
   if(alive)throw new Error('A desktop task began during staging. Its installed launcher/configuration were not replaced. Finish and shutdown before updating.');
  }
  switching=true;
+ flushPreparedTree(release);
+ for(const file of [launcher+'.agcu.tmp',launcherNode+'.agcu.tmp',controllerStart+'.agcu.tmp'])flushPreparedFile(file);
  fs.renameSync(launcherNode+'.agcu.tmp',launcherNode);
  fs.renameSync(launcher+'.agcu.tmp',launcher);
  fs.renameSync(controllerStart+'.agcu.tmp',controllerStart);
- for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}
- if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(path.join(release,platform.node),path.join(release,'scripts/desktop.mjs')),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.agcu.tmp',text);fs.renameSync(file+'.agcu.tmp',file);}}
+ for(const {file,text} of updates){fs.mkdirSync(path.dirname(file),{recursive:true});writeAtomicText(file,text);}
+ if(sidecarFiles){for(const [file,text] of [[sidecarFiles.definition,JSON.stringify(sidecarDefinition(path.join(release,platform.node),path.join(release,'scripts/desktop.mjs')),null,2)+'\n'],[sidecarFiles.config,sidecarConfig]]){fs.mkdirSync(path.dirname(file),{recursive:true});writeAtomicText(file,text);}}
  for(const file of skillDirs){
   fs.mkdirSync(file,{recursive:true});fs.cpSync(path.join(release,'skills','computer-use'),file,{recursive:true});
   const instructions=path.join(file,'SKILL.md');
   const command=desktopCommand(launcherNode,launcher);
-  fs.writeFileSync(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',controllerStart));
-  fs.writeFileSync(path.join(file,'deployment.json'),JSON.stringify({target,release,workspace:resolvedWorkspace,permission_mode:permissionMode},null,2));
+  writeAtomicText(instructions,fs.readFileSync(instructions,'utf8').replaceAll('{{DESKTOP_COMMAND}}',command).replaceAll('{{CONTROLLER_START}}',controllerStart));
+  writeAtomicJSON(path.join(file,'deployment.json'),{target,release,workspace:resolvedWorkspace,permission_mode:permissionMode});
  }
  if(updatePin!=null&&typeof updatePin!=='boolean')throw Error('Version pin must be boolean.');
  registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace,sidecar,update_pin:updatePin??previous?.update_pin??registry[scope||'global']?.update_pin??false};
- fs.writeFileSync(registryFile+'.agcu.tmp',JSON.stringify(registry,null,2));fs.renameSync(registryFile+'.agcu.tmp',registryFile);
- fs.writeFileSync(updateFile,JSON.stringify(updateSettings),{mode:0o600});
- fs.writeFileSync(path.join(target,'installation.json')+'.agcu.tmp',JSON.stringify({...manifest,backup},null,2));fs.renameSync(path.join(target,'installation.json')+'.agcu.tmp',path.join(target,'installation.json'));
+ writeAtomicJSON(registryFile,registry);
+ writeAtomicJSON(updateFile,updateSettings);
+ writeAtomicJSON(path.join(target,'installation.json'),{...manifest,backup});
  return {target,release,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,configs,skills:skillDirs,backup};
  }catch(error){
   if(switching){try{rollback(rollbackFile);}catch(recovery){throw Object.assign(Error('Installation recovery needs manual review. Use the retained rollback journal.'),{code:'installation_recovery_failed',rollback:rollbackFile,cause:recovery});}}

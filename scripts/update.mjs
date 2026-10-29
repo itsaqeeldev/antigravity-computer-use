@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {diagnostics} from './diagnostics.mjs';
 import {acquireServiceLease} from '../server/service-lease.mjs';
 import {request} from './desktop.mjs';
+import {writeAtomicJSON} from '../server/atomic-json.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function update(target,command,{fetcher=fetch,adapters={}}={}){
  target=path.resolve(target);
@@ -34,7 +35,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   try{const value=JSON.parse(fs.readFileSync(stateFile));if(!value||typeof value!=='object'||Array.isArray(value)||value.sequence!=null&&(!Number.isSafeInteger(value.sequence)||value.sequence<0))throw Error();return value;}
   catch{throw Error('update_state_invalid');}
  };
- const save=v=>{fs.writeFileSync(stateFile+'.tmp',JSON.stringify(v),{mode:0o600});fs.renameSync(stateFile+'.tmp',stateFile);};
+ const save=v=>writeAtomicJSON(stateFile,v);
  if(command==='scheduled'){
   const now=Date.now(),last=read();
   if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await updateLocked(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
@@ -112,12 +113,12 @@ async function updateLocked(target,command,{fetcher,adapters}){
    save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
   }
   let journal;
-  const markSwitch=()=>{if(fs.existsSync(switchingFile))throw Error('update_interrupted_requires_recovery');journal={pid:process.pid,previous_installation:installed,rollback:[]};fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600,flag:'wx'});switching=true;};
-  const addJournal=file=>{journal.rollback.push(file);fs.writeFileSync(switchingFile+'.tmp',JSON.stringify(journal),{mode:0o600});fs.renameSync(switchingFile+'.tmp',switchingFile);};
+  const markSwitch=()=>{if(fs.existsSync(switchingFile))throw Error('update_interrupted_requires_recovery');journal={pid:process.pid,previous_installation:installed,rollback:[]};writeAtomicJSON(switchingFile,journal,{exclusive:true});switching=true;};
+  const addJournal=file=>{journal.rollback.push(file);writeAtomicJSON(switchingFile,journal);};
   if(command==='rollback'){
    if(!state.rollback?.length)throw Error('update_no_rollback');if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
-   if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600});
+   if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];writeAtomicJSON(switchingFile,journal);
    if(serviceRunning)cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
    const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));cli(restored,['start']);save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }

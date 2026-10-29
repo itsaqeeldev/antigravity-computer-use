@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "d52f1e2822ec11cf68755727f8bcf4649874860024055be36dffab799adc9371"
+      "sha256": "2774b40ad88ce02559e8da9acd4700d9d38624a2035a3590365b5c6a34d8150a"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "d72689ae58821bbbffee57df0497a6a4d48716ac5332696f19d28de117c54306"
+      "sha256": "6c8ed4399c53b73868bcb06f6811afff936d8e56c19de9e642769cb72f37e18b"
     },
     {
       "path": "tests/install.test.mjs",
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "27f103344d21473026a0d5958440635fc5fc16213f9e517c9fcfca8ea2851dd8"
+      "sha256": "ba7b217972beb66a30e7c3a3e876b24266e7bd31da339a1ca172a3eb8d239d39"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "d77d59a2e8faf881b61065baf0a66f074a00c715b7a995cbafda8ee40291c61b"
+      "sha256": "83d80fb068db375241c39444cd11cda53d27f8618426ff8d945c732b6ba65288"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "3b41e7dde6fdf8d4b13e2f6de5d444a387ce6dd5c86dd4e620bc989910c4b215"
+      "sha256": "521adb1f6136904b3173d3319758fc2a5732e18ed1c38f819930b106e0b0ce28"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -673,6 +673,14 @@
     {
       "path": "tests/unicode-transport.test.mjs",
       "sha256": "977431a068ec4f376ca8fdd11e992058cbe787e1d6fb395cd31d66fb7fe8c910"
+    },
+    {
+      "path": "server/atomic-json.mjs",
+      "sha256": "db98c55a9cd50b14e4e6b199fa5acfc2eb60bb14df173598df7fffad088f921a"
+    },
+    {
+      "path": "tests/atomic-json.test.mjs",
+      "sha256": "c04bb06fbc7095560ccd25ae5fd11d23b7947f0bfa2c4316e6496952249d0147"
     }
   ]
 }

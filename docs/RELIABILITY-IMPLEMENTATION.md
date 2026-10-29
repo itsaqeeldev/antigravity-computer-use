@@ -295,3 +295,19 @@ now retains the actual readiness reply for diagnosis. The focused foreground
 test passed, and the next full run passed 196 tests, zero failures and seven
 skips. The original failure output is retained privately; a successful retry is
 not proof that an intermittent startup defect has been eliminated.
+
+## Flushed recovery metadata
+
+Update state, switching markers, installer journals and deployment pointers now
+publish a fully written and `fsync`-flushed temporary file through a same-directory
+atomic rename or exclusive link. A failed file flush or replacement retains the
+previous metadata and cleans its unpublished temporary file. Before launcher
+switching, the installer flushes staged payload files and saved rollback copies.
+Host configuration and skill entrypoint text also use atomic publication.
+
+The required file flush is never silently skipped. Directory flushing is
+attempted; platforms where Node cannot open/flush directory handles report that
+limit rather than treating it as a power-loss qualification pass. Fault-injection
+tests verify old-state retention and write ordering. Real power-loss and native
+interrupted-service acceptance remain pending, and no user desktop control was
+resumed for these tests.

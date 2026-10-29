@@ -24,6 +24,7 @@ fs.mkdirSync(path.join(out,'server'),{recursive:true});for(const f of modules)fs
 fs.copyFileSync(path.join(root,'server/auto-update.mjs'),path.join(out,'server/auto-update.mjs'));
 fs.copyFileSync(path.join(root,'server/recovery.mjs'),path.join(out,'server/recovery.mjs'));
 fs.copyFileSync(path.join(root,'server/update-notice.mjs'),path.join(out,'server/update-notice.mjs'));
+fs.copyFileSync(path.join(root,'server/atomic-json.mjs'),path.join(out,'server/atomic-json.mjs'));
 if(fs.existsSync(path.join(root,'release-public-key.pem')))fs.copyFileSync(path.join(root,'release-public-key.pem'),path.join(out,'release-public-key.pem'));
 for(const folder of ['skills','scripts','licenses'])fs.cpSync(path.join(root,folder),path.join(out,folder),{recursive:true});
 for(const f of ['README.md','HANDOFF.md','CONTRIBUTING.md','SECURITY.md','LICENSE','THIRD_PARTY_NOTICES.md','UPSTREAM.json','VALIDATION.md','PROJECT-STATUS.md','IMPLEMENTATION_PROGRESS.md'])if(fs.existsSync(path.join(root,f)))fs.copyFileSync(path.join(root,f),path.join(out,f));
