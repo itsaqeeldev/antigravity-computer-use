@@ -173,6 +173,12 @@ test('cross-folder migration refuses a live controller and preserves Stop/prefer
  fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:false}));
  const next=install({bundle,target:nextTarget,home,permissionMode:'host-managed'});
  assert(fs.existsSync(path.join(nextTarget,'data/emergency.stop')));assert.equal(JSON.parse(fs.readFileSync(path.join(nextTarget,'data/control-preferences.json'))).takeover_mode,'smart');assert(!fs.existsSync(path.join(nextTarget,'data/desktop-session.json')));
+ const pointer=path.join(next.skills[0],'deployment.json'),current=fs.readFileSync(pointer,'utf8'),rollbackFile=path.join(next.backup,'rollback.json');
+ fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:true}));
+ let rejected=spawnSync(process.execPath,['scripts/rollback.mjs',rollbackFile],{windowsHide:true,encoding:'utf8'});assert.equal(rejected.status,1);assert.match(rejected.stderr,/task_open_finish_before_rollback/);assert.equal(fs.readFileSync(pointer,'utf8'),current);
+ fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:false}));fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:process.pid}));
+ rejected=spawnSync(process.execPath,['scripts/rollback.mjs',rollbackFile],{windowsHide:true,encoding:'utf8'});assert.equal(rejected.status,1);assert.match(rejected.stderr,/still running/);assert.equal(fs.readFileSync(pointer,'utf8'),current);
+ fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:2147483647}));
  const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(next.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);assert.equal(JSON.parse(fs.readFileSync(path.join(first.skills[0],'deployment.json'))).target,firstTarget);
 });
 test('cross-folder migration refuses corrupt task state without replacing the deployment',()=>{
