@@ -84,6 +84,10 @@ test('signed update metadata refuses tampering, wrong platform, expired releases
  const {publicKey,privateKey}=generateKeyPairSync('ed25519');const manifest={schema:1,build_id:'a'.repeat(64),version:'1.0.0',sequence:1,platform:process.platform,arch:process.arch,min_os:'0.0.0',expires:'2099-01-01',files:{'node':{size:3,sha256:sha256('abc'),url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v1/node'}}};
  const check=m=>{const bytes=Buffer.from(JSON.stringify(m));return verifyRelease(bytes,sign(null,bytes,privateKey).toString('base64'),publicKey);};assert.equal(check(manifest).version,'1.0.0');
  assert.throws(()=>verifyRelease(Buffer.from('{}'),'bad',publicKey));assert.throws(()=>check({...manifest,arch:'wrong'}));assert.throws(()=>check({...manifest,min_os:'9999.0.0'}));assert.throws(()=>check({...manifest,expires:'2020-01-01'}));assert.throws(()=>check({...manifest,files:{'../escape':manifest.files.node}}));
+ for(const invalid of ['..','1..2','1.2.x','1.2.3.4','9007199254740992.0.0'])assert.throws(()=>check({...manifest,min_os:invalid}),/release_os_invalid/);
+ const bytes=Buffer.from(JSON.stringify(manifest)),signature=sign(null,bytes,privateKey).toString('base64');
+ for(const invalid of ['unknown','1..2','9007199254740992.0.0'])assert.throws(()=>verifyRelease(bytes,signature,publicKey,{osRelease:invalid}),/current_os_unknown/);
+ assert.equal(verifyRelease(bytes,signature,publicKey,{osRelease:'1.0.0'}).version,'1.0.0');
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'update-'));try{fs.writeFileSync(path.join(dir,'node'),'abc');verifyStaged(dir,manifest);fs.writeFileSync(path.join(dir,'node'),'bad');assert.throws(()=>verifyStaged(dir,manifest));const release=acquireUpdateLock(dir);assert.throws(()=>acquireUpdateLock(dir));release();}finally{fs.rmSync(dir,{recursive:true});}
 });
 test('interrupted or oversized downloads never publish a partial payload',async()=>{

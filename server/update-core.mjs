@@ -9,8 +9,9 @@ export function verifyRelease(bytes,signature,publicKey,{platform=process.platfo
  if(m.schema!==1||m.platform!==platform||m.arch!==arch)throw Error('release_platform_mismatch');
  if(!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(m.version)||channel==='stable'&&m.version.includes('-'))throw Error('release_channel_mismatch');
  if(!Number.isSafeInteger(m.sequence)||m.sequence<1||!Number.isFinite(Date.parse(m.expires))||Date.parse(m.expires)<=now)throw Error('release_metadata_expired');
- const parts=v=>String(v).split('.').map(Number);
- const a=parts(osRelease),b=parts(m.min_os);if(b.length!==3||b.some(n=>!Number.isInteger(n)||n<0))throw Error('release_os_invalid');
+ const parts=v=>typeof v==='string'&&/^\d+\.\d+\.\d+$/.test(v)?v.split('.').map(Number):[];
+ const a=parts(osRelease),b=parts(m.min_os);if(b.length!==3||b.some(n=>!Number.isSafeInteger(n)||n<0))throw Error('release_os_invalid');
+ if(a.length!==3||a.some(n=>!Number.isSafeInteger(n)||n<0))throw Error('current_os_unknown');
  for(let i=0;i<3;i++){if(a[i]>b[i])break;if(a[i]<b[i])throw Error('release_os_incompatible');}
  if(!m.files||!Object.keys(m.files).length||Object.keys(m.files).length>500)throw Error('release_inventory_invalid');
  let total=0;for(const [name,f]of Object.entries(m.files)){

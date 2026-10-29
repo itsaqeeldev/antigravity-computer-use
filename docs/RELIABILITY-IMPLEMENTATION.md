@@ -18,6 +18,11 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+Signed updater metadata now requires a three-component numeric minimum OS and
+a valid detected OS version before comparison. Malformed and out-of-range
+components are refused rather than coerced. Focused signature and transaction
+tests pass; this does not qualify an actual published update.
+
 The owner observed stationary cursor clicks in the direct Upscaly test. Named
 clicks had defaulted to accessibility invocation; the shared runtime now requests
 physical pointer movement by default, including batch steps. Explicit
