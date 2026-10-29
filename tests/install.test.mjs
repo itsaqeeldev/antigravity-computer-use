@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {nativePlatform} from '../server/platform.mjs';
+import {storageOperation} from '../server/storage.mjs';
 import {rollbackGuarded} from '../scripts/rollback.mjs';
 const platform=nativePlatform();
 const root=testDirectory('test-install');fs.mkdirSync(root,{recursive:true});
@@ -23,6 +24,7 @@ function writeFixture(bundle,content='fixture'){
  fs.mkdirSync(path.dirname(host),{recursive:true});
  fs.writeFileSync(host,content);
 }
+function prepareFixtureData(dir){fs.mkdirSync(dir,{recursive:true});if(process.platform==='darwin')storageOperation('data',dir);}
 test('direct installation removes only its legacy MCP entry and pins the script runtime',()=>{
  const dir=fs.mkdtempSync(path.join(root,'direct-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),workspace=path.join(dir,'project');
  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});
@@ -184,9 +186,10 @@ test('bundle and target overlap is refused before security or configuration chan
 test('cross-folder migration refuses a live controller and preserves Stop/preferences without old capabilities',()=>{
  const dir=fs.mkdtempSync(path.join(root,'migrate-')),bundle=path.join(dir,'bundle'),firstTarget=path.join(dir,'old'),nextTarget=path.join(dir,'new'),home=path.join(dir,'home');
  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
- const first=install({bundle,target:firstTarget,home,permissionMode:'host-managed'});const data=path.join(firstTarget,'data');fs.mkdirSync(data);
+ const first=install({bundle,target:firstTarget,home,permissionMode:'host-managed'});const data=path.join(firstTarget,'data');prepareFixtureData(data);
  fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');fs.writeFileSync(path.join(data,'control-preferences.json'),JSON.stringify({takeover_mode:'smart'}));fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:true}));fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:process.pid,secret:'never copied'}));
  const original=fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8');assert.throws(()=>install({bundle,target:nextTarget,home,permissionMode:'host-managed'}),/still running/);assert(!fs.existsSync(nextTarget));assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),original);
+ prepareFixtureData(path.join(nextTarget,'data'));
  fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:2147483647,secret:'never copied'}));
  assert.throws(()=>install({bundle,target:nextTarget,home,permissionMode:'host-managed'}),/task_open_finish_before_install/);assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),original);
  fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:false}));
@@ -221,7 +224,7 @@ test('global and project updates retain their own policies instead of the last i
 test('rollback refuses a live service before restoring configuration or launchers',()=>{
  const dir=fs.mkdtempSync(path.join(root,'rollback-live-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
- const installed=install({bundle,target,home});fs.mkdirSync(path.join(target,'data'));fs.writeFileSync(path.join(target,'data/desktop-session.json'),JSON.stringify({pid:process.pid}));
+ const installed=install({bundle,target,home});prepareFixtureData(path.join(target,'data'));fs.writeFileSync(path.join(target,'data/desktop-session.json'),JSON.stringify({pid:process.pid}));
  const before=fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8');const rolled=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(installed.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});
  assert.equal(rolled.status,1);assert.match(rolled.stderr,/still running/);assert.equal(fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8'),before);assert(fs.existsSync(installed.launcher));
 });
@@ -229,7 +232,7 @@ test('rollback refuses a recovered open or malformed task before changing deploy
  const dir=fs.mkdtempSync(path.join(root,'rollback-task-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
  try{
   fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
-  const installed=install({bundle,target,home});const marker=path.join(target,'data','task-state.json');fs.mkdirSync(path.dirname(marker),{recursive:true});
+  const installed=install({bundle,target,home});const marker=path.join(target,'data','task-state.json');prepareFixtureData(path.dirname(marker));
   const before=fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8');
   for(const state of [JSON.stringify({schema:1,open:true}),'{broken']){
    fs.writeFileSync(marker,state);const result=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(installed.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});

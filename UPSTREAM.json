@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "22a1fd3aae62fade7455a4edf4515c1c59c025a8b59bd8e3e276c038bc9fa646"
+      "sha256": "15fce1e71d2d5edc14ee228e0bd9d2ea034dbdb360a967d0e0da55476bb9e7db"
     },
     {
       "path": "tests/core.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "16d74473f128676e0714a0843e6af782a948bb0201480b573b16c56029d269fd"
+      "sha256": "8a325c79d06e296d2f9e292ffe44231f8e10f88eed48e54f17079af165517fc5"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

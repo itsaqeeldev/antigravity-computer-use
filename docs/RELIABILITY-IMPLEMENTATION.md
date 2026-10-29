@@ -874,6 +874,11 @@ failed before returning a successful installation record. Injected switch-failur
 tests exercise both paths. Issue #8 remains open pending helper-loss tests and
 real macOS/Windows recovery qualification; a lease can be lost during an
 individual filesystem operation and must not be assumed continuously held.
+Mac CI run `40966564326` failed three guarded-rollback fixtures because they
+populated uninitialized private data directories. Those fixtures now initialize
+their own empty Mac directories with the native storage guard before writing
+test state. This changes fixture setup, not the storage guard. The repaired tests
+passed on Windows; the current Mac CI run must confirm the fix on both runners.
 An additional local Windows test now kills the actual lease helper between two
 rollback records: the next record remains untouched and the journal remains.
 On macOS a terminated helper can remain a zombie while synchronous file work
