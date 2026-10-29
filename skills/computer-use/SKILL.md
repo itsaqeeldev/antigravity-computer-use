@@ -45,6 +45,7 @@ These common command shapes are complete; use them directly without schema setup
 | `file_dialog` | `--hwnd OWNER --observation-id F --path FILE --action open` (or `save`) `--entry-method clipboard --reason TEXT` |
 | `run` | `--hwnd H --observation-id F --reason TEXT --step COMMAND` followed by that step's flags; repeat at most8times, omitting per-step owner/frame |
 | `wait` | `--hwnd H --until TEXT --timeout-ms 30000 --reason TEXT [--abort-on 'Failed,Cancelled']` |
+| `wait_change` | `--hwnd H --observation-id F --timeout-ms 30000 --reason TEXT` |
 | `close_window` | `--hwnd H --reason TEXT` |
 | `end`, `status` | No arguments |
 
@@ -64,6 +65,8 @@ These common command shapes are complete; use them directly without schema setup
 Fetch only unfamiliar command schemas in **one** `describe move drag scroll run` call. Do not read every schema, implementation or historical test script to operate an app. Named flags need no JSON request/plan files; automatic receipts already record bounded timings/delivery. Use UTF-8 `--text-file` for large generated text. Keep user-facing progress brief, without raw trees/log dumps.
 
 For processing, use `wait --hwnd 123 --until 'ACTUAL EXPECTED TEXT' --timeout-ms 30000 --reason 'Wait for the observed result'`. If you know the app's actual failure labels, `--abort-on 'Failed,Cancelled'` stops early when one appears; failure wins if both success and failure are visible. Labels are literal substrings; select specific observed text and do not scope the query so narrowly that it excludes failures. A `--step wait` may follow an action in a batch; combined wait budgets are at most30seconds, and an unmet or aborted wait stops subsequent input. Never invent a completion or failure label. A known output can instead be watched by ordinary authorized file tools with a bounded deadline, then checked independently and against the GUI. Start once; a timeout is a reason to inspect, never resubmit.
+
+When the next accessible label is unknown, `wait_change --hwnd H --observation-id F --timeout-ms 30000 --reason 'Wait for this view to update'` consumes the current frame and returns a fresh text-only frame on a tree change or timeout. It uses the original snapshot's query and node limit. Changes can be unrelated, and canvas or pixel-only changes may not appear; inspect the returned tree and take a fresh screenshot when needed. A change is never proof of success, and a timeout is not permission to repeat an earlier action.
 
 ## Text and file dialogs
 

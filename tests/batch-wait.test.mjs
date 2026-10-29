@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {call,TOOLS,validate} from '../server/desktop-tools.mjs';
-import {Runtime} from '../server/runtime.mjs';
+import {Runtime,appKey} from '../server/runtime.mjs';
 import {parseRunArguments} from '../scripts/arguments.mjs';
 const args=steps=>({hwnd:7,observation_id:'initial',reason:'Verify once, never replay',steps});
 const describe=kind=>({inputSchema:TOOLS.find(tool=>tool.name==='computer_'+kind).inputSchema});
@@ -52,4 +52,35 @@ test('wait abort labels are bounded and success remains compatible',async()=>{
  let count=0;const runtime={frames:new Map(),check(){},async observe(){const id='s'+(++count);this.frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};}};
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'ready',abort_on:['Failed']});
  assert.equal(result.matched,true);assert.equal(result.metadata.observation_id,'s2');assert(!runtime.frames.has('s1'));
+});
+
+test('wait_change compares the original view and returns a fresh usable observation',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);
+ const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading',viewQuery:'Status',viewMaxNodes:250}]]);let observed;
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){observed=a;frames.set('fresh',{key,workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'Complete'}};}};
+ const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Inspect view'});
+ assert.equal(result.changed,true);assert.equal(result.metadata.observation_id,'fresh');assert(!frames.has('initial'));assert(frames.has('fresh'));
+ assert.equal(observed.query,'Status');assert.equal(observed.max_nodes,250);assert.equal(observed.with_image,false);
+ const dispatched=await call({async waitChange(a){return {received:a.observation_id};}},'computer_wait_change',{hwnd:7,observation_id:'fresh',reason:'Observe'});
+ assert.equal(dispatched.received,'fresh');
+ assert.throws(()=>validate('computer_wait_change',{hwnd:7,reason:'No frame'}));
+});
+
+test('wait_change refuses stale frames and stops on identity or control changes',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
+ const runtime={frames:new Map(),generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){this.frames.set('fresh',{key:'different',workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'Changed'}};}};
+ await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'missing'}),e=>e.code==='stale_observation');
+ runtime.frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});
+ await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial'}),e=>e.code==='identity_changed');assert(!runtime.frames.has('fresh'));
+ runtime.frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});
+ runtime.observe=async()=>{runtime.generation++;return{metadata:{observation_id:'new',tree:'Changed'}};};
+ await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial'}),e=>e.code==='control_changed');
+});
+
+test('wait_change times out with a fresh frame without sending input or retaining polling frames',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app),frames=new Map();let reads=0;
+ frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){const id='poll'+(++reads);frames.set(id,{key,workerEpoch:1});return{metadata:{observation_id:id,tree:'Loading'}};}};
+ const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',timeout_ms:100,reason:'Wait for a view'});
+ assert.equal(result.changed,false);assert.equal(result.timed_out,true);assert(frames.has(result.metadata.observation_id));assert.equal(frames.size,1);
 });

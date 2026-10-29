@@ -24,6 +24,14 @@ bounds and skipped input. Labels are literal substrings, so callers must choose
 specific observed text and avoid queries that hide errors. This is source/test
 evidence only; a real Antigravity app workflow and its latency remain unmeasured.
 
+The separate `wait_change` command waits for a change in the exact accessible
+tree shown by a fresh observation. It preserves that observation's query and
+node limit, consumes the old frame, returns a fresh text-only frame, and rejects
+app identity, worker or control changes. A tree change can be unrelated and a
+canvas may not expose changes, so it is not an outcome-verification shortcut.
+Focused tests cover changes, timeout, consumed/stale frames and identity/control
+transitions. Real desktop/model behavior and speed benefit remain unqualified.
+
 Review found that Windows `set_value` could dispatch an accessibility write and
 then silently repeat it as keyboard input if the provider threw or returned
 stale/unreadable data. It now reports `input_outcome_unknown` after an uncertain

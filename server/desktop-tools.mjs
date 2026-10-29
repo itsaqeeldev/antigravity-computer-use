@@ -27,6 +27,7 @@ export const TOOLS=[
  tool('computer_file_dialog','Fill and confirm an ALREADY OPEN native file picker. Use owner hwnd, fresh frame and exact path. entry_method clipboard explicitly uses temporary clipboard-preserving paste for atomic filename entry; keyboard is the compatibility default. Never confirms a mismatched filename.',{...target,path:str,action:{type:'string',enum:['open','save']},entry_method:{type:'string',enum:['keyboard','clipboard']}},['hwnd','observation_id','path','reason']),
  tool('computer_run','Run 1-8 predictable actions or observed-text waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:contract.batch_steps,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
  tool('computer_wait','Wait for expected UI text without repeating input. Optional abort_on strings stop early on a known failure; failures win if success and failure appear together. Returns a fresh observation.',{hwnd:num,until:selectorText,abort_on:{type:'array',minItems:1,maxItems:8,items:selectorText},timeout_ms:{...num,minimum:100,maximum:30000},query:str,reason:str},['hwnd','until','reason']),
+ tool('computer_wait_change','Wait for the accessible text tree to differ from a fresh observation. Returns a fresh text-only observation. A change is not proof of success, and pixel-only changes may be invisible.',{hwnd:num,observation_id:str,timeout_ms:{...num,minimum:100,maximum:30000},reason:str},['hwnd','observation_id','reason']),
  tool('computer_end','Finish normally; no Antigravity restart needed.'),
  tool('computer_controls','Explicitly show local controls for human re-arm or pause/stop. Showing controls never clears an emergency Stop, grants an app or sends input. Stopped controls dismiss automatically after30seconds.'),
  tool('computer_ready','Check control readiness and reveal local controls once. Follow next_action; never repeat startup or clear Stop.'),
@@ -78,6 +79,7 @@ export async function call(r,name,a){
  if(name==='computer_grant')return {approved:await r.grant(a.hwnd,a.reason)};
  if(name==='computer_snapshot')return r.observe(a);
  if(name==='computer_wait')return r.wait(a);
+ if(name==='computer_wait_change')return r.waitChange(a);
  if(name==='computer_end')return r.finish();
  if(name==='computer_stop')return r.stop();
  if(name==='computer_pause')return r.pause();

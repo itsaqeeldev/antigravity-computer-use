@@ -178,7 +178,7 @@ export class Runtime {
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
     for(const [id,frame] of this.frames)if(Date.now()-frame.at>contract.frame_ms||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
     while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
-    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes});
+    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:rendered,viewQuery:args.query,viewMaxNodes:args.max_nodes});
     return {metadata:response,image};
   }
   async action(op,args){
@@ -256,6 +256,27 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,500));
     }while(true);
     return {matched:false,timed_out:true,...await this.observe({hwnd:args.hwnd,query:args.query})};
+  }
+  async waitChange(args){
+    this.check();
+    const baseline=requireObservation(this.frames,args.observation_id,args.hwnd);
+    if(typeof baseline.viewTree!=='string')fail('stale_observation','The observation cannot be compared. Take a fresh snapshot.');
+    if(baseline.workerEpoch!==this.driver.epoch)fail('stale_observation','The native worker restarted. Take a fresh snapshot.');
+    const generation=this.generation,w=await this.grant(Number(args.hwnd),args.reason);this.check();
+    if(generation!==this.generation)fail('control_changed','Control changed. Take a fresh snapshot.');
+    if(baseline.key!==appKey(w))fail('identity_changed','Application identity changed since observation.');
+    const until=Date.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);
+    do {
+      this.check();
+      const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason});
+      this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
+      const current=this.frames.get(latest.metadata.observation_id);
+      if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
+      if(latest.metadata.tree!==baseline.viewTree)return {changed:true,...latest};
+      if(Date.now()>=until)return {changed:false,timed_out:true,...latest};
+      this.frames.delete(latest.metadata.observation_id);
+      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
+    }while(true);
   }
   async finish(){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();return {ended:true,state:this.state,restart_required:false};}
   async launch(args){
