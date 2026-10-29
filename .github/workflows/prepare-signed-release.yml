@@ -1,5 +1,12 @@
 name: Prepare signed release assets (no publication)
 on:
+  push:
+    branches: [codex/macos-and-latency-review]
+    paths:
+      - .github/workflows/prepare-signed-release.yml
+      - scripts/sign-update.mjs
+      - scripts/sign-update-ci.mjs
+      - release-public-key.pem
   workflow_dispatch:
     inputs:
       sequence:
@@ -41,7 +48,7 @@ jobs:
       - name: Sign published-update metadata and prepare payload assets
         env:
           AGCU_RELEASE_SIGNING_KEY: ${{ secrets.AGCU_RELEASE_SIGNING_KEY }}
-          RELEASE_SEQUENCE: ${{ inputs.sequence }}
+          RELEASE_SEQUENCE: ${{ inputs.sequence || github.run_id }}
           MINIMUM_KERNEL: ${{ matrix.minimum_kernel }}
         shell: bash
         run: node scripts/sign-update-ci.mjs .localdata/release-bundle "$RELEASE_SEQUENCE" "$MINIMUM_KERNEL" .localdata/signed-release

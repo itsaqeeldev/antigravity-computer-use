@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "0c764a03cb07fd7f6178e773f2719b30f2bb54011582f7361acb22e6c90207c7"
+      "sha256": "81daeda2f8bf59aee2d09615458a8df692f5add92ac58c38f8fc6582c5e7eba8"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -648,7 +648,7 @@
     },
     {
       "path": ".github/workflows/prepare-signed-release.yml",
-      "sha256": "a6ecca510d406f45a26f807a69aa69490e5cbb0d81ae3450797419dc8a64e28e"
+      "sha256": "78b376a9f744e42bfd348709808420cd8348b8e1a9baf27a7e35a4f71c36b26e"
     },
     {
       "path": "server/recovery.mjs",

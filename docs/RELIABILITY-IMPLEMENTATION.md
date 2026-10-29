@@ -237,3 +237,14 @@ availability/version, whether staging/rollback exists, sanitized worker result,
 an error code and one next action. Unknown settings/worker fields are dropped.
 Notify-only installations receive `update_available`, not an automatic-apply
 instruction. The complete signed material stays private for runtime verification.
+
+## Signing workflow registration
+
+A direct dispatch attempt returned HTTP 404 because GitHub requires the new
+workflow to exist on the default branch. A temporary, explicitly named development
+branch push trigger now qualifies the same preparation jobs without merging the
+runtime. It runs only when signing scripts, the public key or the workflow change;
+it is not a pull-request trigger. Repository permissions remain read-only, and
+only unpublished artifact preparation is authorized by this workflow. Automatic
+qualification uses its unique run ID as the sequence. Actual release dispatches
+must use a sequence greater than any previously published metadata.
