@@ -26,6 +26,10 @@ Scheduled updates also clear stale availability when the signing key is absent
 or an apply fails. The prior staged files remain available for inspection, but
 the scheduler waits for a new check instead of repeatedly attempting an invalid
 apply. Transaction tests cover both cases without a live installation.
+Staging now writes each received chunk fully even if the operating system
+returns a short write; a zero-progress writer fails and removes its partial file.
+The focused test simulates short and stalled writes, without qualifying real
+disk exhaustion or a published release.
 
 The owner observed stationary cursor clicks in the direct Upscaly test. Named
 clicks had defaulted to accessibility invocation; the shared runtime now requests

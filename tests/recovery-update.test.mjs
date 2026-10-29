@@ -93,6 +93,15 @@ test('signed update metadata refuses tampering, wrong platform, expired releases
 test('interrupted or oversized downloads never publish a partial payload',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'download-'));try{const destination=path.join(dir,'payload');await assert.rejects(downloadFile('fixture',destination,{size:3,hash:sha256('abc'),fetcher:async()=>({ok:true,body:(async function*(){yield Buffer.from('oversized');})()})}));assert(!fs.existsSync(destination));assert(!fs.existsSync(destination+'.part'));}finally{fs.rmSync(dir,{recursive:true});}
 });
+test('download handles short disk writes and refuses a stalled writer without publishing',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'short-write-'));try{
+  const destination=path.join(dir,'payload'),fetcher=async()=>({ok:true,body:(async function*(){yield Buffer.from('abcdef');})()});
+  let writes=0;const short={...fs,writeSync(fd,bytes,offset,length){writes++;return fs.writeSync(fd,bytes,offset,Math.min(2,length));}};
+  await downloadFile('fixture',destination,{size:6,hash:sha256('abcdef'),fetcher,io:short});assert.equal(fs.readFileSync(destination,'utf8'),'abcdef');assert.equal(writes,3);
+  const failed=path.join(dir,'stalled'),stalled={...fs,writeSync(){return 0;}};
+  await assert.rejects(downloadFile('fixture',failed,{size:6,hash:sha256('abcdef'),fetcher,io:stalled}),/update_download_write_failed/);assert(!fs.existsSync(failed));assert(!fs.existsSync(failed+'.part'));
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('explicit controls can recover a failed episode without clearing emergency Stop',async()=>{
  const r={state:'stopped',recoveryFailure:{code:'guardian_unavailable'},guardian:{async request(){return {state:'stopped',controls_visible:true};}}};
  const response=await Runtime.prototype.showControls.call(r);assert(response.controls_visible);assert.equal(r.recoveryFailure,null);assert.equal(r.state,'stopped');

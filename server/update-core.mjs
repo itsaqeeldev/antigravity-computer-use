@@ -42,11 +42,11 @@ export function newerVersion(candidate,current){
  if(!a[3])return !!b[3];if(!b[3])return false;
  const x=a[3].split('.'),y=b[3].split('.');for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===y[i])continue;if(x[i]===undefined)return false;if(y[i]===undefined)return true;const numeric=v=>/^\d+$/.test(v);if(numeric(x[i])&&numeric(y[i]))return Number(x[i])>Number(y[i]);if(numeric(x[i])!==numeric(y[i]))return !numeric(x[i]);return x[i]>y[i];}return false;
 }
-export async function downloadFile(url,destination,{size,hash,fetcher=fetch}={}){
+export async function downloadFile(url,destination,{size,hash,fetcher=fetch,io=fs}={}){
  const reply=await fetcher(url,{signal:AbortSignal.timeout(30000)});if(!reply.ok||!reply.body)throw Error('update_download_failed');
- const fd=fs.openSync(destination+'.part','wx',0o600);let length=0;const digest=createHash('sha256');
- try{for await(const chunk of reply.body){length+=chunk.length;if(length>size)throw Error('update_download_size');digest.update(chunk);fs.writeSync(fd,chunk);}if(length!==size||digest.digest('hex')!==hash)throw Error('update_download_hash');fs.closeSync(fd);fs.renameSync(destination+'.part',destination);}
- catch(e){try{fs.closeSync(fd);}catch{}try{fs.unlinkSync(destination+'.part');}catch{}throw e;}
+ const fd=io.openSync(destination+'.part','wx',0o600);let length=0;const digest=createHash('sha256');
+ try{for await(const chunk of reply.body){length+=chunk.length;if(length>size)throw Error('update_download_size');digest.update(chunk);let offset=0;while(offset<chunk.length){const written=io.writeSync(fd,chunk,offset,chunk.length-offset);if(!Number.isInteger(written)||written<=0||written>chunk.length-offset)throw Error('update_download_write_failed');offset+=written;}}if(length!==size||digest.digest('hex')!==hash)throw Error('update_download_hash');io.closeSync(fd);io.renameSync(destination+'.part',destination);}
+ catch(e){try{io.closeSync(fd);}catch{}try{io.unlinkSync(destination+'.part');}catch{}throw e;}
 }
 export async function readBoundedJSON(reply,maxBytes=262144){
  if(!reply.ok)throw Error('update_metadata_unavailable');
