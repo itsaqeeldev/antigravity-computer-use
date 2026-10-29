@@ -17,7 +17,7 @@ import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs
 import {Incidents} from './incidents.mjs';
 import {updateNotice} from './update-notice.mjs';
 import {recoveryAdvice} from './recovery.mjs';
-import {writeAtomicJSON,readTaskState} from './atomic-json.mjs';
+import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -80,13 +80,13 @@ export class Runtime {
     else fs.mkdirSync(dataDir(),{recursive:true}); // inert unit-test dependencies
     this.latchFile=latchFile===undefined?(!driver&&!guardian?path.join(dataDir(),'emergency.stop'):null):latchFile;
     this.taskFile=taskFile===undefined?(!driver&&!guardian?path.join(dataDir(),'task-state.json'):null):taskFile;
-    const priorTask=this.taskFile?readTaskState(this.taskFile):false;
+    const prior=this.taskFile?readTaskRecord(this.taskFile):{open:false,guard:null};const priorTask=prior.open;
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
     fs.writeFileSync(this.guardFile,'idle||0|',{mode:0o600});
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.taskDurable=true;this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.priorGuard=priorTask?prior.guard:null;this.taskDurable=true;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -108,7 +108,7 @@ export class Runtime {
   beginTask(){
     if(this.taskOpen&&this.taskDurable)return;
     this.taskOpen=true;this.taskDurable=false;
-    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true});this.taskDurable=true;}
+    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile)});this.taskDurable=true;}
     catch{throw Object.assign(Error('Cannot preserve task state; no desktop action was started.'),{code:'task_state_write_failed'});}
   }
   // A passive App sidecar must not open a HUD, install input hooks or acquire

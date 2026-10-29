@@ -867,6 +867,11 @@ prove the previous ledger was released. End therefore fails closed with
 previous-ledger recovery is implemented. This is a known usability limitation,
 not completed recovery. Host-authenticated ownership is still unavailable
 (issue #7). Stop and re-arm behavior remain unchanged.
+New task markers now atomically record the validated guard-file basename before
+desktop input can be sent. A replacement retains that prior identity without
+exposing a personal path in status; older markers lacking it remain supported
+but cannot identify their ledger. This is preparation for issue #9, not proof
+that old workers or watchdogs have stopped or that old input is released.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real

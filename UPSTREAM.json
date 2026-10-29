@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "a50a75ada1be7f17652b29311dffa2b21e367b03a4a7f83a5a82c5806d7804c3"
+      "sha256": "63780297a10df58b40b29b62334099ecec26a5ab420ebe23768157d54a925143"
     },
     {
       "path": "server/mcp.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "d722a727369c1e9b5489c69294150bfac13490c0cced575faf750e742275ab94"
+      "sha256": "c7822895883ab24760c57848c65983c3b4acff941a3d86492703353004e57518"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "9f9e908056dcd5e39f49724c8a48fb11d8244632b13d09a54e3e2a1836682613"
+      "sha256": "5cc105e42f1c36d985347782685fefc8288cd153be008a7e68926627814cf9d6"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -700,7 +700,7 @@
     },
     {
       "path": "server/atomic-json.mjs",
-      "sha256": "8c7253c886043856b8e2115d0513f2e55e80e462f803e593e9feb21dd79c3bc8"
+      "sha256": "cc32425d17156c773951bae9a0ad0d0e045e4e50975c6c39ed4250af60ced582"
     },
     {
       "path": "tests/atomic-json.test.mjs",

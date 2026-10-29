@@ -14,8 +14,8 @@ test('task reservation survives controller replacement until confirmed End',asyn
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-state-')),file=path.join(dir,'task-state.json');
  const make=()=>{const guardian=new EventEmitter();guardian.send=()=>{};return new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});};
  try{
-  const first=make();first.beginTask();assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
-  const restarted=make();assert.equal(restarted.status().task_open,true);assert.equal(restarted.status().recovered_task,true);
+  const first=make();first.beginTask();const marker=JSON.parse(fs.readFileSync(file));assert.equal(marker.open,true);assert.equal(marker.guard,path.basename(first.guardFile));
+  const restarted=make();assert.equal(restarted.priorGuard,marker.guard);assert.notEqual(restarted.priorGuard,path.basename(restarted.guardFile));assert.equal(restarted.status().task_open,true);assert.equal(restarted.status().recovered_task,true);
   await assert.rejects(restarted.grant(1),e=>e.code==='recovered_task_requires_end');
   await assert.rejects(restarted.action('clipboard',{}),e=>e.code==='recovered_task_requires_end');
   await assert.rejects(restarted.launch({app:'example'}),e=>e.code==='recovered_task_requires_end');
@@ -23,7 +23,7 @@ test('task reservation survives controller replacement until confirmed End',asyn
   await assert.rejects(restarted.observe({hwnd:1}),/observation probe/);assert.equal(observed,true);
   await restarted.finish({preserveTask:true});assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
   await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(restarted.status().recovered_task,true);assert.equal(JSON.parse(fs.readFileSync(file)).open,true);assert.equal(make().status().task_open,true);
-  fs.writeFileSync(file,'{broken');assert.throws(()=>make(),e=>e.code==='task_state_invalid');
+  for(const invalid of ['{broken',JSON.stringify({schema:1,open:true,guard:'../../outside'})]){fs.writeFileSync(file,invalid);assert.throws(()=>make(),e=>e.code==='task_state_invalid');}
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('task reservation write failure remains closed to actions and updates',()=>{
@@ -57,7 +57,7 @@ test('task reservation remains open after actual controller process termination'
   const until=Date.now()+15000;while(!output.includes('reserved')&&child.exitCode===null&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,20));
   assert(output.includes('reserved'),errors);child.kill();await closed;
   const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});
-  assert.equal(restarted.status().task_open,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
+  const saved=JSON.parse(fs.readFileSync(file));assert(saved.guard);assert.equal(restarted.priorGuard,saved.guard);assert.equal(restarted.status().task_open,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
  }finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await closed;fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('pause invalidates frames synchronously and keeps per-app session grants',async()=>{
