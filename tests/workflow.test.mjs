@@ -36,8 +36,15 @@ test('unconfirmed held-input recovery requests Stop and returns an actionable fa
   const events=[];const driver={epoch:1,proc:null,pending:new Map(),inputMayBeHeld:true,info:null,ready:null,
    _failAll(){},releaseHeldInputs:recovery,onEvent:event=>events.push(event),onLog(){}};
   await assert.rejects(Driver.prototype._abort.call(driver),e=>e.code==='input_cleanup_failed');
-  assert.deepEqual(events,[{event:'input_cleanup_failed'}]);assert.equal(driver.epoch,2);
+  assert.deepEqual(events,[{event:'input_cleanup_failed'}]);assert.equal(driver.epoch,2);assert.equal(driver.inputMayBeHeld,true);
  }
+});
+test('held input stays pending across failed cleanup attempts until release is confirmed',async()=>{
+ let attempts=0,allowed=false;const driver={epoch:1,proc:null,pending:new Map(),inputMayBeHeld:true,info:null,ready:null,_failAll(){},onEvent(){},onLog(){},async releaseHeldInputs(){attempts++;return allowed;}};
+ for(let n=0;n<2;n++){await assert.rejects(Driver.prototype._abort.call(driver),e=>e.code==='input_cleanup_failed');assert.equal(driver.inputMayBeHeld,true);}
+ await assert.rejects(Driver.prototype.start.call(driver),e=>e.code==='input_cleanup_failed');assert.equal(attempts,2);
+ allowed=true;await Driver.prototype._abort.call(driver);assert.equal(attempts,3);assert.equal(driver.inputMayBeHeld,false);
+ await Driver.prototype._abort.call(driver);assert.equal(attempts,3);
 });
 
 test('failed file-picker keyboard input requests held-input cleanup before rejecting',async()=>{

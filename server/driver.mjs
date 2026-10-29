@@ -39,6 +39,7 @@ export class Driver {
 
   async start() {
     if (this.aborting) await this.aborting;
+    if (this.inputMayBeHeld) throw new HostError('input_cleanup_failed','Automation-held input cleanup is unconfirmed. Complete cleanup before starting another native operation.','Do not repeat the interrupted action.');
     if (this.starting) return this.starting;
     if (this.proc && !this.proc.killed && this.info) return this.info;
     // Defer launch until the shared promise is assigned, even for sync failures.
@@ -197,13 +198,13 @@ export class Driver {
     this._failAll(new HostError('control_cancelled','Native worker was cancelled; observe again.',null));
     if(p) { try { p.stdin.destroy(); p.kill(); await Promise.race([once(p,'exit'),new Promise(r=>setTimeout(r,1000))]); } catch {} }
     if (!recover) return;
-    this.inputMayBeHeld=false;
     let released=false;
     try{released=await this.releaseHeldInputs();}catch(error){this.onLog('input recovery: '+error.message);}
     if(!released){
       this.onEvent?.({event:'input_cleanup_failed'});
       throw new HostError('input_cleanup_failed','Automation-held input cleanup could not be confirmed. Control must remain stopped.','Use the local controls only after cleanup succeeds; do not repeat the interrupted action.');
     }
+    this.inputMayBeHeld=false;
   }
   async releaseHeldInputs(){
     const {exe}=ensureHost();

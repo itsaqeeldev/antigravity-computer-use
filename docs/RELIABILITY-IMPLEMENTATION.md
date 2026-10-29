@@ -868,6 +868,12 @@ An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and End, and confirms the inert driver saw no
 input. This is controller integration evidence, not a real desktop replay test.
 
+Held-input cleanup now retains its pending flag if the independent release
+helper fails, and native startup refuses new operations while that flag remains.
+A later cleanup must actually succeed before the flag clears. Focused driver
+regressions exercise repeated failure and confirmed recovery; live physical
+held-input failure and recovery remain unqualified on both platforms.
+
 The installer also checks task state in the destination and previous deployment
 roots before switching files, and checks again after staging. An open marker or
 malformed state refuses the installation without replacing its configuration.
@@ -904,7 +910,11 @@ regressions with a 9.09 ms median and 12.56 ms p95 over 20 checks. Both jobs
 nevertheless failed an
 incident test because the new guard raised synchronously; the test now accepts
 both synchronous ownership loss and an asynchronous uncertain-publication error.
-The corrected suite and interactive Mac qualification remain pending.
+Interactive Mac qualification remains pending.
+Corrected source `a0298d5` subsequently passed the hosted Apple Silicon and
+Intel Mac matrix in run `40968152561`, including build, regression, isolated
+install/update/rollback and provenance. It did not exercise the interactive
+desktop, and later source changes require their own CI results.
 
 Local full-suite rerun on 30 October failed `update_insufficient_space` with
 drive D near 156 MiB free while tests ran concurrently. The focused rollback,
