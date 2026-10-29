@@ -648,7 +648,7 @@
     },
     {
       "path": ".github/workflows/prepare-signed-release.yml",
-      "sha256": "78b376a9f744e42bfd348709808420cd8348b8e1a9baf27a7e35a4f71c36b26e"
+      "sha256": "49fcac51e61d7a671551c4a5ddbe0eb7df8d57c0564308eea4edf11a731a0082"
     },
     {
       "path": "server/recovery.mjs",
@@ -661,6 +661,10 @@
     {
       "path": "server/update-notice.mjs",
       "sha256": "c56c3caf128a0498ccfa6a763f465472d6b3b952894a3160ad2849f00a6ac7c8"
+    },
+    {
+      "path": "scripts/verify-signed-assets.mjs",
+      "sha256": "21fec56573c07ec5de1908a00d5b3d52d4c045e124e8442fe89e2f096cb3d474"
     }
   ]
 }

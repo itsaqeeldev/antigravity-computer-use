@@ -52,6 +52,8 @@ jobs:
           MINIMUM_KERNEL: ${{ matrix.minimum_kernel }}
         shell: bash
         run: node scripts/sign-update-ci.mjs .localdata/release-bundle "$RELEASE_SEQUENCE" "$MINIMUM_KERNEL" .localdata/signed-release
+      - name: Independently verify public signature and prepared payloads
+        run: node scripts/verify-signed-assets.mjs .localdata/release-bundle .localdata/signed-release
       - uses: actions/upload-artifact@v6
         with:
           name: signed-release-${{ matrix.platform }}-${{ matrix.arch }}
