@@ -41,6 +41,31 @@ test('recovered End closes only after old Windows ledger and native processes ve
   assert.equal(r.status().recovered_task,true);assert.equal((await r.finish()).ended,true);assert.equal(r.status().task_open,false);assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('recovered End waits for actual prior process exits and preserves Stop',{skip:process.platform!=='win32',timeout:30000},async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'prior-processes-')),file=path.join(dir,'task-state.json'),latch=path.join(dir,'emergency.stop');let children=[],controller;
+ const previous={data:process.env.AGCU_DATA_DIR,plugin:process.env.CU_PLUGIN_DATA,claude:process.env.CLAUDE_PLUGIN_DATA};
+ try{
+  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  process.env.AGCU_DATA_DIR=dir;delete process.env.CU_PLUGIN_DATA;delete process.env.CLAUDE_PLUGIN_DATA;
+  children=Array.from({length:3},()=>{const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore',windowsHide:true});child.done=new Promise(resolve=>child.once('close',resolve));return child;});
+  assert(children.every(child=>Number.isSafeInteger(child.pid)&&child.pid>0));
+  const script=`import fs from 'node:fs';import {EventEmitter} from 'node:events';import {Runtime} from ${JSON.stringify(new URL('../server/runtime.mjs',import.meta.url).href)};const guardian=new EventEmitter();guardian.pid=Number(process.argv[2]);guardian.send=()=>{};const driver={info:{pid:Number(process.argv[3])},async abort(){}};const r=new Runtime({guardian,driver,sessions:{register(){},close(){}},taskFile:process.argv[1]});r.beginTask();fs.writeFileSync(r.guardFile,'stopped||0|');fs.writeFileSync(r.guardFile+'.watchdog',process.argv[4]+'|12345');fs.writeFileSync(r.guardFile+'.inputs','');r.recordDispatch();console.log('recorded');setInterval(()=>{},1000);`;
+  controller=spawn(process.execPath,['--input-type=module','-e',script,file,...children.map(child=>String(child.pid))],{env:process.env,stdio:['ignore','pipe','pipe'],windowsHide:true});let output='',errors='';controller.stdout.on('data',x=>output+=x);controller.stderr.on('data',x=>errors+=x);controller.done=new Promise(resolve=>controller.once('close',resolve));
+  const until=Date.now()+15000;while(!output.includes('recorded')&&controller.exitCode===null&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,20));assert(output.includes('recorded'),errors);controller.kill();await controller.done;
+  fs.writeFileSync(latch,'stopped');const guardian=new EventEmitter();guardian.send=()=>{};const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file,latchFile:latch});
+  await assert.rejects(r.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
+  for(const child of children.slice(0,2)){child.kill();await child.done;}await assert.rejects(r.finish(),e=>e.code==='recovered_cleanup_unverified');
+  children[2].kill();await children[2].done;const ledger=path.join(dir,JSON.parse(fs.readFileSync(file)).guard+'.inputs');fs.writeFileSync(ledger,'k:65:0:0');
+  await assert.rejects(r.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
+  // Fixture evidence only: do not invoke a native input-release helper here.
+  fs.writeFileSync(ledger,'');assert.equal((await r.finish()).ended,true);assert.equal(r.state,'stopped');assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
+ }finally{
+  if(controller&&controller.exitCode===null&&controller.signalCode===null)controller.kill();if(controller)await controller.done;
+  for(const child of children){if(child.exitCode===null&&child.signalCode===null)child.kill();await child.done;}
+  for(const [name,value] of [['AGCU_DATA_DIR',previous.data],['CU_PLUGIN_DATA',previous.plugin],['CLAUDE_PLUGIN_DATA',previous.claude]]){if(value===undefined)delete process.env[name];else process.env[name]=value;}
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
 test('native process identities are persisted before dispatch and retained across restart',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-children-')),file=path.join(dir,'task-state.json');const r=fixture();r.taskFile=file;
  try{

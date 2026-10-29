@@ -895,6 +895,12 @@ watchdog metadata permanently marks that task's watchdog history incomplete,
 so recovered End refuses instead of trusting only the latest watchdog. Older
 records without this completeness marker also remain blocked.
 Fixture-level and native storage tests do not establish physical crash recovery.
+A Windows cross-process regression now kills a task process and tracks three
+real inert child processes. End refuses while any recorded child remains alive
+or the prior ledger is nonempty, then succeeds once all have exited and a
+fixture ledger is empty; the Stop latch remains. The child processes are not
+native desktop controllers, and the fixture deliberately sends no input, so
+physical crash recovery and watchdog behavior remain unqualified.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real
