@@ -160,6 +160,21 @@ test('a persisted interrupted-switch journal restores the old installation on sc
   const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
  }finally{f.cleanup();}
 });
+test('rollback and interrupted recovery hold the controller fence while restoring files',async()=>{
+ for(const mode of ['rollback','recover']){const f=fixture();let held=false,restores=0;try{
+  if(mode==='rollback'){await update(f.target,'check',f);await update(f.target,'apply',f);}
+  else{const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json'))),staged=f.adapters.install({bundle:f.fresh.bundle,target:f.target});fs.writeFileSync(path.join(f.target,'update-switching.json'),JSON.stringify({previous_installation:previous,rollback:[path.join(staged.backup,'rollback.json')]}));}
+  const rollback=f.adapters.rollback,cli=f.adapters.cli;f.adapters.acquireControllerLease=async()=>{assert.equal(held,false);held=true;return {async release(){assert(held);held=false;}};};
+  f.adapters.rollback=file=>{assert(held,'rollback must hold controller ownership');restores++;return rollback(file);};
+  f.adapters.cli=(record,args)=>{if(args[0]==='start')assert.equal(held,false,'release the fence before starting the service');return cli(record,args);};
+  const result=await update(f.target,mode,f);assert(mode==='rollback'?result.rolled_back:result.recovered);assert(restores>0);assert.equal(held,false);
+ }finally{f.cleanup();}}
+});
+test('a competing controller prevents rollback and retains the recovery journal',async()=>{
+ const f=fixture();try{await update(f.target,'check',f);await update(f.target,'apply',f);let restored=false;f.adapters.rollback=()=>{restored=true;};f.adapters.acquireControllerLease=async()=>{throw Object.assign(Error('owned'),{code:'service_already_running'});};
+  await assert.rejects(update(f.target,'rollback',f),e=>e.code==='service_already_running');assert.equal(restored,false);assert(fs.existsSync(path.join(f.target,'update-switching.json')));
+ }finally{f.cleanup();}
+});
 test('interrupted-switch recovery requires the restored build identity before clearing its journal',async()=>{
  const f=fixture();try{
   const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));

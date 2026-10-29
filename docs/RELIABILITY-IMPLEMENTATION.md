@@ -33,6 +33,10 @@ lease. Initial cleanup has already been confirmed and the switch journal blocks
 new input. Active, unresponsive or ambiguous status still requires operator
 inspection. Isolated tests cover these branches; real failed-start recovery on a
 published bundle remains pending.
+Explicit rollback and interrupted-switch recovery also acquire the native
+controller lease before restoring files, and release it before passive restart.
+An isolated test checks ordering and confirms a competing owner leaves the
+recovery journal intact. Real Sidecar/OS race qualification is still pending.
 
 Mac Intel CI run `40946383380` failed during the compiler lookup after roughly
 ten seconds and reported missing Xcode tools. The previous code discarded the

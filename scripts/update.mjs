@@ -74,6 +74,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    return health;
   };
   const shutdownVerified=record=>{const result=cli(record,['shutdown']);if(result.ok!==true||result.closed!==true)throw Error('update_cleanup_unconfirmed');};
+  const acquireController=adapters.acquireControllerLease||(!adapters.storage?()=>acquireServiceLease(path.join(target,'data')):async()=>null);
   if(command==='check'){
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
@@ -121,7 +122,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
    switching=true;safeToUnlock=false;
    if(serviceRunning)shutdownVerified(installed);
-   for(const file of [...interrupted.rollback].reverse())runRollback(file);
+   const fence=await acquireController();try{for(const file of [...interrupted.rollback].reverse())runRollback(file);}finally{await fence?.release();}
    const prior=passiveRecord(interrupted.previous_installation);startVerified(prior,'update_recovery_health_failed');
    save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
   }
@@ -132,7 +133,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(!state.rollback?.length)throw Error('update_no_rollback');if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];writeAtomicJSON(switchingFile,journal);
-   if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
+   if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;const fence=await acquireController();try{for(const file of [...state.rollback].reverse())runRollback(file);}finally{await fence?.release();}
    const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));startVerified(restored,'update_rollback_health_failed');save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
@@ -150,7 +151,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(serviceRunning)shutdownVerified(installed);
   // Hold the same native lease used by controllers while swapping files. An
   // old Sidecar cannot restart into a half-switched deployment.
-  let controllerLease;if(!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
+  let controllerLease=await acquireController();
   const records=[];let next;
   try{
    for(const scope of Object.values(registry)){
@@ -182,7 +183,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    }
    // Hold the same fence used for installation through rollback as well: a
    // Sidecar must not restart between the status check and restoring files.
-   if(!controllerLease&&!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
+   if(!controllerLease)controllerLease=await acquireController();
    for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
