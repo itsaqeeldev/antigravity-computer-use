@@ -72,6 +72,16 @@ test('a passive sidecar releases idle control and serves a later session without
   assert.equal((await request(session,'snapshot',{hwnd:1})).metadata.observation_id,'next-session');assert.equal(resumed,1);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('update reservation refuses an idle task and unavailable task state',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fence-'));let taskOpen=true;
+ const runtime={status:()=>({state:'idle',approved_apps:[],...(taskOpen===undefined?{}:{task_open:taskOpen})}),async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  assert.equal((await request(session,'prepare_update')).prepared,false);
+  taskOpen=undefined;assert.equal((await request(session,'prepare_update')).prepared,false);
+  taskOpen=false;assert.equal((await request(session,'prepare_update')).prepared,true);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 
 test('service shutdown removes its process signal handlers',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-signal-cleanup-'));

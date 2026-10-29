@@ -115,6 +115,9 @@ async function updateLocked(target,command,{fetcher,adapters}){
   }
   const current=cli(installed,['status']);if(current.ok!==true)throw Error('update_controller_check_failed');if(!['idle','not_running','stopped'].includes(current.state)||current.approved_apps?.length)return {deferred:true,next_action:'wait_for_task_end'};
   const serviceRunning=current.state!=='not_running'&&current.reconnect_required!==true;
+  // Older services cannot prove whether an idle conversation still owns an
+  // open task. Do not replace them automatically on the basis of idle alone.
+  if(serviceRunning&&current.task_open!==false)return {deferred:true,next_action:current.task_open===true?'wait_for_task_end':'task_state_unavailable'};
   const reserve=async()=>{if(!serviceRunning)return true;
    const session=adapters.prepare?null:JSON.parse(fs.readFileSync(path.join(target,'data/desktop-session.json')));
    const prepared=adapters.prepare?await adapters.prepare(current):await request(session,'prepare_update',{},5000,current.permission_mode);

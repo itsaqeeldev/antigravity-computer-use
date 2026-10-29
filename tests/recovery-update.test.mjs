@@ -56,6 +56,13 @@ test('ready reveals stopped controls without rearming; failure is bounded',async
   assert(!source.includes('rearm'),'the human launcher reveals controls; only the local button clears Stop');
  }
 });
+test('ready reserves the task until end confirms input cleanup, including idle release',async()=>{
+ let failAbort=false;const r={taskOpen:false,state:'idle',generation:0,frames:new Map(),grants:new Map(),token:'',guardian:{proc:{},send(){}},driver:{async abort(){if(failAbort)throw Error('cleanup failed');}},status(){return {state:this.state,task_open:this.taskOpen};},async showControls(){return {controls_visible:true,state:'idle'};}};
+ await Runtime.prototype.ready.call(r);assert.equal(r.taskOpen,true);
+ await Runtime.prototype.finish.call(r,{preserveTask:true});assert.equal(r.taskOpen,true);
+ failAbort=true;await assert.rejects(Runtime.prototype.finish.call(r));assert.equal(r.taskOpen,true);
+ failAbort=false;await Runtime.prototype.finish.call(r);assert.equal(r.taskOpen,false);
+});
 test('ready treats an invisible control reply as a bounded diagnostic failure',async()=>{
  let calls=0;
  const runtime={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{},initialized:true},async showControls(){calls++;return {state:'stopped',controls_visible:false};}};

@@ -842,3 +842,15 @@ one rename. A competing publisher verifies and retains the winner; an invalid
 existing bundle is refused. The suite includes a real concurrent compiler and
 signature check on each Mac CI runner. That CI check is not a substitute for
 real interactive Mac qualification or Apple notarization.
+
+## Updater fence for an open idle task
+
+An idle runtime with no approved app is not proof that a task has ended: an
+agent may have requested `ready` and still be selecting a target. `ready`, app
+grant and launch now mark the task open. The update reservation requires an
+explicit closed task, and a running older service without this field is deferred
+until an operator uses the supported upgrade path. Idle visual cleanup preserves
+the task marker; normal End clears it only after input cleanup succeeds. This
+marker is process-local and is not host-attested task identity: a service crash
+or a different caller ending the shared task remains subject to issue #7.
+Fixture and IPC coverage does not qualify real Antigravity orchestration.

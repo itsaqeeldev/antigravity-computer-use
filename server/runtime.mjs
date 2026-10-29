@@ -83,7 +83,7 @@ export class Runtime {
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=false;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -107,6 +107,7 @@ export class Runtime {
   async prepare(){}
   async showControls(){const result=await this.guardian.request({op:'show_controls'});if(result.controls_visible===true)this.recoveryFailure=null;return result;}
   async ready(){
+    this.taskOpen=true;
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_stop_persistence_without_restart',replay_allowed:false,error:{code:this.lastControlReason,message:'Control is stopped because native control storage failed. Inspect private storage; do not restart or send input.'}};
     const unavailable=()=>({...this.status(),ready:false,controls_visible:this.recoveryVisibility??null,guardian_running:!!this.guardian.proc&&!this.guardian.proc.killed,guardian_exit:this.guardian.lastExit??null,...recoveryAdvice({error:this.recoveryFailure}),error:this.recoveryFailure});
     if(this.recoveryFailure)return unavailable();
@@ -138,6 +139,7 @@ export class Runtime {
     return w;
   }
   async grant(hwnd,purpose='Operate this app for the requested desktop task'){
+    this.taskOpen=true;
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
@@ -302,7 +304,7 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
   }
-  async finish(){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();return {ended:true,state:this.state,restart_required:false};}
+  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask)this.taskOpen=false;return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.
@@ -314,6 +316,7 @@ export class Runtime {
     return {recorded:true,incident_id,classification:'agent_report_unverified',next_action:'pending_reporting_preferences'};
   }
   async launch(args){
+    this.taskOpen=true;
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
@@ -373,6 +376,6 @@ export class Runtime {
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
   async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});let persistenceFailed=false;try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch{persistenceFailed=true;this.lastControlReason='stop_persistence_failed';}await this.driver.abort?.();if(persistenceFailed)throw Object.assign(Error('Control is stopped, but the emergency Stop latch could not be saved. Do not restart the controller; inspect its private storage.'),{code:'stop_persistence_failed'});return {stopped:true,human_rearm_required:true};}
-  status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
+  status(){return {state:this.state,task_open:this.taskOpen===true,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }
