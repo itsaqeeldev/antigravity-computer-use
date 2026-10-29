@@ -39,6 +39,11 @@ same controller, tool schemas and `/computer-use` skill. It is undergoing native
 CI and installation checks; actual Mac desktop acceptance is still pending.
 [Mac candidate and qualification details](docs/MACOS.md).
 
+The unreleased beta.3 work in [PR #1](https://github.com/shayann07/antigravity-computer-use/pull/1)
+adds control recovery, sanitized failure reports and signed whole-bundle updates.
+It shares the runtime with the Mac adapter. [Implementation and acceptance status](docs/RELIABILITY-IMPLEMENTATION.md).
+The Windows download and one-line installer below remain pinned to beta.2.
+
 ## See it in action
 
 <p align="center">
@@ -129,7 +134,7 @@ this project adds no separate model service or telemetry. [Security model](SECUR
 
 | Area | Verified evidence and remaining work |
 | --- | --- |
-| **Current source checks** | 139 passed, zero failed, five explicit installation-ACL skips. CI also compiles the native helper and checks source provenance. Skips are not qualification passes. |
+| **Published beta.2 source snapshot** | 139 passed, zero failed, five explicit installation-ACL skips. For the changing development candidate, inspect PR #1 and its implementation log. Skips are not qualification passes. |
 | **Beta.2 lifecycle** | Actual native checks cover hidden startup, explicit controls, End, capture cleanup, stopped-state refusal and automatic dismissal. Automatic Antigravity-managed startup and read-only native discovery also passed on the installed beta.2 build. |
 | **Real app workflow** | Earlier beta.1 controller/helper completed actual Antigravity-driven Upscaly AI PNG/JPEG exports with independent output, database and native-engine verification. Full AI acceptance has not been repeated on the changed beta.2 helper. |
 | **Speed** | The earlier High-effort Antigravity tasks took **4m29s PNG / 4m33s JPEG**. Host/model orchestration dominates the remaining delay. These are historical witnesses, not a current speed guarantee. |
@@ -141,8 +146,12 @@ this project adds no separate model service or telemetry. [Security model](SECUR
 
 ## Build and contribute
 
-Source builds require **Windows x64, Node 24.20.0** and the inbox .NET Framework
-compiler. There are no npm runtime dependencies.
+Windows source builds require **Windows x64, Node 24.20.0** and the inbox .NET
+Framework compiler. Experimental Mac builds use **macOS 14+, matching Intel or
+Apple Silicon Node 24.20.0, and Xcode Command Line Tools**; follow the
+[Mac build and qualification guide](docs/MACOS.md). There are no npm runtime
+dependencies. Clone the current implementation branch/PR for Mac development;
+the published Windows tag does not contain the Mac adapter.
 
 ```powershell
 git clone https://github.com/shayann07/antigravity-computer-use.git

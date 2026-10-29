@@ -11,8 +11,10 @@ It is not part of the pinned beta.2 download. See
 [implementation and qualification status](RELIABILITY-IMPLEMENTATION.md) before
 using a CI candidate. An old installation needs one supported upgrade before it
 can check for signed automatic updates; installing a skill file alone cannot
-upgrade its runtime. The production signing trust root and release assets remain
-unconfigured, so no automatic distribution is claimed.
+upgrade its runtime. The signing trust root is configured and signed assets have
+passed development CI, but they are not a published updater release. Automatic
+distribution and the public bootstrap pin remain gated by native/real-device
+acceptance; the one-line command below still installs beta.2.
 
 ## Quick install
 
