@@ -166,12 +166,23 @@ test('cross-folder migration refuses a live controller and preserves Stop/prefer
  const dir=fs.mkdtempSync(path.join(root,'migrate-')),bundle=path.join(dir,'bundle'),firstTarget=path.join(dir,'old'),nextTarget=path.join(dir,'new'),home=path.join(dir,'home');
  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
  const first=install({bundle,target:firstTarget,home,permissionMode:'host-managed'});const data=path.join(firstTarget,'data');fs.mkdirSync(data);
- fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');fs.writeFileSync(path.join(data,'control-preferences.json'),JSON.stringify({takeover_mode:'smart'}));fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:process.pid,secret:'never copied'}));
+ fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');fs.writeFileSync(path.join(data,'control-preferences.json'),JSON.stringify({takeover_mode:'smart'}));fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:true}));fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:process.pid,secret:'never copied'}));
  const original=fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8');assert.throws(()=>install({bundle,target:nextTarget,home,permissionMode:'host-managed'}),/still running/);assert(!fs.existsSync(nextTarget));assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),original);
  fs.writeFileSync(path.join(data,'desktop-session.json'),JSON.stringify({pid:2147483647,secret:'never copied'}));
+ assert.throws(()=>install({bundle,target:nextTarget,home,permissionMode:'host-managed'}),/task_open_finish_before_install/);assert.equal(fs.readFileSync(path.join(first.skills[0],'SKILL.md'),'utf8'),original);
+ fs.writeFileSync(path.join(data,'task-state.json'),JSON.stringify({schema:1,open:false}));
  const next=install({bundle,target:nextTarget,home,permissionMode:'host-managed'});
  assert(fs.existsSync(path.join(nextTarget,'data/emergency.stop')));assert.equal(JSON.parse(fs.readFileSync(path.join(nextTarget,'data/control-preferences.json'))).takeover_mode,'smart');assert(!fs.existsSync(path.join(nextTarget,'data/desktop-session.json')));
  const rollback=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(next.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});assert.equal(rollback.status,0,rollback.stderr);assert.equal(JSON.parse(fs.readFileSync(path.join(first.skills[0],'deployment.json'))).target,firstTarget);
+});
+test('cross-folder migration refuses corrupt task state without replacing the deployment',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'migrate-task-invalid-')),bundle=path.join(dir,'bundle'),old=path.join(dir,'old'),next=path.join(dir,'new'),home=path.join(dir,'home');
+ try{
+  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+  const first=install({bundle,target:old,home});const data=path.join(old,'data');fs.mkdirSync(data);fs.writeFileSync(path.join(data,'task-state.json'),'{broken');
+  const pointer=path.join(first.skills[0],'deployment.json'),before=fs.readFileSync(pointer,'utf8');
+  assert.throws(()=>install({bundle,target:next,home}),/task_state_invalid/);assert.equal(fs.readFileSync(pointer,'utf8'),before);assert.equal(fs.readFileSync(path.join(data,'task-state.json'),'utf8'),'{broken');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
 test('global and project updates retain their own policies instead of the last installed scope',()=>{

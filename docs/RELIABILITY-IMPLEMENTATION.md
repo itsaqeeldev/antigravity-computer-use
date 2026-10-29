@@ -857,3 +857,10 @@ flush directory handles is not power-loss qualification. This marker is not
 host-attested task identity: a different caller ending the shared task remains
 subject to issue #7. Fixture and IPC coverage does not qualify real Antigravity
 orchestration.
+
+The installer also checks task state in the destination and previous deployment
+roots before switching files, and checks again after staging. An open marker or
+malformed state refuses the installation without replacing its configuration.
+The older beta had no task marker, so its absence in an older stopped service
+cannot establish that an Antigravity conversation has finished; that bootstrap
+qualification remains outstanding.

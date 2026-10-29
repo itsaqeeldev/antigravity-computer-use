@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "5cce46ff9a15d547ac30bee91ab93cf6b2ee72f8f7e2351609d9acd724362453"
+      "sha256": "981b4ddf6b69958d2469a549b6f12b25ccf0591e0ce19bc49f7d07d1dbb4ffa2"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "aeeac9ba4de3583e54e4e1fcbd72cc7c167d152b7303d1d546b9c6e01525fefa"
+      "sha256": "e40c3ec1e91aa78636d6e07fa31fbf95068c0fc69ae4ec87a4bf36c833718ee9"
     },
     {
       "path": "tests/core.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e886e8225ce1e0d1692d9e589675b567ed4cb2e3704e418a0a7fb55b2ecde07e"
+      "sha256": "57c87b79831c84bf9e24d2e0f6beb4a4d2773c859d5af662897fd1faa34da006"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

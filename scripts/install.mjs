@@ -113,12 +113,17 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  if(!['automatic','notify','manual'].includes(updateSettings.mode)||!['stable','beta'].includes(updateSettings.channel)||typeof updateSettings.reporting!=='boolean')throw Error('Invalid update/reporting settings');
  for(const root of previousRoots)if(root!==target)prepareStorage(root,storageHelper,'legacy');
  const preserveControl=()=>{
+  const data=path.join(target,'data'),taskFile=path.join(data,'task-state.json');
+  const taskOpen=file=>{if(!fs.existsSync(file))return false;try{if(fs.statSync(file).size>1024)throw Error();const saved=JSON.parse(fs.readFileSync(file,'utf8'));if(saved?.schema!==1||typeof saved.open!=='boolean')throw Error();return saved.open;}catch{throw Error('task_state_invalid');}};
+  let open=taskOpen(taskFile);
   for(const root of previousRoots)if(root!==target){
-   const previousData=path.join(root,'data'),data=path.join(target,'data');
+   const previousData=path.join(root,'data');
+   if(taskOpen(path.join(previousData,'task-state.json')))open=true;
    if(fs.existsSync(path.join(previousData,'emergency.stop'))){fs.mkdirSync(data,{recursive:true});fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');}
    const preferences=path.join(previousData,'control-preferences.json'),destination=path.join(data,'control-preferences.json');
    if(!fs.existsSync(destination)&&fs.existsSync(preferences)){const saved=JSON.parse(fs.readFileSync(preferences,'utf8'));if(['manual','smart'].includes(saved.takeover_mode)){fs.mkdirSync(data,{recursive:true});fs.writeFileSync(destination,JSON.stringify({takeover_mode:saved.takeover_mode},null,2));}}
   }
+  if(open)throw Error('task_open_finish_before_install');
  };
  preserveControl();
  const backup=path.join(target,'backups',stamp);fs.mkdirSync(backup,{recursive:true});
