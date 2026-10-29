@@ -27,6 +27,9 @@ test('runtime translates a name to the same observation-scoped native index and 
  r.frames.set('semantic',{at:Date.now(),hwnd:1,key:appKey(w),snapshot:'native-frame-2',workerEpoch:1,elements:[{i:7,name:'JPEG',role:'Button'}]});
  await Runtime.prototype.action.call(r,'click',{hwnd:1,observation_id:'semantic',name:'JPEG',physical:false,reason:'Explicit semantic action'});
  assert.equal(sent.filter(x=>x.op==='click').at(-1).args.physical,false);
+ r.frames.set('pixel',{at:Date.now(),hwnd:1,key:appKey(w),snapshot:'native-frame-3',workerEpoch:1,elements:[],image:{width:100,height:100,source:[0,0,100,100]}});
+ await Runtime.prototype.action.call(r,'click',{hwnd:1,observation_id:'pixel',x:12,y:30,physical:false,reason:'Observed image target'});
+ const pixel=sent.filter(x=>x.op==='click').at(-1).args;assert.equal(pixel.physical,true);assert.deepEqual(pixel.point,[12,30]);
 });
 test('later named batch steps resolve against fresh internal observations',async()=>{
  const seen=[];const r={async action(op,args){seen.push({op,args});return{metadata:{observation_id:'frame'+seen.length}};}};
@@ -50,7 +53,7 @@ test('a real runtime batch resolves the next named control from its newly observ
  const r={frames:new Map([['initial',frame('s1',[{i:7,name:'Settings',role:'Button'}])]]),deadline:Date.now()+10000,remaining:10,generation:1,async grant(){return w;},check(){},stamp(){return{};},async app(){return w;},guardian:{send(){}},driver:{epoch:1,info:{pid:10},async start(){},async call(op,args){if(op==='authorize')return{result:{sensitive:false}};sent.push(args);return{result:{method:'invoke_pattern'}};}},sessions:{async withInput(_op,_meta,fn){return fn();}},async observe(){const id='fresh'+sent.length;r.frames.set(id,frame('s'+(sent.length+1),[{i:42,name:'JPEG',role:'Button'}]));return{metadata:{observation_id:id}};}};
  r.action=Runtime.prototype.action.bind(r);
  const result=await call(r,'computer_run',{hwnd:1,observation_id:'initial',reason:'Open then select',steps:[{kind:'click',name:'Settings',role:'Button',risk:'routine'},{kind:'click',name:'JPEG',role:'Button',risk:'routine'}]});
- assert.deepEqual(sent.map(x=>[x.index,x.snapshot_id]),[[7,'s1'],[42,'s2']]);assert.equal(result.batch.completed.length,2);
+ assert.deepEqual(sent.map(x=>[x.index,x.snapshot_id,x.physical]),[[7,'s1',true],[42,'s2',true]]);assert.equal(result.batch.completed.length,2);
 });
 
 test('selector observation cache is bounded and drops expired or restarted-worker frames',async()=>{

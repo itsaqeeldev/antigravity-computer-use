@@ -416,7 +416,7 @@
     },
     {
       "path": "tests/observed-selectors.test.mjs",
-      "sha256": "2035ce8676955fe474eaf36f89c4a39e27fdc1a8f7b657da576391bc38fa8e82"
+      "sha256": "048212ee19ec70c79f70d38b3ceb23702193ca112ceee1d0855aaae976a6f606"
     },
     {
       "path": "tests/observed-selectors-integration.mjs",
