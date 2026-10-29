@@ -938,6 +938,12 @@ state notifications until a native human-resume event confirms the latch is
 absent. Active operations recheck the latch, and delayed activation replies
 cannot override a concurrent Stop. Fixture and IPC tests cover these races;
 physical human re-arm on the new build remains pending.
+Ready, cached app grants and host-authorized soft Resume now also recheck the
+persisted latch before reporting control available. A mocked race writes the
+latch before the guardian event arrives and verifies the runtime stops rather
+than accepting the stale reply. These are not physical Stop/re-arm results.
+Ready also reports a latch-persistence failure explicitly if it arises during
+that recheck, rather than asking for re-arm while storage is unverified.
 The prior driver fix at `503be09` passed both Mac CI jobs in run `40968689619`.
 With free disk space restored, the Windows-local suite including the new End-path
 regression passed 305 tests with 11 skips; skips are not qualification passes.

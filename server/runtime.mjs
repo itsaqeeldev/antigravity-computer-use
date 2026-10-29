@@ -166,15 +166,20 @@ export class Runtime {
       controls=await this.showControls();
       if(controls.error)throw Object.assign(Error(controls.error.message),{code:controls.error.code});
       if(['idle','active','paused','stopped'].includes(controls.state)&&!(this.state==='stopped'&&controls.state!=='stopped'))this.state=controls.state;
+      if(this.state!=='stopped')try{Runtime.prototype.enforceStopLatch.call(this);}catch(error){if(error.code!=='control_stopped')throw error;}
+      if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))return {...this.status(),ready:false,controls_visible:controls.controls_visible??null,next_action:'inspect_stop_persistence_without_restart',replay_allowed:false,error:{code:this.lastControlReason,message:'Control is stopped because native control storage failed. Inspect private storage; do not restart or send input.'}};
       const visible=controls.controls_visible===true;
       if(!visible)throw Object.assign(Error('Local controls did not report a visible bar.'),{code:'guardian_controls_not_visible'});
       return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused'&&!this.recoveredTask,controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
         next_action:this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':this.recoveredTask?'inspect_recovered_task':'discover_or_launch'};
     }catch(error){this.recoveryVisibility=controls?.controls_visible===false?false:null;this.recoveryFailure={code:error.code||'guardian_unavailable',message:error.code==='desktop_context_unavailable'?'Start the installed local launcher on the visible desktop. No desktop was switched and Stop remains latched.':'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return unavailable();}
   }
+  enforceStopLatch(){
+    if(this.latchFile){let latched=false;try{fs.lstatSync(this.latchFile);latched=true;}catch(error){if(error.code!=='ENOENT'){this.stop().catch(()=>{});fail('stop_persistence_failed','Cannot verify the emergency Stop latch; no input was sent.');}}if(latched){this.stop().catch(()=>{});fail('control_stopped','Emergency Stop remains latched; local human re-arm is required.');}}
+  }
   check(){
     if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);
-    if(this.latchFile){let latched=false;try{fs.lstatSync(this.latchFile);latched=true;}catch(error){if(error.code!=='ENOENT'){this.stop().catch(()=>{});fail('stop_persistence_failed','Cannot verify the emergency Stop latch; no input was sent.');}}if(latched){this.stop().catch(()=>{});fail('control_stopped','Emergency Stop remains latched; local human re-arm is required.');}}
+    Runtime.prototype.enforceStopLatch.call(this);
   }
   async identity(hwnd){
     if(!Number.isSafeInteger(Number(hwnd))||Number(hwnd)<=0)fail('no_target','Select an HWND from computer_apps.');
@@ -198,7 +203,7 @@ export class Runtime {
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
     const w=await this.app(hwnd);const key=appKey(w);
-    if(this.grants.has(key)&&this.state==='active')return w;
+    if(this.grants.has(key)&&this.state==='active'){this.check();return w;}
     const answer=await this.guardian.prompt({kind:'app',hwnd:Number(hwnd),app_pid:w.pid,host_pid:this.driver.info?.pid,
       message:`Allow this application for this session?\r\n\r\n${w.title}\r\n${w.path}\r\nPID ${w.pid}\r\n\r\nTask: ${purpose}\r\n\r\nIts screenshots and accessibility text go to Antigravity's configured model. Ordinary actions run autonomously. Consequential effects need a separate confirmation. Your real mouse/keyboard will be used. Esc or Ctrl+Alt+F12 stops. Use a disposable account/VM for important data.`});
     if(!answer.allowed)fail(answer.decision==='timeout'?'approval_timeout':'permission_denied',answer.decision==='timeout'?'Local application approval timed out.':'The human denied this application.');
@@ -445,7 +450,7 @@ export class Runtime {
     if(this.state!=='paused'||generation!==this.generation)fail('control_changed','Control changed before Resume completed. Inspect status.');
     const result=await this.guardian.request({op:'resume'});
     if(!result.allowed||result.state!=='active'||generation!==this.generation||this.state==='stopped')fail('human_resume_required','Native runtime refused Resume or emergency Stop won the race. Use the local controls.');
-    this.state='active';this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+contract.session_ms;
+    this.state='active';this.check();this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+contract.session_ms;
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
   async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});let persistenceFailed=false;try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch{persistenceFailed=true;this.lastControlReason='stop_persistence_failed';}await this.driver.abort?.();if(persistenceFailed)throw Object.assign(Error('Control is stopped, but the emergency Stop latch could not be saved. Do not restart the controller; inspect its private storage.'),{code:'stop_persistence_failed'});return {stopped:true,human_rearm_required:true};}

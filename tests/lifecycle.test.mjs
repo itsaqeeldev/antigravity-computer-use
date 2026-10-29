@@ -1,6 +1,6 @@
 import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';
-import {Runtime} from '../server/runtime.mjs';
+import {Runtime,appKey} from '../server/runtime.mjs';
 import {Driver} from '../server/driver.mjs';
 import fs from 'node:fs';import path from 'node:path';
 import {spawn} from 'node:child_process';
@@ -129,6 +129,8 @@ test('a stale guardian state or resume cannot override a persisted Stop',async()
  try{
   r.state='active';await r.stop();guardian.emit('state','idle','normal_shutdown');guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(r.state,'stopped');
   const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.next_action,'awaiting_human_rearm');assert.equal(r.state,'stopped');
+  r.state='idle';const staleReady=await r.ready();assert.equal(staleReady.ready,false);assert.equal(staleReady.next_action,'awaiting_human_rearm');assert.equal(r.state,'stopped');
+  r.state='idle';r.stop=async()=>{r.state='stopped';r.lastControlReason='stop_persistence_failed';};const failedReady=await r.ready();assert.equal(failedReady.next_action,'inspect_stop_persistence_without_restart');assert.equal(failedReady.error.code,'stop_persistence_failed');
   r.state='active';assert.throws(()=>r.check(),e=>e.code==='control_stopped');assert.equal(r.state,'stopped');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -138,6 +140,15 @@ test('Stop wins over a delayed successful native activation reply',async()=>{
  guardian.request=async()=>{await r.stop();return {allowed:true};};
  try{await assert.rejects(r.grant(1,'fixture'),e=>e.code==='control_inactive');assert.equal(r.state,'stopped');assert.equal(r.grants.size,0);assert.equal(fs.readFileSync(latchFile,'utf8'),'stopped');}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('persisted Stop wins over cached grants and a soft-resume reply',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-latch-race-')),latchFile=path.join(dir,'emergency.stop');const guardian=new EventEmitter();guardian.send=()=>{};
+ const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},latchFile,permissionMode:'host-managed'});const app={pid:11,started:'birth',path:'C:/fixture.exe',hwnd:1};r.app=async()=>app;
+ try{
+  r.state='active';r.grants.set(appKey(app),app);fs.writeFileSync(latchFile,'stopped');await assert.rejects(r.grant(1,'fixture'),e=>e.code==='control_stopped');assert.equal(r.state,'stopped');assert.equal(r.grants.size,0);
+  fs.unlinkSync(latchFile);r.state='paused';guardian.request=async()=>{fs.writeFileSync(latchFile,'stopped');return {allowed:true,state:'active'};};
+  await assert.rejects(r.resume(),e=>e.code==='control_stopped');assert.equal(r.state,'stopped');assert.equal(fs.readFileSync(latchFile,'utf8'),'stopped');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('failed Stop persistence keeps the service stopped and refuses shutdown until repaired',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-stop-write-'));try{
