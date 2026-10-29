@@ -106,6 +106,16 @@ tests exercise these failures; native interrupted-update acceptance is still ope
 
 ### Open diagnostics concurrency defect
 
+**Open: separate incident writers can still lose records.** The controller and
+launcher can both call the synchronous recorder. A two-process barrier test had
+both writers read the journal and publish through `incidents.json.tmp`; both
+reported success but the final journal held only one of the two distinct events.
+The reproduction and result are retained under `.localdata/tests/incident-race-*`.
+The separate reporter acknowledgement repair below does not serialize incident
+writers. A correction must preserve bounded private storage, deduplication,
+consent and recovery after writer death; simply changing the temporary filename
+does not fix the lost read-modify-write update.
+
 The old recorder and reporting worker both rewrote `incidents.json` through the
 same `.tmp` pathname. A deterministic two-process test reproduced `ENOENT` when
 a new incident arrived during publication. The candidate now stores bounded
