@@ -127,6 +127,9 @@ the lock. A Windows test kills that helper immediately after the caller's livene
 check; the stale writer fails and the next holder's journal remains intact. The
 original reproduction remains under `.localdata/reliability-current/`. Older
 pinned runtimes do not use this protocol, and real Mac qualification remains open.
+Malformed or oversized helper replies now fail the pending publication promptly
+and retire that helper; the result remains outcome-unknown rather than replaying
+a potentially committed incident. A focused protocol regression covers this path.
 The first asynchronous version delayed error responses while acquiring the lease,
 causing a client timeout in the full suite. Recording is now queued off the reply
 path; replies identify it as pending, status exposes pending/failure, and orderly

@@ -16,6 +16,13 @@ test('a helper that cannot be reaped reports unconfirmed cleanup',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.exitCode=null;child.kill=()=>false;
  await assert.rejects(acquireServiceLease(base,{helper:'inert',startupTimeout:10,cleanupTimeout:25,spawnProcess:()=>child}),e=>e.code==='service_lease_cleanup_unconfirmed'&&e.cause?.code==='service_lease_timeout');
 });
+test('malformed publication acknowledgement fails promptly and retires the helper',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;
+ child.kill=()=>{child.exitCode=1;child.emit('exit',1);child.emit('close',1);};
+ child.stdin.on('data',()=>child.stdout.write('not-json\n'));
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child,prepareStorage:async()=>({ok:true})});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true}\n'));
+ const lease=await pending;await assert.rejects(lease.publishIncidents(Buffer.from('[]')),e=>e.code==='incident_publish_outcome_unknown');assert.equal(lease.lost,true);assert.equal(child.exitCode,1);await lease.release();
+});
 test('one real kernel owner covers path-case aliases and prevents directory replacement until release',{skip:process.platform!=='win32'},async()=>{
  const dir=temporary(),moved=dir+'-moved';const lease=await acquireServiceLease(dir);
  try{

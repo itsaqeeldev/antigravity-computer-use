@@ -2,7 +2,7 @@
 // existing Windows storage helper holds a kernel mutex until this pipe closes.
 import {spawn} from 'node:child_process';import path from 'node:path';import {EventEmitter} from 'node:events';
 import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
-export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),startupTimeout=5000,cleanupTimeout=2000}={}){
+export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),prepareStorage=storageOperationAsync,startupTimeout=5000,cleanupTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
  child.stdout.setEncoding('utf8');
  const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending,publishPending;
@@ -10,8 +10,8 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
  child.once('close',resolveExit);
  lease.pid=child.pid;lease.lost=false;
  const ownershipError=()=>Object.assign(Error('Controller ownership helper is unavailable. Control must stop.'),{code:'service_ownership_lost'});
- const markLost=()=>{if(!lease.lost){lease.lost=true;lease.emit('lost',ownershipError());}};
- lease.assertHeld=()=>{if(releasing||lease.lost||child.exitCode!==null){markLost();throw ownershipError();}try{process.kill(child.pid,0);}catch{markLost();throw ownershipError();}};
+ const markLost=()=>{if(!lease.lost){lease.lost=true;lease.emit('lost',ownershipError());}if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}};
+ lease.assertHeld=()=>{if(releasing||lease.lost||child.exitCode!==null||child.signalCode!=null){markLost();throw ownershipError();}try{process.kill(child.pid,0);}catch{markLost();throw ownershipError();}};
  const startup=new Promise((resolve,reject)=>{
   const fail=error=>{if(settled)return;settled=true;clearTimeout(timer);releasing=true;try{child.kill();}catch{}
    // A killed helper may still hold the directory until Windows reaps it.
@@ -21,11 +21,11 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   child.on('error',error=>fail(error));child.stderr.on('data',()=>{});
   child.stdin.on('error',()=>{});
   child.stdout.on('data',chunk=>{
-   buffer+=chunk;if(buffer.length>8192){if(!ready)fail(Error('Invalid ownership-helper reply.'));else markLost();return;}
+   buffer+=chunk;if(buffer.length>8192){if(!ready)fail(Error('Invalid ownership-helper reply.'));else {markLost();try{child.kill();}catch{}}return;}
    while(buffer.includes('\n')){const index=buffer.indexOf('\n'),line=buffer.slice(0,index);buffer=buffer.slice(index+1);
     try{const result=JSON.parse(line);if(!ready){if(!result.ok)throw Object.assign(Error(result.error?.message||'Controller ownership refused.'),{code:result.error?.code||'service_lease_refused'});if(!result.lease_acquired)throw Error('Missing controller ownership acknowledgement.');clearTimeout(timer);settled=true;ready=true;resolve(lease);}
      else if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);if(result.ok&&result.published)pending.resolve();else pending.reject(Object.assign(Error('Incident publication was not confirmed.'),{code:'incident_publish_outcome_unknown'}));}
-    }catch(error){if(!ready)fail(error);else markLost();}
+    }catch(error){if(!ready)fail(error);else {markLost();try{child.kill();}catch{}}}
    }
   });
   child.once('exit',code=>{
@@ -44,6 +44,6 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
  };
  lease.release=()=>releasePending??=(async()=>{releasing=true;child.stdin.end();let timer;await Promise.race([exited,new Promise(resolve=>{timer=setTimeout(()=>{child.kill();resolve();},2000);})]);clearTimeout(timer);})();
  const held=await startup;
- try{await storageOperationAsync('data',directory,{helper});held.assertHeld();return held;}
+ try{await prepareStorage('data',directory,{helper});held.assertHeld();return held;}
  catch(error){await held.release();throw error;}
 }
