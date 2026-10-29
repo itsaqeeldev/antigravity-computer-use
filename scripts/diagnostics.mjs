@@ -28,7 +28,7 @@ export async function diagnostics(directory,{submit=false,target=path.dirname(di
   let matches;try{matches=JSON.parse(query.stdout);}catch{return {submitted,next_action:'github_lookup_invalid'};}if(!Array.isArray(matches)||matches.some(match=>!Number.isSafeInteger(match?.number)||typeof match?.title!=='string'))return {submitted,next_action:'github_lookup_invalid'};
   matches=matches.filter(match=>match.title===title);
   if(intent&&!matches.length)return {submitted,next_action:'github_submission_outcome_unknown',incident_id:item.id};
-  if(!matches.length){lease.assertHeld();if(!updateSettings(target).reporting)return {submitted,next_action:'reporting_consent_required'};const body='Sanitized runtime incident (no screenshots, text, paths or arguments):\n\n```json\n'+JSON.stringify(item,null,2)+'\n```';
+  if(!matches.length){lease.assertHeld();if(!updateSettings(target).reporting)return {submitted,next_action:'reporting_consent_required'};const label=item.operation==='computer_feedback'?'Agent-reported concern (unverified; no screenshots, task text, paths or arguments)':'Sanitized runtime incident (no screenshots, text, paths or arguments)';const body=label+':\n\n```json\n'+JSON.stringify(item,null,2)+'\n```';
    writeAtomicJSON(intentFile,{id:item.id,count:item.count});intent={id:item.id,count:item.count};
    const result=run('gh',['issue','create','--repo','shayann07/antigravity-computer-use','--title',title,'--body-file','-'],{input:body,encoding:'utf8',timeout:15000,windowsHide:true});if(result.status!==0)return {submitted,next_action:'github_submission_outcome_unknown',incident_id:item.id};}
   item.pending=false;submitted++;

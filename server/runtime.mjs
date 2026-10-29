@@ -279,6 +279,16 @@ export class Runtime {
     }while(true);
   }
   async finish(){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();return {ended:true,state:this.state,restart_required:false};}
+  async feedback(args){
+    // Revalidate at the persistence boundary too; never store model text,
+    // application content, screenshots, paths or arbitrary error messages.
+    if(!['cursor_visual','focus','observation','workflow','performance','missing_capability','unexpected_pause','other'].includes(args.category)||
+       !['observe','click','type','scroll','drag','keyboard','launch','wait','update','other'].includes(args.operation)||
+       !['suspected','observed','reproduced'].includes(args.evidence))fail('invalid_feedback','Choose only the listed feedback categories.');
+    const code=`agent_${args.category}_${args.operation}_${args.evidence}`;
+    const incident_id=await new Incidents(dataDir()).recordSerialized('computer_feedback',{state:this.state,error:{code}});
+    return {recorded:true,incident_id,classification:'agent_report_unverified',next_action:'pending_reporting_preferences'};
+  }
   async launch(args){
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}

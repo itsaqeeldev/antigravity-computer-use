@@ -41,7 +41,10 @@ CI and installation checks; actual Mac desktop acceptance is still pending.
 
 The unreleased beta.3 work in [PR #1](https://github.com/shayann07/antigravity-computer-use/pull/1)
 adds control recovery, sanitized failure reports and signed whole-bundle updates.
-It shares the runtime with the Mac adapter. [Implementation and acceptance status](docs/RELIABILITY-IMPLEMENTATION.md).
+The development branch also supports structured, unverified agent feedback;
+automatic issue reporting is opt-in and requires GitHub authentication. Models
+can miss problems, while runtime errors are logged independently. It shares the
+runtime with the Mac adapter. [Implementation and acceptance status](docs/RELIABILITY-IMPLEMENTATION.md).
 The Windows download and one-line installer below remain pinned to beta.2.
 
 ## See it in action

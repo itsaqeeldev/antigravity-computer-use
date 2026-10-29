@@ -5,6 +5,18 @@ shared Mac support” plan. This log records implementation and evidence separat
 Review branch: `codex/review-intel-mac`. All private test output stays
 in `.localdata/`. No release completion is claimed here.
 
+Agents can now record structured feedback about observed usability, speed or
+missing-capability concerns that did not produce a runtime error. Categories,
+operation and evidence level come from fixed lists; task text, paths, screenshots
+and arbitrary model prose cannot be submitted through this command. Reports are
+deduplicated locally and labeled unverified. The existing scheduler submits
+sanitized metadata only when the installation explicitly enables reporting and
+GitHub authentication is available. Runtime errors are still recorded without
+model participation. The skill instructs agents to assess and report genuine
+concerns, but cannot force an arbitrary model to notice or report every issue.
+Focused tests cover consent, sanitization and the unverified label; the running
+installation and real automatic GitHub submission are not yet qualified.
+
 The shared visual contract now uses a four-second breathing cycle with a
 0.64–1.00 opacity range. Windows requests opacity updates for its cached edge
 bitmap every 50 ms instead of 100 ms; macOS reads the same cycle and amplitude.

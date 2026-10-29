@@ -2,8 +2,31 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {Incidents} from '../server/incidents.mjs';import {diagnostics} from '../scripts/diagnostics.mjs';import {testDirectory} from './paths.mjs';
 import {spawn} from 'node:child_process';
 import {storageOperation} from '../server/storage.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
+import {Runtime} from '../server/runtime.mjs';import {call,validate} from '../server/desktop-tools.mjs';
 const acquire=async()=>({assertHeld(){},async release(){}});
 function fixture(reporting){const target=fs.mkdtempSync(path.join(testDirectory('tmp'),'reporting-')),directory=path.join(target,'data');fs.mkdirSync(directory);fs.writeFileSync(path.join(target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting}));const i=new Incidents(directory);i.record('computer_click',{error:{code:'stale_observation',message:'private password'}});return {target,directory,i,clean:()=>fs.rmSync(target,{recursive:true})};}
+test('agent feedback accepts only fixed classifications and never persists task content',async()=>{
+ const original=Incidents.prototype.recordSerialized;let saved;
+ Incidents.prototype.recordSerialized=async function(operation,result){saved={operation,result};return 'fixed-incident';};
+ try{
+  const args={category:'performance',operation:'wait',evidence:'observed'};
+  const result=await call({feedback:a=>Runtime.prototype.feedback.call({state:'idle'},a)},'computer_feedback',args);
+  assert.equal(result.incident_id,'fixed-incident');assert.equal(result.classification,'agent_report_unverified');
+  assert.deepEqual(saved,{operation:'computer_feedback',result:{state:'idle',error:{code:'agent_performance_wait_observed'}}});
+  for(const invalid of [{...args,category:'secret_personal_data'},{...args,screenshot:'private'},{...args,evidence:'confirmed'}])assert.throws(()=>validate('computer_feedback',invalid));
+  await assert.rejects(Runtime.prototype.feedback.call({state:'idle'},{...args,category:'secret_personal_data'}),e=>e.code==='invalid_feedback');
+ }finally{Incidents.prototype.recordSerialized=original;}
+});
+test('agent concerns remain pending without consent and are labeled unverified when submitted',async()=>{
+ const f=fixture(false);try{
+  f.i.record('computer_feedback',{error:{code:'agent_focus_type_observed'}});
+  assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('no consent')})).next_action,'reporting_consent_required');
+  fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting:true}));let body;
+  const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:'[]'};if(options.input.includes('agent_focus_type_observed'))body=options.input;return{status:0,stdout:'https://github.com/example/issue'};};
+  assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,2);
+  assert.match(body,/Agent-reported concern \(unverified/);assert(!body.includes('private password'));assert(!f.i.read().some(x=>x.pending));
+ }finally{f.clean();}
+});
 test('no reporting consent means no network command and reports stay pending',async()=>{const f=fixture(false);try{assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('must not contact GitHub')})).next_action,'reporting_consent_required');assert(f.i.read()[0].pending);}finally{f.clean();}});
 test('missing GitHub authentication keeps pending reports and applies retry backoff',async()=>{const f=fixture(true);try{let calls=0;const run=()=>{calls++;return {status:1,stderr:'private credentials'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'github_authentication_or_network_required');assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'reporting_backoff');assert.equal(calls,1);assert(f.i.read()[0].pending);}finally{f.clean();}});
 test('consented submission sends sanitized metadata once and resolves duplicate issues',async()=>{for(const duplicate of [false,true]){const f=fixture(true);try{let created=0;const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:JSON.stringify(duplicate?[{number:1,title:'[automatic incident '+f.i.read()[0].id+'] '+process.platform+': stale_observation'}]:[])};created++;assert(!options.input.includes('private password'));assert(args.includes('--body-file'));return {status:0,stdout:'https://github.com/example/issue'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,1);assert.equal(created,duplicate?0:1);assert.equal(f.i.read()[0].pending,false);}finally{f.clean();}}});

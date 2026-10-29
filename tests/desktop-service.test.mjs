@@ -188,6 +188,20 @@ test('direct IPC batches use a fresh change-wait frame without replaying prior a
   assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'click',frame:'changed'}]);assert(!runtime.frames.has('post-action'));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('direct IPC accepts bounded feedback without desktop input or arbitrary task content',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-feedback-ipc-'));const original=Incidents.prototype.recordSerialized;let recorded;
+ Incidents.prototype.recordSerialized=async function(op,result){recorded={op,result};return 'feedback-id';};
+ const runtime={state:'idle',status(){return{state:this.state};},async close(){}};runtime.feedback=Runtime.prototype.feedback.bind(runtime);
+ let service;
+ try{
+  service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+  const result=await request(session,'feedback',{category:'focus',operation:'type',evidence:'observed'});
+  assert.equal(result.recorded,true);assert.equal(result.classification,'agent_report_unverified');assert.equal(recorded.result.error.code,'agent_focus_type_observed');
+  const invalid=await request(session,'feedback',{category:'focus',operation:'type',evidence:'observed',text:'private task data'});
+  assert.equal(invalid.ok,false);assert(!JSON.stringify(recorded).includes('private task data'));
+ }finally{if(service)await service.shutdown();Incidents.prototype.recordSerialized=original;fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('direct IPC client timeout cancels active work without replay',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let stops=0,actions=0,release;
  const runtime={async action(){actions++;return new Promise(resolve=>release=()=>resolve({input_completed:true}));},async stop(){stops++;},async close(){}};

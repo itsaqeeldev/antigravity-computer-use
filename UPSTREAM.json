@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "749aaf4cba125d5f94fa9f20c8c6590b8889c2ba1973ed65ba74f90b6e6b4ec2"
+      "sha256": "c1987c1eebc9b13bd6fe3a21554e46ddeebffcfce2f98b0f3f9c2dfbb804f756"
     },
     {
       "path": "server/mcp.mjs",
@@ -260,7 +260,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "0c2eca7e5487ed7d51a10037a7a94da61beda1411bbf54c27bb765d86cd7b88d"
+      "sha256": "cfbcb46edb9b4445804a114e2e4310879a077285d747154932c8a835a1aec32c"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "a6282174abba1c814daa59c77b0e74cf210cf9cd0f171f4a760f0545400dc941"
+      "sha256": "4349f9a9dc6f45254dd655df68c861a676be8cc4aa7788be500b6a817780ce41"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "8328c16d3557c887e30db65caf3ad63c49a68c0e3eca8522f706f9859748c40f"
+      "sha256": "4950026cbe19147700641cce3e6b55f3717284aa096a40e48f5b21746d563917"
     },
     {
       "path": "docs/MACOS.md",
@@ -596,7 +596,7 @@
     },
     {
       "path": "scripts/diagnostics.mjs",
-      "sha256": "89e538ff28bc5899087544391d168d925e3bc6302ffee23a2f126ef7a63e7d5e"
+      "sha256": "4ef054f5033b3547ee7f6a2c4ba6cd9e3cefadc3c3af58a5974746cd3555b4a2"
     },
     {
       "path": "tests/recovery-update.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "294e3dc0a16220f2f3bdbd36a59657f4fa88692c3e13fd105df9cfb518f415c3"
+      "sha256": "906b4c93cbf463ba5e3be87531f85f3fd60f97fe2dd225b727b883939595d591"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -616,7 +616,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "06b2d749eeeb5d4e4b7b1ffc449b091c9eb7785ef0ae72daf8dadfe3b8ee11fa"
+      "sha256": "43805c32d98f45658a2a0a33bbb2e2045b63ba39762602cfc206828b16e47265"
     },
     {
       "path": "tests/incident-concurrency.test.mjs",

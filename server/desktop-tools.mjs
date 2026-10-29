@@ -28,6 +28,7 @@ export const TOOLS=[
  tool('computer_run','Run 1-8 predictable actions or observed waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:contract.batch_steps,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
  tool('computer_wait','Wait for expected UI text without repeating input. Optional abort_on strings stop early on a known failure; failures win if success and failure appear together. Returns a fresh observation.',{hwnd:num,until:selectorText,abort_on:{type:'array',minItems:1,maxItems:8,items:selectorText},timeout_ms:{...num,minimum:100,maximum:30000},query:str,reason:str},['hwnd','until','reason']),
  tool('computer_wait_change','Wait for the accessible text tree to differ from a fresh observation. Returns a fresh text-only observation. A change is not proof of success, and pixel-only changes may be invisible.',{hwnd:num,observation_id:str,timeout_ms:{...num,minimum:100,maximum:30000},reason:str},['hwnd','observation_id','reason']),
+ tool('computer_feedback','Record an agent-observed concern as bounded, unverified local metadata. Automatic GitHub submission requires the installation reporting preference and authentication. No free text, screenshots, paths or task content are accepted.',{category:{type:'string',enum:['cursor_visual','focus','observation','workflow','performance','missing_capability','unexpected_pause','other']},operation:{type:'string',enum:['observe','click','type','scroll','drag','keyboard','launch','wait','update','other']},evidence:{type:'string',enum:['suspected','observed','reproduced']}},['category','operation','evidence']),
  tool('computer_end','Finish normally; no Antigravity restart needed.'),
  tool('computer_controls','Explicitly show local controls for human re-arm or pause/stop. Showing controls never clears an emergency Stop, grants an app or sends input. Stopped controls dismiss automatically after30seconds.'),
  tool('computer_ready','Check control readiness and reveal local controls once. Follow next_action; never repeat startup or clear Stop.'),
@@ -80,6 +81,7 @@ export async function call(r,name,a){
  if(name==='computer_snapshot')return r.observe(a);
  if(name==='computer_wait')return r.wait(a);
  if(name==='computer_wait_change')return r.waitChange(a);
+ if(name==='computer_feedback')return r.feedback(a);
  if(name==='computer_end')return r.finish();
  if(name==='computer_stop')return r.stop();
  if(name==='computer_pause')return r.pause();
