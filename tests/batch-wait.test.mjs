@@ -84,3 +84,15 @@ test('wait_change times out with a fresh frame without sending input or retainin
  const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',timeout_ms:100,reason:'Wait for a view'});
  assert.equal(result.changed,false);assert.equal(result.timed_out,true);assert(frames.has(result.metadata.observation_id));assert.equal(frames.size,1);
 });
+
+test('batched wait_change passes the fresh frame forward and stops after timeout',async()=>{
+ const seen=[];let changed=true;
+ const runtime={async action(op,a){seen.push({op,frame:a.observation_id});return{metadata:{observation_id:'after-click'}};},
+  async waitChange(a){seen.push({op:'wait_change',frame:a.observation_id});return{changed,timed_out:!changed,metadata:{observation_id:'after-change'}};}};
+ const plan=args([{kind:'click',name:'Start'},{kind:'wait_change',timeout_ms:5000},{kind:'click',name:'Details'}]);
+ const result=await call(runtime,'computer_run',plan);
+ assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'wait_change',frame:'after-click'},{op:'click',frame:'after-change'}]);assert.equal(result.batch.completed.length,3);
+ seen.length=0;changed=false;const timeout=await call(runtime,'computer_run',plan);
+ assert.equal(seen.length,2);assert.equal(timeout.ok,false);assert.equal(timeout.verification_error.code,'wait_change_timeout');assert.equal(timeout.batch.skipped,1);assert.equal(timeout.metadata.observation_id,'after-change');
+ seen.length=0;await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',timeout_ms:20000},{kind:'wait_change',timeout_ms:20000}])),/Combined batch waits/);assert.equal(seen.length,0);
+});

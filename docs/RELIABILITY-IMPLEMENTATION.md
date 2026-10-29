@@ -31,6 +31,10 @@ app identity, worker or control changes. A tree change can be unrelated and a
 canvas may not expose changes, so it is not an outcome-verification shortcut.
 Focused tests cover changes, timeout, consumed/stale frames and identity/control
 transitions. Real desktop/model behavior and speed benefit remain unqualified.
+It can also run as a batch step: a fresh frame feeds the next action, timeouts
+skip the rest, and its budget is combined with ordinary waits. The comparison
+starts from the previous action's returned frame, so an earlier change can be
+missed; a detected change can be unrelated and must not be treated as success.
 
 Review found that Windows `set_value` could dispatch an accessibility write and
 then silently repeat it as keyboard input if the provider threw or returned

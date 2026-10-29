@@ -25,7 +25,7 @@ export const TOOLS=[
  tool('computer_launch','Launch an existing GUI application (.exe on Windows, .app on macOS) under the host permission policy. Optional observe returns the first unambiguous visible window of that exact launched PID and executable; never relaunch on observe_pending or verification_error.',{app:str,args:{type:'array',items:str},observe:bool,reason:str},['app','reason']),
  tool('computer_open','Open document/folder with its handler; separate confirmation.',{...target,path:str},['hwnd','observation_id','path','reason']),
  tool('computer_file_dialog','Fill and confirm an ALREADY OPEN native file picker. Use owner hwnd, fresh frame and exact path. entry_method clipboard explicitly uses temporary clipboard-preserving paste for atomic filename entry; keyboard is the compatibility default. Never confirms a mismatched filename.',{...target,path:str,action:{type:'string',enum:['open','save']},entry_method:{type:'string',enum:['keyboard','clipboard']}},['hwnd','observation_id','path','reason']),
- tool('computer_run','Run 1-8 predictable actions or observed-text waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:contract.batch_steps,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
+ tool('computer_run','Run 1-8 predictable actions or observed waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:contract.batch_steps,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
  tool('computer_wait','Wait for expected UI text without repeating input. Optional abort_on strings stop early on a known failure; failures win if success and failure appear together. Returns a fresh observation.',{hwnd:num,until:selectorText,abort_on:{type:'array',minItems:1,maxItems:8,items:selectorText},timeout_ms:{...num,minimum:100,maximum:30000},query:str,reason:str},['hwnd','until','reason']),
  tool('computer_wait_change','Wait for the accessible text tree to differ from a fresh observation. Returns a fresh text-only observation. A change is not proof of success, and pixel-only changes may be invisible.',{hwnd:num,observation_id:str,timeout_ms:{...num,minimum:100,maximum:30000},reason:str},['hwnd','observation_id','reason']),
  tool('computer_end','Finish normally; no Antigravity restart needed.'),
@@ -89,7 +89,7 @@ export async function call(r,name,a){
   // Validate the whole plan before sending the first input. A typo in step8
   // must not execute steps1-7 and then throw away their delivery evidence.
   const plan=a.steps.map(({kind,...rest},i)=>{
-   const n='computer_'+kind;if(!OPS[n]&&n!=='computer_wait')throw new Error('Unsupported batch step '+kind);
+   const n='computer_'+kind;if(!OPS[n]&&!['computer_wait','computer_wait_change'].includes(n))throw new Error('Unsupported batch step '+kind);
    const properties=TOOLS.find(t=>t.name===n).inputSchema.properties;
    if(!Object.hasOwn(properties,'hwnd'))throw new Error('Batch steps must target their owner window; use explicit paste for text instead of a window-free clipboard step.');
    if(Object.hasOwn(rest,'hwnd')||Object.hasOwn(rest,'observation_id'))throw new Error('Batch steps cannot replace the owner window or frame.');
@@ -98,12 +98,12 @@ export async function call(r,name,a){
    if(properties.observe)args.observe={with_image:i===a.steps.length-1,...rest.observe};
    validate(n,args);return {kind,n,args,framed};
   });
-  const waitBudget=plan.filter(step=>step.n==='computer_wait').reduce((sum,step)=>sum+(step.args.timeout_ms??15000),0);
+  const waitBudget=plan.filter(step=>['computer_wait','computer_wait_change'].includes(step.n)).reduce((sum,step)=>sum+(step.args.timeout_ms??15000),0);
   if(waitBudget>contract.batch_wait_ms)throw new Error('Combined batch waits must not exceed30seconds. No input was sent.');
   const completed=[];let last=null;let observation=a.observation_id;
   for(let i=0;i<plan.length;i++){
    const {kind,n,args,framed}=plan[i];
-   try{last=await call(r,n,framed?{...args,observation_id:observation}:args);completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};if(n==='computer_wait'&&!last.matched){completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};}observation=last.metadata?.observation_id;}
+   try{last=await call(r,n,framed?{...args,observation_id:observation}:args);completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};if(n==='computer_wait'&&!last.matched){completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};}if(n==='computer_wait_change'&&!last.changed){completed.pop();return {...last,ok:false,verification_error:{code:'wait_change_timeout',message:'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};}observation=last.metadata?.observation_id;}
    catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
