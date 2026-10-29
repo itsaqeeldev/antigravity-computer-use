@@ -3,6 +3,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {Run
 import {Driver} from '../server/driver.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
 import path from 'node:path';import {dataDir} from '../server/build.mjs';
+import {spawn} from 'node:child_process';
 
 test('native action dispatch follows durable child recording and refuses a failed record',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'dispatch-record-')),file=path.join(dir,'task-state.json');let sent=0;
@@ -57,6 +58,29 @@ test('held input stays pending across failed cleanup attempts until release is c
  await assert.rejects(Driver.prototype.start.call(driver),e=>e.code==='input_cleanup_failed');assert.equal(attempts,2);
  allowed=true;await Driver.prototype._abort.call(driver);assert.equal(attempts,3);assert.equal(driver.inputMayBeHeld,false);
  await Driver.prototype._abort.call(driver);assert.equal(attempts,3);
+});
+test('unconfirmed worker termination keeps cleanup pending and blocks native restart',async()=>{
+ const child=new EventEmitter();child.exitCode=null;child.signalCode=null;child.stdin={destroy(){}};let kills=0;child.kill=()=>{kills++;return false;};
+ const order=[];const driver=new Driver({onEvent:()=>order.push('stop')});driver.proc=child;driver.exitTimeoutMs=10;driver.inputMayBeHeld=true;let releases=0;driver.releaseHeldInputs=async()=>{order.push('release');releases++;return true;};
+ for(let i=0;i<2;i++){
+  await assert.rejects(driver.abort(),e=>e.code==='input_cleanup_failed');assert.equal(driver.retiring,child);assert.equal(driver.inputMayBeHeld,true);await assert.rejects(driver.start(),e=>e.code==='input_cleanup_failed');
+ }
+ assert.equal(kills,2);assert.equal(releases,2);assert.deepEqual(order,['stop','release','stop','release']);child.exitCode=0;child.emit('exit',0);
+ await driver.abort();assert.equal(driver.retiring,null);assert.equal(driver.inputMayBeHeld,false);assert.equal(releases,3);
+});
+test('worker error retains a possibly live child until its exit is confirmed',async()=>{
+ const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={destroy(){}};child.kill=()=>false;
+ const driver=new Driver();driver.proc=child;driver.exitTimeoutMs=10;let releases=0;driver.releaseHeldInputs=async()=>{releases++;return true;};
+ driver.workerFailed(child,Error('worker error'));assert.equal(driver.retiring,child);assert.equal(driver.inputMayBeHeld,true);
+ await assert.rejects(driver.aborting,e=>e.code==='input_cleanup_failed');assert.equal(driver.retiring,child);assert.equal(releases,1);
+ child.exitCode=1;child.emit('exit',1);await driver.abort();assert.equal(driver.retiring,null);assert.equal(driver.inputMayBeHeld,false);assert.equal(releases,2);
+});
+test('driver observes a real child exit before reporting cleanup',async()=>{
+ const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:['pipe','ignore','ignore'],windowsHide:true});const closed=new Promise(resolve=>child.once('close',resolve));
+ const driver=new Driver();driver.proc=child;driver.inputMayBeHeld=true;driver.exitTimeoutMs=5000;let releases=0;
+ driver.releaseHeldInputs=async()=>{assert(child.exitCode!==null||child.signalCode!==null);releases++;return true;};
+ try{await driver.abort();assert.equal(releases,1);assert.equal(driver.retiring,null);assert.equal(driver.inputMayBeHeld,false);}
+ finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await closed;}
 });
 
 test('failed file-picker keyboard input requests held-input cleanup before rejecting',async()=>{

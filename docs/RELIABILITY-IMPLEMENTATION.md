@@ -926,6 +926,12 @@ An additional Runtime-plus-Driver test now exercises End through two failed
 release attempts and one successful attempt: the task stays open and Stop stays
 latched until cleanup is confirmed; End never clears the latch. Its release
 helper is inert, so this is not a physical input-release test.
+The driver also retains an unconfirmed retiring worker across cancellation
+attempts. It requests Stop and independently tries input release, but refuses
+new native operations and does not report cleanup complete until the worker's
+exit is observed. A worker error event is not treated as proof of exit. Mocked
+timeout tests and a real inert child-process exit test cover the boundary;
+desktop/native hung-worker qualification is still pending.
 The prior driver fix at `503be09` passed both Mac CI jobs in run `40968689619`.
 With free disk space restored, the Windows-local suite including the new End-path
 regression passed 305 tests with 11 skips; skips are not qualification passes.

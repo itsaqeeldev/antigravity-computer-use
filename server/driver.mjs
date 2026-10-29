@@ -4,7 +4,6 @@
 // milliseconds instead of re-walking from the desktop root every action.
 
 import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { ensureHost } from './build.mjs';
 import {verifyNativeContract} from './platform.mjs';
@@ -34,6 +33,8 @@ export class Driver {
     this.stderr = [];
     this.starting = null;
     this.inputMayBeHeld = false;
+    this.retiring = null;
+    this.exitTimeoutMs = 1000;
     this.aborting = null;
   }
 
@@ -47,6 +48,16 @@ export class Driver {
     this.starting = attempt;
     try { return await attempt; }
     finally { if (this.starting === attempt) this.starting = null; }
+  }
+
+  workerFailed(proc,err){
+    if(this.proc!==proc)return;
+    this.proc=null;this.info=null;this.ready=null;
+    // An 'error' event does not prove the process exited. Preserve its handle
+    // and require confirmed termination before another worker may start.
+    const mayBeLive=Number.isSafeInteger(proc.pid)&&proc.pid>0&&proc.exitCode==null&&proc.signalCode==null;
+    if(this.inputMayBeHeld||mayBeLive){this.retiring=proc;this.inputMayBeHeld=true;this.abort().catch(()=>{});}
+    this._failAll(err);
   }
 
   _launch() {
@@ -64,11 +75,7 @@ export class Driver {
       let bootTimer;
       const fail = (err) => {
         clearTimeout(bootTimer);
-        if (this.proc === proc) {
-          this.proc = null; this.info = null; this.ready = null;
-          if (this.inputMayBeHeld) this.abort().catch(() => {});
-          this._failAll(err);
-        }
+        this.workerFailed(proc,err);
         if (!settled) { settled = true; reject(err); }
       };
       createInterface({ input: proc.stdout }).on('line', line => { if (this.proc === proc) this._onLine(line); });
@@ -192,16 +199,34 @@ export class Driver {
   }
   async _abort() {
     this.epoch++;
-    const p=this.proc;
+    const p=this.retiring||this.proc;
     const recover=this.inputMayBeHeld;
     this.proc=null; this.info=null; this.ready=null;
     this._failAll(new HostError('control_cancelled','Native worker was cancelled; observe again.',null));
-    if(p) { try { p.stdin.destroy(); p.kill(); await Promise.race([once(p,'exit'),new Promise(r=>setTimeout(r,1000))]); } catch {} }
+    if(p){
+      this.retiring=p;
+      const exited=await new Promise(resolve=>{
+        if(p.exitCode!=null||p.signalCode!=null){resolve(true);return;}
+        let done=false;const finish=value=>{if(done)return;done=true;clearTimeout(timer);p.removeListener('exit',onExit);p.removeListener('error',onError);resolve(value);};
+        const onExit=()=>finish(true),onError=()=>finish(false);p.once('exit',onExit);p.once('error',onError);
+        const timer=setTimeout(()=>finish(p.exitCode!=null||p.signalCode!=null),this.exitTimeoutMs??1000);
+        try{p.stdin?.destroy();}catch{}try{p.kill();}catch{}
+        if(p.exitCode!=null||p.signalCode!=null)finish(true);
+      });
+      if(!exited){
+        // Still attempt independent release, but never accept its success as
+        // proof that a possibly live worker cannot send more input.
+        this.inputMayBeHeld=true;try{this.onEvent?.({event:'input_cleanup_failed'});}catch{}
+        try{await this.releaseHeldInputs();}catch{}
+        throw new HostError('input_cleanup_failed','Native worker exit is unconfirmed. Control must remain stopped.','Do not repeat the interrupted action.');
+      }
+      this.retiring=null;
+    }
     if (!recover) return;
     let released=false;
     try{released=await this.releaseHeldInputs();}catch(error){this.onLog('input recovery: '+error.message);}
     if(!released){
-      this.onEvent?.({event:'input_cleanup_failed'});
+      try{this.onEvent?.({event:'input_cleanup_failed'});}catch{}
       throw new HostError('input_cleanup_failed','Automation-held input cleanup could not be confirmed. Control must remain stopped.','Use the local controls only after cleanup succeeds; do not repeat the interrupted action.');
     }
     this.inputMayBeHeld=false;
