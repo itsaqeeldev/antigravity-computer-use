@@ -18,6 +18,15 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+The supported Windows local upgrade to source `0a919f8` produced and installed
+build `4d112e9e4137e1999750430cc3170995bc8cc421a76f998c517c3cd459a66910`.
+All 108 payload files and the global skill verified; cleanup was confirmed and
+settings and project pins were preserved. Stop was not latched at upgrade time.
+The new service started idle and host-managed without desktop input. This is not
+an automatic signed-update acceptance test or a real Antigravity task on the new
+build. Private receipt and rollback location remain under the installation and
+the upgrade evidence is under `.localdata/reliability-current/`.
+
 The incident counter no longer clamps at one million when reading records: that
 clamp could cause a new occurrence to appear already acknowledged. A regression
 checks the transition past the former limit. Exhaustion of the safe integer range
