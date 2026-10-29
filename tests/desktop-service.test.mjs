@@ -62,13 +62,13 @@ test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Uni
 });
 
 test('a passive sidecar releases idle control and serves a later session without restarting',async()=>{
- const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-'));let state='active',finishes=0;
- const runtime={status:()=>({state}),async finish(){finishes++;state='idle';},async observe(){state='active';return {metadata:{observation_id:'next-session'}};},async close(){}};
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-'));let state='active',finishes=0,resumed=0;
+ const runtime={status:()=>({state}),async finish(){finishes++;state='idle';},async observe(){state='active';resumed++;return {metadata:{observation_id:'next-session'}};},async close(){}};
  const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:25,idleCheckMs:5});const session=JSON.parse(fs.readFileSync(service.file));
  try{
   for(let i=0;i<30&&!finishes;i++)await new Promise(r=>setTimeout(r,10));assert.equal(finishes,1);assert(fs.existsSync(service.file));
   const status=await request(session,'status');assert.equal(status.state,'idle');assert.equal(status.listener_idle_policy,'release');
-  assert.equal((await request(session,'snapshot',{hwnd:1})).metadata.observation_id,'next-session');assert.equal(state,'active');
+  assert.equal((await request(session,'snapshot',{hwnd:1})).metadata.observation_id,'next-session');assert.equal(resumed,1);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 

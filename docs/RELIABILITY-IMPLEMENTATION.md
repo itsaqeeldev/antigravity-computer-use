@@ -35,6 +35,14 @@ reported success without read-back; it now sends the supplied number and checks
 the observed value before reporting success. Mac contract checks and real
 provider/app acceptance must still run for this change.
 
+Intel CI run `40956802016` compiled the native adapter but failed a passive
+Sidecar regression: it checked that the fake runtime was still active after a
+25 ms idle timeout, and a loaded runner had already released it. The test now
+checks that the same listener actually dispatched the subsequent observation,
+without assuming the response arrives before the idle timer. The production
+timeout and idle behavior are unchanged. The focused Windows checks passed;
+the exact revised head still needs fresh cross-platform CI.
+
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |
