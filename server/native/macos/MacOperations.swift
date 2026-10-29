@@ -130,7 +130,12 @@ func macContractTest() throws {
     try Data("stopped".utf8).write(to: URL(fileURLWithPath: MacFence.latch))
     defer { try? FileManager.default.removeItem(atPath: MacFence.latch); try? MacFence.write("idle||0|") }
     try refused(live, "latched emergency Stop")
-    emit(["ok": true, "control_contract": 1, "checks": ["shared state codec", "malformed state refusal", "canonical approval fingerprint", "sensitive action classification", "kernel process birth identity", "native idle/paused/stopped/expired/session/monitor/Stop refusals"], "desktop_input_sent": false])
+    try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
+    guard MacInputLedger.recover() else { throw AxonError("contract_test_failed","Empty input cleanup failed.") }
+    try Data("invalid journal".utf8).write(to:URL(fileURLWithPath:MacInputLedger.path))
+    guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Malformed input journal was accepted.") }
+    try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
+    emit(["ok": true, "control_contract": 1, "checks": ["shared state codec", "malformed state refusal", "canonical approval fingerprint", "sensitive action classification", "kernel process birth identity", "native idle/paused/stopped/expired/session/monitor/Stop refusals", "empty cleanup and malformed input-journal refusal"], "desktop_input_sent": false])
 }
 
 func macMoveCursor(_ point: CGPoint, _ args: [String: Any]) throws -> [String: Any] {

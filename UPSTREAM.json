@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "77b94fe1b20eb3d0c138b01b76bbbe394866bf6840d87d94f90dee7b1194f78b",
+      "local_sha256": "0b3d54ec1d5c364fa86e71eb93c8f9986c5c8ac5d08ffce4e0eb2a58ba856fac",
       "modified": true
     },
     {
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "cd7080b66f1b6212ebb8b86c735184dd913b5aeebed4d845653d152dc669982f"
+      "sha256": "fc9fe221382fcd8d4d328d9d5e8f16d034b324d8f80cfd6b8f2a67e5a0b82285"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -568,11 +568,11 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "e58d31b6f8ff8b078c1f1dabebce5512f1b6a30cae834d9febec3134bf0bc58b"
+      "sha256": "da7743f98d1c25cd630d7b2b74c9cec801963378d442605ca09ae4dae12b8df5"
     },
     {
       "path": "docs/MACOS.md",
-      "sha256": "43b038c28628902532618665deb9eea5c0dfe4e9d73c1e6ad12dc3a98fd2f576"
+      "sha256": "4822438d29f0dec8a579684e9b26441da1e616268112c3643ecdd70b9686a9fb"
     }
   ]
 }

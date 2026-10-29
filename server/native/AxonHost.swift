@@ -641,6 +641,9 @@ func post(_ e: CGEvent?) throws {
         throw AxonError("mac_permissions_required", "Native input permission was revoked. No further input was sent.")
     }
     guard let event = markedEvent(e) else { throw AxonError("event_creation_failed", "Cannot construct native input.") }
+    if [.leftMouseDown,.rightMouseDown,.otherMouseDown,.leftMouseDragged,.rightMouseDragged,.otherMouseDragged,.scrollWheel].contains(event.type) {
+        try macCheckTargetPoint(event.location,MacFence.current)
+    }
     try MacInputLedger.record(event, before: true)
     try MacFence.dispatched(); event.post(tap: .cghidEventTap)
     try MacInputLedger.record(event, before: false)
@@ -1196,13 +1199,11 @@ func dispatchOp(_ op: String, _ a: [String: Any]) throws -> [String: Any] {
     case "describe": return try opDescribe(a)
     case "busy": return try opBusy(a)
     case "banner": return try opBanner(a)
-    // The three document tools are Windows only and are not offered in the
-    // tool list on macOS, but a run step can still name one; that gets a
-    // plain answer here rather than "unknown operation".
+    // Legacy low-level extension, not exposed by the shared direct tool schema.
     case "paste_files":
         throw AxonError("unsupported_on_macos",
             "'\(op)' is a Windows-only operation; the macOS host has no \(op).",
-            "computer_paste, computer_open and computer_file_dialog are not available on macOS. Use computer_launch and the app's own Open dialog by snapshot, and computer_type for text.")
+            "Use the shared file_dialog tool to choose files in an already-open native picker; do not substitute clipboard text for file URLs.")
     default: throw AxonError("unknown_op", "Unknown operation '\(op)'.", nil)
     }
 }
@@ -1220,26 +1221,32 @@ func readLoop() {
             let a = req["args"] as? [String: Any] ?? [:]
 
             if op == "shutdown" {
-                _ = MacInputLedger.recover()
+                guard MacInputLedger.recover() else { throw AxonError("input_cleanup_failed","Native input cleanup failed; shutdown was not acknowledged.") }
                 emit(["id": reqId, "ok": true, "result": ["bye": true]])
                 exit(0)
             }
             let started = Date()
             let result = try dispatch(op, a)
+            guard MacInputLedger.recover() else { throw AxonError("input_cleanup_failed","Native input cleanup failed; inspect before continuing.") }
             emit(["id": reqId, "ok": true,
                   "ms": Int(Date().timeIntervalSince(started) * 1000),
                   "result": result])
         } catch let e as AxonError {
-            var err: [String: Any] = ["code": MacFence.didDispatch ? "input_outcome_unknown" : e.code, "message": e.message]
+            let cleaned = MacInputLedger.recover()
+            if !cleaned { MacFence.emergency("input_cleanup_failed") }
+            var err: [String: Any] = ["code": !cleaned ? "input_cleanup_failed" : MacFence.didDispatch ? "input_outcome_unknown" : e.code, "message": e.message]
             if let h = e.hint { err["hint"] = h }
             emit(["id": reqId, "ok": false, "error": err])
         } catch {
+            let cleaned = MacInputLedger.recover()
+            if !cleaned { MacFence.emergency("input_cleanup_failed") }
             emit(["id": reqId, "ok": false,
-                  "error": ["code": "host_error", "message": String(describing: error)]])
+                  "error": ["code": !cleaned ? "input_cleanup_failed" : MacFence.didDispatch ? "input_outcome_unknown" : "host_error", "message": String(describing: error)]])
         }
     }
     // stdin closed: the server is gone, and so is any reason to keep pumping
     // the event tap. Without this a warm-up run would never exit.
+    if !MacInputLedger.recover() { MacFence.emergency("input_cleanup_failed") }
     exit(0)
 }
 

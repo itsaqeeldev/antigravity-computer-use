@@ -19,9 +19,11 @@ unguarded Swift port.
 - No compiler or external Node installation for a prebuilt candidate. Source
   builds require Xcode Command Line Tools and Node24.20.0.
 
-The first Apple Silicon CI candidate compiled, passed native contract and
-private-storage/ownership checks, and produced a bundle. Installation and
-restart checks then failed under deep installation paths; the current Mac
+Candidate `787ddb1` passed compilation, shared regressions, native contract and
+private-storage/ownership checks, packaging, installation, End, latched Stop
+across restart, update and rollback on Apple Silicon and Intel
+([CI evidence](https://github.com/shayann07/antigravity-computer-use/actions/runs/40817619660)).
+Earlier installation/start checks failed under deep paths; the current Mac
 adapter uses an ephemeral IPv4 **127.0.0.1** endpoint with the same private
 256-bit capability authentication. It never listens on an external interface.
 Windows retains its named pipe. This is a transport difference, not a different
@@ -81,6 +83,9 @@ macOS may require new permission approval after an ad-hoc-signed update.
   invalidates the native fence, terminates birth-time-matched input workers and
   releases journaled automation-held input. Stop persists across restart;
   only the local human Re-arm control clears it.
+- Input permission and point ownership are rechecked while dispatching native
+  events. Errors release journaled input and preserve unknown delivery; cleanup
+  failure latches Stop. Native headless refusal tests do not prove physical Esc.
 - Manual takeover is the default. Optional Smart mode ignores small motion and
   yields on deliberate input. Resume requires fresh observations.
 - AppKit renders the minimal bar, breathing edges and original arrow/text
