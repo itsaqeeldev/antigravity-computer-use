@@ -80,6 +80,13 @@ test('the actual human launcher can reveal controls after cached ready failure w
 test('incidents deduplicate and never contain error messages or request text',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'incident-'));try{const i=new Incidents(dir);for(let n=0;n<2;n++)i.record('computer_click',{error:{code:'guardian_exited',message:'SECRET C:/private'},text:'password'});const records=i.read();assert.equal(records.length,1);assert.equal(records[0].count,2);assert(!fs.readFileSync(i.file,'utf8').includes('SECRET'));}finally{fs.rmSync(dir,{recursive:true});}
 });
+test('incident publication preserves the prior journal if writer ownership is lost',()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'incident-fence-'));try{
+  const journal=new Incidents(dir);journal.record('computer_click',{error:{code:'stale_observation'}});const original=fs.readFileSync(journal.file,'utf8');
+  assert.throws(()=>journal.record('computer_ready',{error:{code:'guardian_exited'}},{guard:()=>{throw Object.assign(Error('ownership lost'),{code:'service_ownership_lost'});}}),e=>e.code==='service_ownership_lost');
+  assert.equal(fs.readFileSync(journal.file,'utf8'),original);assert.deepEqual(fs.readdirSync(dir),['incidents.json']);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('signed update metadata refuses tampering, wrong platform, expired releases and unsafe paths',()=>{
  const {publicKey,privateKey}=generateKeyPairSync('ed25519');const manifest={schema:1,build_id:'a'.repeat(64),version:'1.0.0',sequence:1,platform:process.platform,arch:process.arch,min_os:'0.0.0',expires:'2099-01-01',files:{'node':{size:3,sha256:sha256('abc'),url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v1/node'}}};
  const check=m=>{const bytes=Buffer.from(JSON.stringify(m));return verifyRelease(bytes,sign(null,bytes,privateKey).toString('base64'),publicKey);};assert.equal(check(manifest).version,'1.0.0');

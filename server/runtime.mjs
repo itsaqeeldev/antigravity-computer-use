@@ -82,7 +82,7 @@ export class Runtime {
       if(reason||s!==this.state)this.lastControlReason=reason||s;
       this.state=s;
       if(reason==='guardian_exited'&&previousState!=='idle'&&this.latchFile)try{fs.writeFileSync(this.latchFile,'stopped');}catch{}
-      if(reason==='guardian_exited'&&this.privateDataStorage===true)try{new Incidents(dataDir()).record('computer_guardian',{state:s,error:{code:'guardian_exited'},guardian_exit:this.guardian.lastExit});}catch{this.diagnosticError='private_diagnostic_storage_unavailable';}
+      if(reason==='guardian_exited'&&this.privateDataStorage===true)new Incidents(dataDir()).recordSerialized('computer_guardian',{state:s,error:{code:'guardian_exited'},guardian_exit:this.guardian.lastExit}).catch(()=>{this.diagnosticError='private_diagnostic_storage_unavailable';});
       if(s!=='active'){
         this.generation++;this.frames.clear();
         if(s==='stopped'||s==='idle'){this.grants.clear();this.token='';}

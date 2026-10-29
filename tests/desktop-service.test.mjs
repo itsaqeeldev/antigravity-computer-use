@@ -8,6 +8,7 @@ import {BUILD_ID} from '../server/version.mjs';
 import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';
 import {fileURLToPath} from 'node:url';
 import {storageOperation} from '../server/storage.mjs';
+import {Incidents} from '../server/incidents.mjs';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -110,6 +111,16 @@ test('a standalone client cannot silently reuse a host-managed service with the 
   assert.equal(inputs,0);const result=await request(session,'clipboard',{reason:'Explicit access'},1000,'host-managed');assert.equal(result.ok,true);assert.equal(inputs,1);
   assert.equal((await request(session,'status',{},1000,'standalone')).permission_mode,'host-managed');
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('diagnostic persistence does not delay an error reply and shutdown waits for it',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-async-incident-'));let release,started;const gate=new Promise(r=>release=r),entered=new Promise(r=>started=r),original=Incidents.prototype.recordSerialized;
+ Incidents.prototype.recordSerialized=async()=>{started();await gate;};
+ const runtime={permissionMode:'host-managed',status:()=>({state:'idle',permission_mode:'host-managed'}),async close(){}};let service;
+ try{
+  service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+  const result=await request(session,'clipboard',{reason:'Denied policy'},1000,'standalone');assert.equal(result.error.code,'deployment_policy_mismatch');assert.equal(result.diagnostic_pending,true);assert.match(result.incident_id,/^[a-f0-9]{24}$/);await entered;assert.equal((await request(session,'status',{},1000,'host-managed')).diagnostic_pending,1);
+  let closed=false;const shutting=service.shutdown().then(()=>{closed=true;});await new Promise(r=>setTimeout(r,30));assert.equal(closed,false);release();await shutting;assert.equal(closed,true);
+ }finally{release();if(service)await service.shutdown();Incidents.prototype.recordSerialized=original;fs.rmSync(dir,{recursive:true,force:true});}
 });
 
 test('start refuses to replace a live but unresponsive service',async()=>{

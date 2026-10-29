@@ -1,7 +1,7 @@
 // Windows ACLs are checked by a small prebuilt .NET helper, not POSIX mode bits.
 // It has no desktop/input API and never elevates or changes parent permissions.
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';
-import {createHash,randomUUID} from 'node:crypto';import {spawnSync} from 'node:child_process';
+import {createHash,randomUUID} from 'node:crypto';import {spawnSync,execFile} from 'node:child_process';import {promisify} from 'node:util';
 import {buildMacStorage} from './macos-build.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function ensureStorageGuard(){
@@ -26,6 +26,13 @@ export function storageOperation(mode,directory,{helper=ensureStorageGuard()}={}
  const result=spawnSync(helper,[mode,path.resolve(directory)],{windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:1024*1024});
  let reply;try{reply=JSON.parse(result.stdout);}catch{}
  if(result.status!==0||!reply?.ok)throw Object.assign(Error(reply?.error?.message||result.error?.message||'Private storage verification failed.'),{code:reply?.error?.code||'storage_permissions_failed',path:reply?.error?.path});
+ return reply;
+}
+const execFileAsync=promisify(execFile);
+export async function storageOperationAsync(mode,directory,{helper=ensureStorageGuard()}={}){
+ let stdout='',failure;try{({stdout}=await execFileAsync(helper,[mode,path.resolve(directory)],{windowsHide:true,encoding:'utf8',timeout:30000,maxBuffer:1024*1024}));}catch(error){failure=error;stdout=error.stdout||'';}
+ let reply;try{reply=JSON.parse(stdout);}catch{}
+ if(failure||!reply?.ok)throw Object.assign(Error(reply?.error?.message||failure?.message||'Private storage verification failed.'),{code:reply?.error?.code||'storage_permissions_failed',path:reply?.error?.path});
  return reply;
 }
 export function defaultInstallationRoot({helper,home,localAppData,hasD=fs.existsSync('D:\\')}={}){

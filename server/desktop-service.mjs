@@ -62,10 +62,14 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   const sockets=new Set();
   const receipts=new Receipts(directory);
   const incidents=new Incidents(directory);
+  const pendingIncidents=new Set();
+  const queueIncident=(name,reply)=>{const id=incidents.identify(name,reply);if(!id)return;reply.incident_id=id;reply.diagnostic_pending=true;
+   const pending=new Promise(resolve=>setImmediate(resolve)).then(()=>incidents.recordSerialized(name,reply)).catch(()=>{runtime.diagnosticError='private_diagnostic_storage_unavailable';});
+   pendingIncidents.add(pending);pending.finally(()=>pendingIncidents.delete(pending));};
   const shutdown=()=>{
     if(shutdownPending)return shutdownPending;
     shutdownPending=(async()=>{closing=true;
-    try{await runtime.close();}catch(error){closing=false;throw error;}
+    try{await runtime.close();while(pendingIncidents.size)await Promise.allSettled([...pendingIncidents]);}catch(error){closing=false;throw error;}
     clearInterval(expiry);
     for(const socket of sockets)socket.end();server.close();
     try{const saved=JSON.parse(fs.readFileSync(file));if(saved.pid===process.pid&&saved.secret===secret)fs.unlinkSync(file);}catch{}
@@ -118,14 +122,14 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
         if(!control){busy=true;executing=true;}
         try{
           const raw=await call(runtime,name,request.args||{});
-          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost}:raw,directory);
+          const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost,...(pendingIncidents.size?{diagnostic_pending:pendingIncidents.size}:{}),...(runtime.diagnosticError?{diagnostic_error:runtime.diagnosticError}:{})}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
           if(reply.error||reply.verification_error)Object.assign(reply,recoveryAdvice(reply));
-          try{const id=incidents.record(name,reply);if(id)reply.incident_id=id;}catch{reply.diagnostic_error='private_diagnostic_storage_unavailable';}
+          queueIncident(name,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));try{result.incident_id=incidents.record(ticket?.command,result);}catch{result.diagnostic_error='private_diagnostic_storage_unavailable';}if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));queueIncident(ticket?.command,result);if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

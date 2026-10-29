@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "5c2ad5be3c89c057a495da98a4f6648b2e757f8d6512aff67029270659d66951"
+      "sha256": "c55c74431173b610ce5869c1c8148bc423aea0dd76c671053c53a4aeb4ee6047"
     },
     {
       "path": "server/mcp.mjs",
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "29a8c304b5022ddf6b5ee81d04e2fba06d04339a2bb786c192768706ef6a034f"
+      "sha256": "5e53e3b10a12b4acd392c3bf492d19ed7eee9d25e621a41edd03d130db726bee"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "6695dcdbc9dd4c2dd8a97564bb8d8f4dca6622eb666dba958a28ef2656357636"
+      "sha256": "c9bba71cd0b67b7b9aefc2c7afc608515f49b22619f97ca4f1c69926be7d67c7"
     },
     {
       "path": "server/version.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "5dfc5da01022f3120bc545beb8db539314264d6565950bd229a8646ae32c081c"
+      "sha256": "5e05ca3573961e8b1e219f0c5a48a40108484e260d74306eb34b8032d26b70d7"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "1effcc3307b0287bc7c86e3c90280c1fa7d7dbd01446fadfc009b2f01efc3bd8"
+      "sha256": "5cce46ff9a15d547ac30bee91ab93cf6b2ee72f8f7e2351609d9acd724362453"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "b4936d19dcfda3fc63bbff27b5f86352d0969e5fee0b6fe3e0fc99758adc061f"
+      "sha256": "aeeac9ba4de3583e54e4e1fcbd72cc7c167d152b7303d1d546b9c6e01525fefa"
     },
     {
       "path": "tests/core.test.mjs",
@@ -352,7 +352,7 @@
     },
     {
       "path": "server/storage.mjs",
-      "sha256": "38ffa1659deccb5afb728434b9b8041e073052413526e55ae3e8deec2da95310"
+      "sha256": "e11471ead11f0e481e897ed83c920a4bee5d9ef7f74f13dbeffc54530d641fa3"
     },
     {
       "path": "tests/storage.test.mjs",
@@ -388,7 +388,7 @@
     },
     {
       "path": "server/service-lease.mjs",
-      "sha256": "e8091d0249e262eeba5c63b72fe5fe35a645db3b97eb6a42edb38eb8fb4d7360"
+      "sha256": "62434a1e2adf2e6f99f7372d2998f839dd7b88c84a9264b528a6c66a71816db8"
     },
     {
       "path": "tests/service-lease.test.mjs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "1ed5318c0dc530de79c468b0abd7cfe46bfe17e61f581d1687046b06b9c8f99a"
+      "sha256": "bc66174000960aea85774aff1c41721bf40ccd97d2967fdad2c4e26455225b20"
     },
     {
       "path": "docs/MACOS.md",
@@ -584,7 +584,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "37de4532828736c6a3b3f4194476fbdbb6cef46e5dc7e31d2eba5cdfb41584a8"
+      "sha256": "41e8a106ce3448b80f0087ad6630484d432d12d4ecfa102e1f0cd809ec78b700"
     },
     {
       "path": "scripts/update.mjs",
@@ -596,11 +596,11 @@
     },
     {
       "path": "scripts/diagnostics.mjs",
-      "sha256": "86d41e41317c8ea2ce984d63f34aa0e8518024ae0033c7444258c07c79c42a1d"
+      "sha256": "529deb87139a480d503e2b48afa6e09e2394309ee959bcce2a254d1ea60f8c77"
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "3566c6c72f89a2b37a1c31e70fad1065bd5a711258a4d0b71267fee4b9d94b3b"
+      "sha256": "d631a2939db0c9ded8bd903b2eec466d6ca0c835df7b59730eb15bb52faf9e29"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "41c7bb4c8b1bdfed3adb911883aff1eb565f21b235c7893b8480a99fd3846494"
+      "sha256": "c404996a8fbd4dcb7c1a52bb97f2025d6cf578a647e6dd5fdc8c5f479dc97972"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -617,6 +617,10 @@
     {
       "path": "tests/reporting.test.mjs",
       "sha256": "f39842da996e54165f7dba159c2a962374192738075efae628a4af7a5f18f5ed"
+    },
+    {
+      "path": "tests/incident-concurrency.test.mjs",
+      "sha256": "fee2b23a51c0b7ef878e64d16e3032b1b59e6e685645a2590e2a075ce28de3a2"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

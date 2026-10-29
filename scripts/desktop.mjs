@@ -47,14 +47,16 @@ export function briefReply(value){
 }
 let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
-export function failureReply(error,{directory,record=true}={}){
+export function failureReply(error){
  const result={ok:false,error:{code:error.code||'refused',message:error.message},next_action:'inspect_diagnostics'};
  for(const field of ['delivery_unknown','observe_before_continuing','cancellation_requested'])if(error[field]===true)result[field]=true;
  Object.assign(result,recoveryAdvice(result));
- if(record)try{
-  applyDeployment(loadDeployment());const folder=directory||dataDir();storageOperation('verify',folder);
-  result.incident_id=new Incidents(folder).record('computer_startup',result);
- }catch{result.diagnostic_error='private_diagnostic_storage_unavailable';}
+ return result;
+}
+export async function recordedFailureReply(error){
+ const result=failureReply(error);
+ try{applyDeployment(loadDeployment());const folder=dataDir();storageOperation('verify',folder);result.incident_id=await new Incidents(folder).recordSerialized('computer_startup',result);}
+ catch{result.diagnostic_error='private_diagnostic_storage_unavailable';}
  return result;
 }
 
@@ -161,4 +163,4 @@ export async function main(){
   }
   const result=await request(session,command,args,100000,policy.permission_mode);printReply(result);if(!result.ok)process.exitCode=1;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{printReply(failureReply(error));process.exitCode=1;});
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(async error=>{printReply(await recordedFailureReply(error));process.exitCode=1;});

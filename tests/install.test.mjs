@@ -117,10 +117,11 @@ test('short launcher forwards literal argv without a command shell or character 
  const host=path.join(bundle,'bin',platform.host);fs.mkdirSync(path.dirname(host),{recursive:true});fs.writeFileSync(host,'fixture');
  fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'{{DESKTOP_COMMAND}}');
  // This module is only an argv oracle: it has no desktop/native dependencies.
- fs.writeFileSync(path.join(bundle,'scripts/desktop.mjs'),'export const encodeReply=JSON.stringify;export const failureReply=e=>({ok:false,error:{message:e.message}});export async function main(){console.log(JSON.stringify(process.argv.slice(2)));}');seal(bundle);
+ fs.writeFileSync(path.join(bundle,'scripts/desktop.mjs'),'export const encodeReply=JSON.stringify;export const recordedFailureReply=async e=>({ok:false,error:{message:e.message}});export async function main(){if(process.argv[2]==="fail")throw Error("fixture failure");console.log(JSON.stringify(process.argv.slice(2)));}');seal(bundle);
  const result=install({bundle,target,home:path.join(dir,'home')});
  const words=['paste','--text','اردو 😀 %PATH% & x|y > z ^ !', '--reason','literal "quotes" and \\slashes'];
  const run=spawnSync(result.launcher_node,[result.launcher,...words],{windowsHide:true,encoding:'utf8'});assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),words);
+ const failed=spawnSync(result.launcher_node,[result.launcher,'fail'],{windowsHide:true,encoding:'utf8'});assert.equal(failed.status,1,failed.stderr);assert.deepEqual(JSON.parse(failed.stdout),{ok:false,error:{message:'fixture failure'}});
 });
 
 test('a live desktop service blocks update before backups, executable or configuration writes',()=>{

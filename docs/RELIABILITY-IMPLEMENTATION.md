@@ -106,15 +106,28 @@ tests exercise these failures; native interrupted-update acceptance is still ope
 
 ### Open diagnostics concurrency defect
 
-**Open: separate incident writers can still lose records.** The controller and
+The controller and
 launcher can both call the synchronous recorder. A two-process barrier test had
 both writers read the journal and publish through `incidents.json.tmp`; both
 reported success but the final journal held only one of the two distinct events.
 The reproduction and result are retained under `.localdata/tests/incident-race-*`.
-The separate reporter acknowledgement repair below does not serialize incident
-writers. A correction must preserve bounded private storage, deduplication,
-consent and recovery after writer death; simply changing the temporary filename
-does not fix the lost read-modify-write update.
+The separate reporter acknowledgement repair below did not serialize incident
+writers. The current candidate serializes production controller and launcher
+writers using a separate private native lease and atomically publishes the bounded
+journal. A two-process test covers distinct incidents, repeated occurrences and
+recovery after terminating a writer. A lost-ownership check immediately before
+publication is tested separately. Earlier pinned releases can still use the old
+writer, and helper death during publication and Mac device behavior need further
+qualification; this is not a claim of universal loss-free reporting.
+The first asynchronous version delayed error responses while acquiring the lease,
+causing a client timeout in the full suite. Recording is now queued off the reply
+path; replies identify it as pending, status exposes pending/failure, and orderly
+shutdown waits for queued records. Native storage checks run asynchronously.
+The failed suite is retained under `.localdata/reliability-current/`, followed by
+a full local pass. A subsequent full run also hit the human-launcher fixture's
+10-second timeout; the focused test and a full retry passed, but the reason for
+the timeout remains unproven. Abrupt process death can still interrupt an
+in-flight record.
 
 The old recorder and reporting worker both rewrote `incidents.json` through the
 same `.tmp` pathname. A deterministic two-process test reproduced `ENOENT` when

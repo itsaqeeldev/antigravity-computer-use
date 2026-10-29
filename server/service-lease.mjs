@@ -1,7 +1,7 @@
 // Lifetime ownership for one controller per private data directory. The small
 // existing Windows storage helper holds a kernel mutex until this pipe closes.
 import {spawn} from 'node:child_process';import path from 'node:path';import {EventEmitter} from 'node:events';
-import {ensureStorageGuard,storageOperation} from './storage.mjs';
+import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
 export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),startupTimeout=5000,cleanupTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
  child.stdout.setEncoding('utf8');
@@ -33,6 +33,6 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
  });
  lease.release=()=>releasePending??=(async()=>{releasing=true;child.stdin.end();let timer;await Promise.race([exited,new Promise(resolve=>{timer=setTimeout(()=>{child.kill();resolve();},2000);})]);clearTimeout(timer);})();
  const held=await startup;
- try{storageOperation('data',directory,{helper});held.assertHeld();return held;}
+ try{await storageOperationAsync('data',directory,{helper});held.assertHeld();return held;}
  catch(error){await held.release();throw error;}
 }

@@ -1,8 +1,8 @@
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {Incidents} from '../server/incidents.mjs';import {updateSettings} from '../server/update-core.mjs';
 import {writeAtomicJSON} from '../server/atomic-json.mjs';
-import {storageOperation} from '../server/storage.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
-async function reportingLease(directory){const lockDir=path.join(directory,'reporting-lease');storageOperation('data',lockDir);return acquireServiceLease(lockDir);}
+import {storageOperationAsync} from '../server/storage.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
+async function reportingLease(directory){await storageOperationAsync('verify',directory);const lockDir=path.join(directory,'reporting-lease');fs.mkdirSync(lockDir,{recursive:true,mode:0o700});return acquireServiceLease(lockDir);}
 export async function diagnostics(directory,{submit=false,target=path.dirname(directory),run=spawnSync,now=Date.now(),acquire=reportingLease}={}){
  const incidents=new Incidents(directory);if(!submit){const reports=incidents.read();let intent;try{const value=JSON.parse(fs.readFileSync(path.join(directory,'reporting-intent.json')));if(/^[a-f0-9]{24}$/.test(value?.id||''))intent=value.id;}catch{}return {reports,pending:reports.filter(r=>r.pending).length,...(intent?{next_action:'github_submission_outcome_unknown',incident_id:intent}:{})};}
  if(!updateSettings(target).reporting)return {submitted:0,next_action:'reporting_consent_required'};

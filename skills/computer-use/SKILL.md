@@ -87,7 +87,7 @@ Verify the requested result in the real app and its produced artifact, restore t
 
 ## Failure reports and updates
 
-The runtime automatically records sanitized, deduplicated incidents. After an unresolved failure, run `diagnostics`; include the incident ID and the failed step in your task result. Run `diagnostics --submit` only under the installation's explicit reporting consent. Missing authentication/consent leaves reports pending; never invent submission success. Do not copy screenshots, user text, paths or credentials into public issues.
+The runtime automatically records sanitized, deduplicated incidents. A reply with `diagnostic_pending:true` means recording is still in progress, not yet confirmed; check `status` once before `diagnostics` and report any `diagnostic_error`. After an unresolved failure, include the incident ID and failed step in your task result. Run `diagnostics --submit` only under the installation's explicit reporting consent. Missing authentication/consent leaves reports pending; never invent submission success. Do not copy screenshots, user text, paths or credentials into public issues.
 
 Ordinary desktop tasks must not edit or replace the installed controller. Authorized development tasks should reproduce the defect, add a regression and submit a reviewable branch/PR. Never self-merge a repair while using the controller.
 
