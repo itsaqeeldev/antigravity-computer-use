@@ -456,7 +456,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "916567b8bc41e7e9a222281d9e1a443aade03b16ff1c951e8972f4fd6d242995"
+      "sha256": "c4dcde7e657b8ea242b2bf39f8bf61a79596bf3360f89c004d1bbf56f3bd7d67"
     },
     {
       "path": "tests/guardian-visibility.mjs",
