@@ -1,0 +1,43 @@
+// Signed metadata is mandatory. No unsigned GitHub release or branch is executable policy.
+import fs from 'node:fs';import path from 'node:path';import os from 'node:os';
+import {verify,createHash} from 'node:crypto';
+export const sha256=data=>createHash('sha256').update(data).digest('hex');
+export function verifyRelease(bytes,signature,publicKey,{platform=process.platform,arch=process.arch,osRelease=os.release(),channel='stable',now=Date.now()}={}){
+ if(!publicKey||!verify(null,bytes,publicKey,Buffer.from(signature,'base64')))throw Error('release_signature_invalid');
+ const m=JSON.parse(bytes);
+ if(!/^[a-f0-9]{64}$/.test(m.build_id||''))throw Error('release_build_invalid');
+ if(m.schema!==1||m.platform!==platform||m.arch!==arch)throw Error('release_platform_mismatch');
+ if(!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(m.version)||channel==='stable'&&m.version.includes('-'))throw Error('release_channel_mismatch');
+ if(!Number.isSafeInteger(m.sequence)||m.sequence<1||!Number.isFinite(Date.parse(m.expires))||Date.parse(m.expires)<=now)throw Error('release_metadata_expired');
+ const parts=v=>String(v).split('.').map(Number);
+ const a=parts(osRelease),b=parts(m.min_os);if(b.length!==3||b.some(n=>!Number.isInteger(n)||n<0))throw Error('release_os_invalid');
+ for(let i=0;i<3;i++){if(a[i]>b[i])break;if(a[i]<b[i])throw Error('release_os_incompatible');}
+ if(!m.files||!Object.keys(m.files).length||Object.keys(m.files).length>500)throw Error('release_inventory_invalid');
+ let total=0;for(const [name,f]of Object.entries(m.files)){
+  if(!name||name.includes('\\')||name.includes(':')||name.split('/').some(p=>!p||p==='.'||p==='..')||name.startsWith('/')||!/^[a-f0-9]{64}$/.test(f.sha256)||!Number.isSafeInteger(f.size)||f.size<0||f.size>150*1024*1024)throw Error('release_inventory_invalid');
+  const url=new URL(f.url);if(url.protocol!=='https:'||url.hostname!=='github.com'||!url.pathname.startsWith('/shayann07/antigravity-computer-use/releases/download/'))throw Error('release_origin_invalid');total+=f.size;
+ }if(total>400*1024*1024)throw Error('release_size_limit');return m;
+}
+export function updateSettings(target,version='0.0.0'){
+ const file=path.join(target,'update-settings.json');if(!fs.existsSync(file))return {mode:'automatic',channel:version.includes('-')?'beta':'stable',reporting:false};
+ const v=JSON.parse(fs.readFileSync(file));if(!['automatic','notify','manual'].includes(v.mode)||!['stable','beta'].includes(v.channel)||typeof v.reporting!=='boolean')throw Error('invalid_update_settings');return v;
+}
+export function acquireUpdateLock(target){const file=path.join(target,'update.lock');const fd=fs.openSync(file,'wx',0o600);fs.writeFileSync(fd,JSON.stringify({pid:process.pid,at:new Date().toISOString()}));return ()=>{fs.closeSync(fd);fs.unlinkSync(file);};}
+export function verifyStaged(directory,m){
+ const actual=[];const walk=folder=>{for(const entry of fs.readdirSync(folder,{withFileTypes:true})){const file=path.join(folder,entry.name);if(entry.isSymbolicLink())throw Error('release_payload_link');if(entry.isDirectory())walk(file);else if(entry.isFile())actual.push(path.relative(directory,file).replaceAll('\\','/'));else throw Error('release_payload_invalid');}};
+ if(!fs.lstatSync(directory).isDirectory()||fs.lstatSync(directory).isSymbolicLink())throw Error('release_payload_link');walk(directory);
+ if(actual.length!==Object.keys(m.files).length||actual.some(name=>!Object.hasOwn(m.files,name)))throw Error('release_payload_inventory');
+ for(const [name,f]of Object.entries(m.files)){const file=path.join(directory,name);const s=fs.lstatSync(file);if(s.size!==f.size||sha256(fs.readFileSync(file))!==f.sha256)throw Error('release_payload_mismatch');}
+}
+export function newerVersion(candidate,current){
+ const parse=v=>{const match=/^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?$/.exec(v);if(!match)throw Error('release_version_invalid');return match.slice(1);};
+ const a=parse(candidate),b=parse(current);for(let i=0;i<3;i++){if(Number(a[i])!==Number(b[i]))return Number(a[i])>Number(b[i]);}
+ if(!a[3])return !!b[3];if(!b[3])return false;
+ const x=a[3].split('.'),y=b[3].split('.');for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===y[i])continue;if(x[i]===undefined)return false;if(y[i]===undefined)return true;const numeric=v=>/^\d+$/.test(v);if(numeric(x[i])&&numeric(y[i]))return Number(x[i])>Number(y[i]);if(numeric(x[i])!==numeric(y[i]))return !numeric(x[i]);return x[i]>y[i];}return false;
+}
+export async function downloadFile(url,destination,{size,hash,fetcher=fetch}={}){
+ const reply=await fetcher(url,{signal:AbortSignal.timeout(30000)});if(!reply.ok||!reply.body)throw Error('update_download_failed');
+ const fd=fs.openSync(destination+'.part','wx',0o600);let length=0;const digest=createHash('sha256');
+ try{for await(const chunk of reply.body){length+=chunk.length;if(length>size)throw Error('update_download_size');digest.update(chunk);fs.writeSync(fd,chunk);}if(length!==size||digest.digest('hex')!==hash)throw Error('update_download_hash');fs.closeSync(fd);fs.renameSync(destination+'.part',destination);}
+ catch(e){try{fs.closeSync(fd);}catch{}try{fs.unlinkSync(destination+'.part');}catch{}throw e;}
+}

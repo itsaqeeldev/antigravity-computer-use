@@ -92,6 +92,16 @@ export class Runtime {
   // cursor ownership just because a previous task left an emergency latch.
   async prepare(){}
   async showControls(){return this.guardian.request({op:'show_controls'});}
+  async ready(){
+    if(this.recoveryFailure)return {...this.status(),ready:false,next_action:'inspect_diagnostics',error:this.recoveryFailure};
+    try{
+      const controls=await this.showControls();
+      if(['idle','active','paused','stopped'].includes(controls.state))this.state=controls.state;
+      const visible=controls.controls_visible===true;
+      return {...this.status(),ready:visible&&this.state!=='stopped'&&this.state!=='paused',controls_visible:visible,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
+        next_action:!visible?'inspect_diagnostics':this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':'discover_or_launch'};
+    }catch(error){this.recoveryFailure={code:error.code||'guardian_unavailable',message:'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return {...this.status(),ready:false,controls_visible:false,next_action:'inspect_diagnostics',error:this.recoveryFailure};}
+  }
   check(){if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);}
   async identity(hwnd){
     if(!Number.isSafeInteger(Number(hwnd))||Number(hwnd)<=0)fail('no_target','Select an HWND from computer_apps.');

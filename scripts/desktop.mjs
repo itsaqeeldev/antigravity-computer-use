@@ -10,6 +10,8 @@ import {TOOLS,validate} from '../server/desktop-tools.mjs';
 import {parseArguments,parseRunArguments} from './arguments.mjs';
 import {storageOperation} from '../server/storage.mjs';
 import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
+import {diagnostics} from './diagnostics.mjs';
+import {scheduleUpdates} from '../server/auto-update.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
@@ -56,6 +58,17 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
 
 export async function main(){
   const [rawCommand,...rest]=process.argv.slice(2);const command=rawCommand?.replace(/^computer_/,'');
+  if(command==='diagnostics'){applyDeployment(loadDeployment());if(rest.some(a=>a!=='--submit'))throw Error('Use diagnostics [--submit]');printReply(diagnostics(dataDir(),{submit:rest.includes('--submit')}));return;}
+  if(command==='update'){
+    const deployment=applyDeployment(loadDeployment());if(!deployment.installed)throw Error('Updates require a supported installation.');
+    if(rest.length!==1||!['status','check','apply','rollback'].includes(rest[0]))throw Error('Use update status|check|apply|rollback');
+    // Use immutable release Node, not the mutable short launcher being replaced.
+    const {spawn}=await import('node:child_process');const {nativePlatform}=await import('../server/platform.mjs');
+    const asynchronous=['apply','rollback'].includes(rest[0]);
+    const child=spawn(fileURLToPath(new URL('../'+nativePlatform().node,import.meta.url)),[fileURLToPath(new URL('./update.mjs',import.meta.url)),path.dirname(dataDir()),rest[0],...(asynchronous?[String(process.pid)]:[])],{windowsHide:true,detached:asynchronous,stdio:asynchronous?'ignore':['ignore','inherit','inherit']});
+    if(asynchronous){await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});child.unref();printReply({queued:true,next_action:'inspect_update_status',message:'Update worker waits for this launcher to exit before replacing files.'});return;}
+    await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>{process.exitCode=code??1;resolve();});});return;
+  }
   if(rest[0]==='--help'){printReply(describeCommand(command));return;}
   if(command==='describe'||(command==='--help'&&rest[0])){
     if(rest[0]==='--all')printReply({commands:[...LIFECYCLE,...TOOLS.map(tool=>describeCommand(tool.name))]});
@@ -73,14 +86,14 @@ export async function main(){
   else if(Object.keys(args).length)throw Object.assign(Error('This lifecycle command takes no arguments.'),{code:'bad_arguments'});
   const policy=applyDeployment(loadDeployment());
   const file=path.join(dataDir(),'desktop-session.json');
-  if(command==='start'||command==='serve'){
+  if(command==='start'||command==='serve'||command==='ready'){
     storageOperation('data',dataDir());
     let existing,saved;
     try{saved=JSON.parse(fs.readFileSync(file));existing=await request(saved,'status',{},1500,policy.permission_mode);}catch{}
     if(existing?.ok){
       if(existing.build_id!==BUILD_ID||existing.build_version!==VERSION)throw Error('A different runtime version owns the live session. End and shutdown that session before starting this build; do not interrupt another task.');
       if(existing.permission_mode!==policy.permission_mode)throw Object.assign(Error('A different permission policy owns the live session. Finish and shutdown its task before using this installed policy; no override was applied.'),{code:'deployment_policy_mismatch'});
-      printReply(existing);return;
+      printReply(command==='ready'?await request(saved,'ready',{},15000,policy.permission_mode):existing);return;
     }
     // An unresponsive live service may still be controlling the desktop. Never
     // replace its capability file or create a competing guardian after timeout.
@@ -91,6 +104,7 @@ export async function main(){
     if(command==='serve'){
       const {serveDesktop}=await import('../server/desktop-service.mjs');
       const service=await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});
+      const cancel=scheduleUpdates(policy);service.server.once('close',cancel);
       printReply({ok:true,...service.status(),service_mode:'foreground',requires_background_execution:true});return;
     }
     // Fixed deployment policy: never accept permission overrides in an action.
@@ -99,7 +113,7 @@ export async function main(){
     const child=spawn(process.execPath,[fileURLToPath(new URL('../server/desktop-service.mjs',import.meta.url)),'--serve'],{detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,AGCU_PERMISSION_MODE:policy.permission_mode}});child.unref();
     for(let i=0;i<100;i++){
       await new Promise(resolve=>setTimeout(resolve,100));
-      try{const session=JSON.parse(fs.readFileSync(file));const found=await request(session,'status',{},1500,policy.permission_mode);if(found.ok&&found.build_id===BUILD_ID&&found.permission_mode===policy.permission_mode){printReply(found);return;}}catch{}
+      try{const session=JSON.parse(fs.readFileSync(file));const found=await request(session,'status',{},1500,policy.permission_mode);if(found.ok&&found.build_id===BUILD_ID&&found.permission_mode===policy.permission_mode){printReply(command==='ready'?await request(session,'ready',{},15000,policy.permission_mode):found);return;}}catch(error){if(command==='ready'&&error.code!=='session_unavailable')throw error;}
     }
     throw Error('Native session did not start; run the service in foreground for diagnostics.');
   }

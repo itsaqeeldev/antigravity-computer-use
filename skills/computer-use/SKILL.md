@@ -8,10 +8,16 @@ description: Operate and visually verify real desktop applications, including de
 Antigravity is the agent; the local native runtime supplies screenshots, accessibility and real mouse/keyboard input. Windows and macOS use the same tools, observation/action loop, batch limits and permission lifecycle. Use its installed direct terminal command. No MCP or separate model is needed. Do not mix it with Cua Driver or another controller.
 
 ```powershell
-{{DESKTOP_COMMAND}} status
+{{DESKTOP_COMMAND}} ready
 ```
 
-Check status once, then choose **either** `apps` for an existing/unknown window or `launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'` for a known executable. Launch returns the window, frame and screenshot; reuse them. `observe_pending`, `input_completed:true` or a verification failure after launch means discover the existing process, never launch it again blindly.
+Run `ready` once. Follow `next_action`:
+
+- `discover_or_launch`: choose `apps` for an existing/unknown window or `launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'` for a known executable.
+- `awaiting_human_rearm` / `awaiting_human_resume`: controls were requested. Tell the human what action is needed, then wait. Never claim a bar is visible unless `controls_visible:true` was returned.
+- `inspect_diagnostics`: run `{{DESKTOP_COMMAND}} diagnostics` once, report the incident ID and stop repeating startup. Do not invent an Antigravity Sidecar panel or repeatedly ask the user to rerun the starter.
+
+Use `ready → apps/launch → snapshot → action/verify → end`. Read only unfamiliar command schemas through one `describe` call. Do not inspect implementation/source files to perform a desktop task. Launch returns the window, frame and screenshot; reuse them. `observe_pending`, `input_completed:true` or a verification failure after launch means discover the existing process, never launch it again blindly.
 
 On macOS, launch an existing `.app` bundle such as `/Applications/Example.app`; returned `hwnd` values are opaque window handles with the same observation rules. Use the application's Mac shortcuts (`cmd`/`option`) where appropriate. Required macOS Accessibility, Screen Recording and Input Monitoring grants must be completed by the human through the installed **Setup Mac Permissions.command**. Never operate system permission prompts or weaken a refusal. The native Mac adapter is experimental until the documented interactive qualification passes; a compile/contract test is not desktop acceptance.
 
@@ -67,3 +73,11 @@ Standalone uses local approval dialogs. Operator-installed host-managed mode rel
 On `input_completed:true` plus a verification error, input already ran; observe its effect before continuing. `delivery_unknown:true` means it may have run: never retry via another provider/pixel/Enter. A stale frame, moved window or restarted worker needs fresh state. `point_off_desktop` sends no input: explicit `fit_window` can restore/fit the approved app, then inspect its fresh state. Never clamp onto another app, relax identity/occlusion checks or change virtual desktops. For other failures, read [recovery guidance](references/recovery.md).
 
 Verify the requested result in the real app and its produced artifact, restore test-modified preferences, close only owned disposable windows with `close_window --hwnd HANDLE --reason ...`, and call `end`. A later task can begin without restarting Antigravity. For broader development/QA qualification, see [application verification](references/app-verification.md).
+
+## Failure reports and updates
+
+The runtime automatically records sanitized, deduplicated incidents. After an unresolved failure, run `diagnostics`; include the incident ID and the failed step in your task result. Run `diagnostics --submit` only under the installation's explicit reporting consent. Missing authentication/consent leaves reports pending; never invent submission success. Do not copy screenshots, user text, paths or credentials into public issues.
+
+Ordinary desktop tasks must not edit or replace the installed controller. Authorized development tasks should reproduce the defect, add a regression and submit a reviewable branch/PR. Never self-merge a repair while using the controller.
+
+Use `update status` or `update check` to inspect/stage signed published updates. Automatic installation waits for idle and confirmed input cleanup. Updates cannot clear Stop or approve OS permission dialogs. Do not change update policy, use unsigned payloads or interrupt a task to force installation.

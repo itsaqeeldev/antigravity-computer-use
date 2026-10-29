@@ -1,5 +1,7 @@
 import fs from 'node:fs';import path from 'node:path';
-const file=process.argv[2];if(!file)throw new Error('Pass the exact backups/<timestamp>/rollback.json to restore.');
+import {fileURLToPath} from 'node:url';
+export function rollback(file){
+if(!file)throw new Error('Pass the exact backups/<timestamp>/rollback.json to restore.');
 const data=JSON.parse(fs.readFileSync(path.resolve(file),'utf8'));
 const target=path.resolve(data.release,'..','..'),sessionFile=path.join(target,'data/desktop-session.json');
 if(fs.existsSync(sessionFile)){
@@ -26,4 +28,6 @@ for(const r of data.records){
  else if(['installation','launcher','deployment','deployment-registry','sidecar-definition'].includes(r.kind)&&fs.existsSync(r.file))fs.unlinkSync(r.file);
  else if(r.kind==='skill'&&fs.existsSync(path.join(r.file,'SKILL.md')))fs.unlinkSync(path.join(r.file,'SKILL.md'));
 }
-console.log('Prior configuration and skill files restored. Installed release folders were preserved.');
+return {restored:true};
+}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){rollback(process.argv[2]);console.log('Prior configuration and skill files restored. Installed release folders were preserved.');}

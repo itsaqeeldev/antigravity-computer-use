@@ -12,6 +12,8 @@ import {loadDeployment,applyDeployment} from './deployment.mjs';
 import {acquireServiceLease} from './service-lease.mjs';
 import {fileURLToPath} from 'node:url';
 import {ipcEndpoint} from './platform.mjs';
+import {Incidents} from './incidents.mjs';
+import {scheduleUpdates} from './auto-update.mjs';
 
 export function compact(result,dir){
   const value={...result};
@@ -55,8 +57,10 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   const secret=randomBytes(32).toString('hex');
   let pipe=ipcEndpoint(directory,randomBytes(18).toString('hex'));
   let busy=false,closing=false,lastCall=Date.now(),expiry,shutdownPending,idleReleased=false;
+  let maintenanceUntil=0;
   const sockets=new Set();
   const receipts=new Receipts(directory);
+  const incidents=new Incidents(directory);
   const shutdown=()=>{
     if(shutdownPending)return shutdownPending;
     shutdownPending=(async()=>{closing=true;
@@ -92,6 +96,13 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
           throw Object.assign(Error('This command belongs to a different build. Use the running release; do not silently mix runtime versions.'),{code:'version_mismatch'});
         if(['standalone','host-managed'].includes(runtime.permissionMode)&&request.expected_permission_mode!==runtime.permissionMode&&!['computer_status','computer_stop','computer_pause','computer_end','computer_shutdown'].includes(name))
           throw Object.assign(Error('This client and live service use different permission policies. Finish the owning task and shutdown before starting the intended policy.'),{code:'deployment_policy_mismatch'});
+        if(name==='computer_prepare_update'){
+          const state=runtime.status();
+          const allowed=!busy&&!closing&&['idle','stopped'].includes(state.state)&&!state.approved_apps?.length;
+          if(allowed)maintenanceUntil=Date.now()+30000;
+          finished=true;socket.end(JSON.stringify({ok:allowed,prepared:allowed,next_action:allowed?'shutdown_for_update':'wait_for_task_end'})+'\n');return;
+        }
+        if(maintenanceUntil>Date.now()&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Object.assign(Error('An installation update is preparing. No new input was accepted.'),{code:'update_in_progress'});
         const control=['computer_status','computer_stop','computer_pause','computer_shutdown'].includes(name);
         if(busy&&!control)throw Error('Desktop operation pending; send one action at a time.');
         if(name==='computer_shutdown'){
@@ -106,9 +117,10 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
           const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
+          try{const id=incidents.record(name,reply);if(id)reply.incident_id=id;}catch{}
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};try{result.incident_id=incidents.record(ticket?.command,result);}catch{}if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));
@@ -131,4 +143,4 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   return {shutdown,server,file,ownership,status:()=>({...runtime.status(),listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost})};
 }
 
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)&&process.argv[2]==='--serve'){const policy=applyDeployment(loadDeployment());await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)&&process.argv[2]==='--serve'){const policy=applyDeployment(loadDeployment());const service=await serveDesktop({idlePolicy:policy.idle_policy||'shutdown'});const cancel=scheduleUpdates(policy);service.server.once('close',cancel);}

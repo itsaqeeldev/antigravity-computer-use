@@ -1,0 +1,28 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {PassThrough} from 'node:stream';import {EventEmitter} from 'node:events';import {generateKeyPairSync,sign} from 'node:crypto';
+import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server/runtime.mjs';import {Incidents} from '../server/incidents.mjs';import {verifyRelease,verifyStaged,sha256,acquireUpdateLock,downloadFile} from '../server/update-core.mjs';import {testDirectory} from './paths.mjs';import {controllerStartSource} from '../scripts/install.mjs';
+test('concurrent guardian requests wait for one ready process',async()=>{
+ let starts=0,child;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const a=g.start(),b=g.start();assert.equal(starts,1);child.stdout.write('{"ev":"ready","pid":123}\n');await Promise.all([a,b]);assert(g.initialized);child.emit('close',2);assert.equal(g.proc,null);assert.equal(g.state,'stopped');
+});
+test('early guardian exit rejects startup promptly and permits one explicit retry',async()=>{
+ let child;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const first=g.start();child.emit('close',3);await assert.rejects(first,e=>e.code==='guardian_exited');const next=g.start();child.stdout.write('{"ev":"ready","pid":123}\n');await next;child.emit('close',0);
+});
+test('ready reveals stopped controls without rearming; failure is bounded',async()=>{
+ let calls=0;const r={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{}},async showControls(){calls++;return{controls_visible:true};}};
+ const ready=await Runtime.prototype.ready.call(r);assert.equal(ready.next_action,'awaiting_human_rearm');assert.equal(r.state,'stopped');
+ r.showControls=async()=>{calls++;throw Error('private stderr');};assert.equal((await Runtime.prototype.ready.call(r)).next_action,'inspect_diagnostics');await Runtime.prototype.ready.call(r);assert.equal(calls,2);
+ assert.match(controllerStartSource(null,'win32'),/mjs" ready/);assert.match(controllerStartSource(null,'darwin'),/mjs" ready/);
+});
+test('incidents deduplicate and never contain error messages or request text',()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'incident-'));try{const i=new Incidents(dir);for(let n=0;n<2;n++)i.record('computer_click',{error:{code:'guardian_exited',message:'SECRET C:/private'},text:'password'});const records=i.read();assert.equal(records.length,1);assert.equal(records[0].count,2);assert(!fs.readFileSync(i.file,'utf8').includes('SECRET'));}finally{fs.rmSync(dir,{recursive:true});}
+});
+test('signed update metadata refuses tampering, wrong platform, expired releases and unsafe paths',()=>{
+ const {publicKey,privateKey}=generateKeyPairSync('ed25519');const manifest={schema:1,build_id:'a'.repeat(64),version:'1.0.0',sequence:1,platform:process.platform,arch:process.arch,min_os:'0.0.0',expires:'2099-01-01',files:{'node':{size:3,sha256:sha256('abc'),url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v1/node'}}};
+ const check=m=>{const bytes=Buffer.from(JSON.stringify(m));return verifyRelease(bytes,sign(null,bytes,privateKey).toString('base64'),publicKey);};assert.equal(check(manifest).version,'1.0.0');
+ assert.throws(()=>verifyRelease(Buffer.from('{}'),'bad',publicKey));assert.throws(()=>check({...manifest,arch:'wrong'}));assert.throws(()=>check({...manifest,expires:'2020-01-01'}));assert.throws(()=>check({...manifest,files:{'../escape':manifest.files.node}}));
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'update-'));try{fs.writeFileSync(path.join(dir,'node'),'abc');verifyStaged(dir,manifest);fs.writeFileSync(path.join(dir,'node'),'bad');assert.throws(()=>verifyStaged(dir,manifest));const release=acquireUpdateLock(dir);assert.throws(()=>acquireUpdateLock(dir));release();}finally{fs.rmSync(dir,{recursive:true});}
+});
+test('interrupted or oversized downloads never publish a partial payload',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'download-'));try{const destination=path.join(dir,'payload');await assert.rejects(downloadFile('fixture',destination,{size:3,hash:sha256('abc'),fetcher:async()=>({ok:true,body:(async function*(){yield Buffer.from('oversized');})()})}));assert(!fs.existsSync(destination));assert(!fs.existsSync(destination+'.part'));}finally{fs.rmSync(dir,{recursive:true});}
+});

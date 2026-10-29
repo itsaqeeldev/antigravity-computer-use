@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "ddfc6ccab23630484bd216664893dc373ce073257187bc945fea28a043d4e226"
+      "sha256": "6f958b694981890f3810367055a4bfc465e81c8a5e15af67960cea68a93d456e"
     },
     {
       "path": "server/mcp.mjs",
@@ -228,7 +228,7 @@
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "878195656d2436e4a4bb3ffc52cc392fbd9bd382e9b337e04272bf88ab0c12fe"
+      "sha256": "50dacaf057312655cdaddfb0299747d67c0c3f4b2443512a2f0504d7c458e97f"
     },
     {
       "path": "server/native/Guardian.cs",
@@ -256,15 +256,15 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "a9d51864a952123eca7304a2787c989dc56d06b09a141236c332c373df31cccd"
+      "sha256": "42e14363b18d9d9f47a1fc86142502766380b4376ce68bb0d83432d779bdaa53"
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "73635deced38f496fdd3b4beb4a05146adf889aa28f41317bf01fa0922b3a460"
+      "sha256": "84a869abfa14df321f96d6034b54aea2a6be07abfb0167abc6e9a4eaeb1b9010"
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "2f3261f468c5e287244872fd36c10d21c93b0be2b23352649b220dea8bfd387b"
+      "sha256": "5a525fea3a7f0d14d0a709afb92bcfa7baf5622471cb4f47004e1308bd6bb302"
     },
     {
       "path": "server/version.mjs",
@@ -312,11 +312,11 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "e27cc85f987a0aea3061952edbfe66c59bdbd82623742cd51fcb75e4d8b77589"
+      "sha256": "5dd42cffd5bad21922914b1ea8939a6c00875ebb39207112d90b2b77c1674396"
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "6de49c14958f31ed86a4ebbafeecc82e1182515434e231edf202bf3d55a4f197"
+      "sha256": "91255e616c4d10df4dc0e3cb8585377ea47cb88e031c96d897bf543a9918acf4"
     },
     {
       "path": "scripts/verify-install.mjs",
@@ -324,7 +324,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "9f406790607e90ef8405bc624aca93ecde10efed8ce5f8434f33673accace4ea"
+      "sha256": "75362345e489c60ca2fcfac273483f228a203f50457a8a48aada88c71c8be9c9"
     },
     {
       "path": "tests/install.test.mjs",
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "d46a9ed2aad582962fa940b6866024aa94ab46f3ccf7d85fc44bf9ef4498b545"
+      "sha256": "27f103344d21473026a0d5958440635fc5fc16213f9e517c9fcfca8ea2851dd8"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -568,11 +568,51 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "da7743f98d1c25cd630d7b2b74c9cec801963378d442605ca09ae4dae12b8df5"
+      "sha256": "ded0bcceb8e4460ba595e3eeaf360efb4ae6562be61498a669971ac79b019b4c"
     },
     {
       "path": "docs/MACOS.md",
       "sha256": "4822438d29f0dec8a579684e9b26441da1e616268112c3643ecdd70b9686a9fb"
+    },
+    {
+      "path": "server/update-core.mjs",
+      "sha256": "6d894a5db269a22a1103244b977f887de96a9d3d4d34f7a94dad55d1c00ae202"
+    },
+    {
+      "path": "server/auto-update.mjs",
+      "sha256": "040842f7f80a8e7de8dfc5350d622692ca9a74b069762f528b53b3e70b07e857"
+    },
+    {
+      "path": "server/incidents.mjs",
+      "sha256": "38703bac07ca03f01aeaa99a31b21c3a64a88d18011b72609659b944053df2c6"
+    },
+    {
+      "path": "scripts/update.mjs",
+      "sha256": "94ced5f7b20988fc60fbad1d881ec13b6656249ca4607ef1ed653d360f7a81ae"
+    },
+    {
+      "path": "scripts/sign-update.mjs",
+      "sha256": "ceaa56bae59b4d241dda77b712858abc48b64dd9fba5c8b52e2a4b29beca7a09"
+    },
+    {
+      "path": "scripts/diagnostics.mjs",
+      "sha256": "c3bd653911b020a467249d9c3de84b8bd92350d7848e9fa5114c9445fc609cf6"
+    },
+    {
+      "path": "tests/recovery-update.test.mjs",
+      "sha256": "41f8bb31aeb85ff1180cb51d708f5b0e73240b0d0d5be41800d69ccde79f79a8"
+    },
+    {
+      "path": "tests/update-transaction.test.mjs",
+      "sha256": "70a17f5554878f21d25863d97e6c6a39f280b36f32fb238c15a300637605dd34"
+    },
+    {
+      "path": "docs/RELIABILITY-IMPLEMENTATION.md",
+      "sha256": "a893c859b733b51075fb4ab7d141c4af7e46ab2cedca960907daf3ccd55b30e8"
+    },
+    {
+      "path": "docs/MAC-QUALIFICATION-PROMPT.md",
+      "sha256": "aa611c3e92b75263a7d7b51ba75df70212d9019c9423e3bf4650d7882fd09c0f"
     }
   ]
 }
