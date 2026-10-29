@@ -46,6 +46,8 @@ automatic issue reporting is opt-in and requires GitHub authentication. Models
 can miss problems, while runtime errors are logged independently. It shares the
 runtime with the Mac adapter. [Implementation and acceptance status](docs/RELIABILITY-IMPLEMENTATION.md).
 The Windows download and one-line installer below remain pinned to beta.2.
+Our [public CI guide](docs/CI.md) explains the fork checks, local commands and
+the separate maintainer signing workflow.
 
 ## See it in action
 

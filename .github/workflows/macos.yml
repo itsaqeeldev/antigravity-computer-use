@@ -11,8 +11,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.20.0
           package-manager-cache: false
@@ -26,7 +28,7 @@ jobs:
         run: node scripts/macos-install-check.mjs
       - name: Archive experimental prebuilt candidate
         run: tar -czf .localdata/AntigravityComputerUse-macos-candidate.tar.gz -C .localdata macos-bundle
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: AntigravityComputerUse-${{ matrix.runner }}-candidate
           path: .localdata/AntigravityComputerUse-macos-candidate.tar.gz
