@@ -27,6 +27,11 @@ test('lease release reports unconfirmed cleanup when a helper does not exit',asy
  const pending=acquireServiceLease(base,{helper:'inert',releaseTimeout:10,cleanupTimeout:30,spawnProcess:()=>child,prepareStorage:async()=>({ok:true})});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true}\n'));
  const lease=await pending;await assert.rejects(lease.release(),e=>e.code==='service_lease_cleanup_unconfirmed');
 });
+test('a broken lease pipe still requires confirmed helper termination',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;child.stdin.end=()=>{throw Error('broken pipe');};child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',releaseTimeout:10,cleanupTimeout:30,spawnProcess:()=>child,prepareStorage:async()=>({ok:true})});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true}\n'));
+ const lease=await pending;await assert.rejects(lease.release(),e=>e.code==='service_lease_cleanup_unconfirmed');
+});
 test('malformed publication acknowledgement fails promptly and retires the helper',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;
  child.kill=()=>{child.exitCode=1;child.emit('exit',1);child.emit('close',1);};

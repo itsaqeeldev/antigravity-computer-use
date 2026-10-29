@@ -43,9 +43,13 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   });
  };
  lease.release=()=>releasePending??=(async()=>{
-  releasing=true;child.stdin.end();
+  releasing=true;
+  // A broken pipe can throw before signalling the helper. Still attempt
+  // termination and confirm its exit; never turn that error into an assumed
+  // release while an updater might be relying on the fence.
+  let pipeClosed=true;try{child.stdin.end();}catch{pipeClosed=false;}
   const waitForExit=async ms=>{let timer;try{return await Promise.race([exited.then(()=>true),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),ms);})]);}finally{clearTimeout(timer);}};
-  if(await waitForExit(releaseTimeout))return;
+  if(pipeClosed&&await waitForExit(releaseTimeout))return;
   try{child.kill();}catch{}
   if(!await waitForExit(cleanupTimeout))throw Object.assign(Error('Ownership helper termination could not be confirmed. Do not start another controller.'),{code:'service_lease_cleanup_unconfirmed'});
  })();

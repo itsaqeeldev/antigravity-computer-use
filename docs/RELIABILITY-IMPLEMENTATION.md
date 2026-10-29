@@ -125,6 +125,8 @@ Inert helper tests exercise delayed exit and refusal; actual OS failure remains
 separate from this test evidence. The updater retains its recovery journal and
 does not start rollback if the helper's exit is unconfirmed, because it cannot
 assume the old fence is still held. A transaction test covers that boundary.
+If closing the helper's pipe throws, release still requests termination and
+requires an exit acknowledgement; an inert broken-pipe test covers that path.
 Rollback and interrupted recovery now validate that every rollback manifest is
 an absolute, non-duplicate `backups/<entry>/rollback.json` inside this install,
 and verify the private tree before shutdown or restoration. Tests cover external,
