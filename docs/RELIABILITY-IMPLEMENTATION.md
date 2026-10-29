@@ -812,3 +812,24 @@ Actual submission attempts remain throttled to at most hourly. Concurrent
 reporters still use the exclusive lease and unknown submission outcomes are not
 replayed. Automated coverage uses isolated fixtures; real installed reporting
 and GitHub submission are not yet qualified.
+
+## Guardian cleanup confirmation
+
+Shutdown previously returned after requesting termination of an unresponsive
+guardian, even if its process had not exited. The controller now waits for the
+process close event, reports `guardian_cleanup_unconfirmed` if it cannot confirm
+exit, and refuses a replacement while the old process remains unresolved.
+Concurrent close requests share the same outcome. Isolated process fixtures cover
+late exit, missing exit, and startup timeout; real native failure injection is
+still pending. This does not resolve shared task ownership issue #7.
+
+## Concurrent native build cache
+
+Windows CI run `40964379469` failed because a build's cleanup could delete a
+different compiler's temporary executable before publication. Cleanup also
+could remove a stamped executable another session was about to launch. The
+compiler now leaves other builds and temporary files alone; a real Windows
+compiler regression verifies both remain. This trades automatic cache pruning
+for correctness until a coordinated, lifetime-aware cleanup exists. The CI
+failure is retained as evidence; a passing local regression is not a substitute
+for the new commit's CI results.

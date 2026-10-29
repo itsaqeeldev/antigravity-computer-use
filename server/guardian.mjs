@@ -4,9 +4,10 @@ import {EventEmitter} from 'node:events';
 import {ensureHost} from './build.mjs';
 
 export class Guardian extends EventEmitter {
-  constructor(env,{spawnProcess=spawn,host=ensureHost,bootTimeout=10000}={}) { super(); this.env=env; this.spawnProcess=spawnProcess;this.host=host;this.bootTimeout=bootTimeout; this.pending=new Map(); this.seq=0; this.state='idle'; }
+  constructor(env,{spawnProcess=spawn,host=ensureHost,bootTimeout=10000,shutdownGrace=3000,killTimeout=3000}={}) { super(); this.env=env; this.spawnProcess=spawnProcess;this.host=host;this.bootTimeout=bootTimeout;this.shutdownGrace=shutdownGrace;this.killTimeout=killTimeout; this.pending=new Map(); this.seq=0; this.state='idle'; }
   async start() {
     if(this.starting)return this.starting;
+    if(this.closing||this.cleanupFailed||this.proc&&!this.initialized)throw Object.assign(Error('Previous local controls have not exited. Inspect diagnostics before starting another.'),{code:'guardian_cleanup_unconfirmed'});
     if(this.proc&&this.initialized) return;
     this.starting=this.boot();
     try{await this.starting;}finally{this.starting=null;}
@@ -35,7 +36,7 @@ export class Guardian extends EventEmitter {
     proc.on('close',(code,signal)=>{
       if(this.proc!==proc)return;
       clearTimeout(this.bootTimer);this.lastExit={code,signal};this.bootReject(failure('guardian_exited','Local controls exited before readiness. Run diagnostics; restarting cannot clear Stop.'));this.initialized=false;
-      this.proc=null;this.state=this.expectedIdleExit?'idle':'stopped';this.emit('state',this.state,this.expectedIdleExit?'normal_shutdown':'guardian_exited');
+      this.proc=null;this.cleanupFailed=false;this.state=this.expectedIdleExit?'idle':'stopped';this.emit('state',this.state,this.expectedIdleExit?'normal_shutdown':'guardian_exited');
       for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('Permission UI closed'));}this.pending.clear();
     });
     proc.on('error',e=>{if(this.proc!==proc)return;clearTimeout(this.bootTimer);this.bootReject(failure('guardian_spawn_failed',e.message));});
@@ -52,9 +53,19 @@ export class Guardian extends EventEmitter {
   }
   async prompt(m){return this.request({op:'prompt',...m});}
   async close({normal=false}={}){
+    if(this.closing)return this.closing;
     const proc=this.proc;if(!proc)return;
     this.expectedIdleExit=normal;
-    this.send({op:'shutdown'});proc.stdin.end();
-    await new Promise(resolve=>{const timer=setTimeout(()=>{try{proc.kill();}catch{}resolve();},3000);proc.once('close',()=>{clearTimeout(timer);resolve();});});
+    this.closing=new Promise((resolve,reject)=>{
+      let grace,deadline;
+      const done=()=>{clearTimeout(grace);clearTimeout(deadline);resolve();};
+      proc.once('close',done);
+      grace=setTimeout(()=>{
+        deadline=setTimeout(()=>{proc.removeListener('close',done);this.cleanupFailed=true;reject(Object.assign(Error('Local controls did not confirm exit. Keep the controller for recovery.'),{code:'guardian_cleanup_unconfirmed'}));},this.killTimeout);
+        try{proc.kill();}catch{}
+      },this.shutdownGrace);
+      try{this.send({op:'shutdown'});proc.stdin.end();}catch{}
+    });
+    try{await this.closing;}finally{this.closing=null;}
   }
 }

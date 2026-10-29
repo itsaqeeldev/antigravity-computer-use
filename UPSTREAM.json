@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "67c3462e5cc61988d0d4a399e86a8f2ed7efbc802cf5566d0ce3344c194bbfca",
+      "local_sha256": "89709bca6373355a378c298a1eec61641a5908b806b48459aa454ba7b06a1c30",
       "modified": true
     },
     {
@@ -228,7 +228,7 @@
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "6fec275466176a4a5e393044f6c0093d60cc3dc545ec43e710680924257ad062"
+      "sha256": "f7135de94762cfd260fcdc374c63bedb259e8d8a0399abaa98f0e54216d78445"
     },
     {
       "path": "server/native/Guardian.cs",
@@ -600,7 +600,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "02e274f289f335ecd4685a5c6aaacefa7adcc1060f1cf83b685123b07bcc7816"
+      "sha256": "7902446e03b9b8539225936fc83c2a7e555a1d724da6ac3266268b7ad8238f38"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "4ff48be2d63c9b30a34b8396a4829b1da176d07689e41fa5f2446da9432b77c2"
+      "sha256": "dc89c732429432c19d238c3f9f474c7b54e01f87e932bffd95984f9db64e62eb"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

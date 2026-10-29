@@ -3,6 +3,16 @@ import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server
 import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
 import {spawn,spawnSync} from 'node:child_process';
 import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERSION} from '../server/version.mjs';
+test('native build preserves another compiler output and an older host',{skip:process.platform!=='win32',timeout:60000},()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'parallel-build-')),bin=path.join(dir,'bin');fs.mkdirSync(bin);
+ const other=path.join(bin,'.build-other-process.exe'),older=path.join(bin,'AxonHost-0123456789abcdef.exe');fs.writeFileSync(other,'another compiler');fs.writeFileSync(older,'another session');
+ try{
+  const script=`import {ensureHost} from ${JSON.stringify(new URL('../server/build.mjs',import.meta.url).href)};ensureHost({force:true});`;
+  const env={...process.env,AGCU_DATA_DIR:dir};delete env.CU_PLUGIN_DATA;delete env.CLAUDE_PLUGIN_DATA;
+  const result=spawnSync(process.execPath,['--input-type=module','-e',script],{env,windowsHide:true,encoding:'utf8',timeout:55000});
+  assert.equal(result.status,0,result.stderr);assert.equal(fs.readFileSync(other,'utf8'),'another compiler');assert.equal(fs.readFileSync(older,'utf8'),'another session');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('concurrent guardian requests wait for one ready process',async()=>{
  let starts=0,child;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const a=g.start(),b=g.start();assert.equal(starts,1);child.stdout.write('{"ev":"ready","pid":123}\n');await Promise.all([a,b]);assert(g.initialized);child.emit('close',2);assert.equal(g.proc,null);assert.equal(g.state,'stopped');
@@ -14,6 +24,26 @@ test('early guardian exit rejects startup promptly and permits one explicit retr
 test('guardian readiness timeout terminates the failed helper and clears startup state',async()=>{
  let killed=0;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{killed++;child.emit('close',null,'SIGTERM');};return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:5});await assert.rejects(g.start(),e=>e.code==='guardian_start_timeout');assert.equal(killed,1);assert.equal(g.starting,null);assert.equal(g.proc,null);
+});
+test('guardian shutdown waits for actual exit and refuses replacement after unconfirmed cleanup',async()=>{
+ let child,starts=0,kills=0;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{kills++;return true;};return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500,shutdownGrace:5,killTimeout:15});
+ const start=g.start();child.stdout.write('{"ev":"ready","pid":123}\n');await start;
+ const first=g.close({normal:true}),second=g.close({normal:true});
+ for(const promise of [first,second])await assert.rejects(promise,e=>e.code==='guardian_cleanup_unconfirmed');
+ assert.equal(kills,1);assert.equal(g.proc,child);await assert.rejects(g.start(),e=>e.code==='guardian_cleanup_unconfirmed');assert.equal(starts,1);
+ child.emit('close',0);assert.equal(g.proc,null);
+ const next=g.start();child.stdout.write('{"ev":"ready","pid":124}\n');await next;child.emit('close',0);
+});
+test('guardian shutdown confirms a late exit after termination request',async()=>{
+ let child;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{setTimeout(()=>child.emit('close',0),5);return true;};return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500,shutdownGrace:5,killTimeout:100});
+ const start=g.start();child.stdout.write('{"ev":"ready","pid":123}\n');await start;await g.close({normal:true});assert.equal(g.proc,null);assert.equal(g.state,'idle');
+});
+test('a timed-out guardian cannot be restarted while its prior process remains live',async()=>{
+ let child,starts=0;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>true;return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:5});await assert.rejects(g.start(),e=>e.code==='guardian_start_timeout');
+ await assert.rejects(g.start(),e=>e.code==='guardian_cleanup_unconfirmed');assert.equal(starts,1);child.emit('close',1);
 });
 test('ready reveals stopped controls without rearming; failure is bounded',async()=>{
  let calls=0;const r={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{}},async showControls(){calls++;return{controls_visible:true};}};

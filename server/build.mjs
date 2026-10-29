@@ -234,7 +234,8 @@ export function ensureHost({ force = false, log = () => {} } = {}) {
     }
   }
 
-  pruneOldBuilds(exe, log);
+  // Other processes can be compiling or about to launch older stamped builds.
+  // Without a shared lifetime lease, deleting either is unsafe.
   warmUp(exe, log);
   log('host built at ' + exe);
   return { exe, rebuilt: true, csc };
@@ -256,17 +257,6 @@ function warmUp(exe, log) {
 // Superseded binaries from earlier versions of the source. A file still being
 // executed by another session cannot be deleted on Windows, and that refusal is
 // exactly the outcome we want, so failures here are ignored.
-function pruneOldBuilds(keep, log) {
-  let entries;
-  try { entries = fs.readdirSync(binDir()); } catch { return; }
-  for (const name of entries) {
-    if (!/^(AxonHost-[0-9a-f]{16}(\.exe)?|\.build-.*|AxonHost\.(exe|stamp))$/.test(name)) continue;
-    const full = path.join(binDir(), name);
-    if (full === keep) continue;
-    try { fs.unlinkSync(full); } catch { /* in use by another session */ }
-  }
-}
-
 function ensureMacHost({ force = false, log = () => {} } = {}) {
   const prebuilt=path.join(HERE,'..','bin','AxonHost.app','Contents','MacOS','AxonHost');
   if(!force&&fs.existsSync(prebuilt)&&!SOURCES.some(file=>fs.existsSync(file)))return {exe:prebuilt,rebuilt:false};
