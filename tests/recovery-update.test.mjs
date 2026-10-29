@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {PassThrough} from 'node:stream';import {EventEmitter} from 'node:events';import {generateKeyPairSync,sign} from 'node:crypto';
 import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server/runtime.mjs';import {Incidents} from '../server/incidents.mjs';import {verifyRelease,verifyStaged,sha256,acquireUpdateLock,downloadFile} from '../server/update-core.mjs';import {testDirectory} from './paths.mjs';import {controllerStartSource} from '../scripts/install.mjs';
-import {failureReply} from '../scripts/desktop.mjs';
+import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
 test('concurrent guardian requests wait for one ready process',async()=>{
  let starts=0,child;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const a=g.start(),b=g.start();assert.equal(starts,1);child.stdout.write('{"ev":"ready","pid":123}\n');await Promise.all([a,b]);assert(g.initialized);child.emit('close',2);assert.equal(g.proc,null);assert.equal(g.state,'stopped');
@@ -43,4 +43,8 @@ test('isolated-desktop guardian errors survive startup and never report visible 
  const guardian=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const boot=guardian.start();child.stdout.write(JSON.stringify({ev:'error',code:'desktop_context_unavailable',message:'Hidden desktop'})+'\n');await assert.rejects(boot,e=>e.code==='desktop_context_unavailable');assert.equal(guardian.initialized,false);
  const runtime={guardian,state:'idle',status:()=>({state:'idle'}),async showControls(){return {controls_visible:false,error:{code:'desktop_context_unavailable',message:'Hidden desktop'}};}};
  const result=await Runtime.prototype.ready.call(runtime);assert.equal(result.ready,false);assert.equal(result.controls_visible,false);assert.equal(result.error.code,'desktop_context_unavailable');
+});
+test('streamed release metadata refuses oversized bodies before buffering all chunks',async()=>{
+ let chunks=0;const reply={ok:true,body:(async function*(){for(let i=0;i<20;i++){chunks++;yield Buffer.alloc(8);}})()};await assert.rejects(readBoundedJSON(reply,12),/update_metadata_size/);assert.equal(chunks,2);
+ assert.deepEqual(await readBoundedJSON({ok:true,body:(async function*(){yield Buffer.from('{"ok":');yield Buffer.from('true}');})()},100),{ok:true});
 });

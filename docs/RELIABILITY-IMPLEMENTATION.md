@@ -190,3 +190,20 @@ guardian when the current desktop is interactive, and otherwise asserts native
 refusal before creating controls. Positive interactive qualification of the new
 helper remains pending: the owner pressed physical Esc during the previous
 desktop trial, so further desktop work was not resumed by a goal continuation.
+
+## Updater concurrency and staging follow-up
+
+The updater now acquires installation ownership before reading deployment state
+or claiming its daily schedule. Scheduled check/recovery/apply share that lease;
+overlapping workers cannot overwrite timing or transaction state. Failed payload
+transfers remove only their newly created stage, and a retry creates fresh private
+storage. Metadata is read with a streaming size bound. Regression tests cover
+concurrent scheduled workers, interrupted-transfer cleanup/retry, numeric version
+ordering, insufficient space and malformed/oversized metadata.
+
+Project pin tests verify the actual pinned launcher and installed skill remain
+byte-identical while the global deployment upgrades. When all scopes are pinned,
+the worker does not reserve, shut down or update the controller. Maintenance
+reservation happens only after update validation. The affected-PC, Sonnet and
+physical/hardware gates remain pending; desktop control has remained stopped
+since the owner's physical Esc.

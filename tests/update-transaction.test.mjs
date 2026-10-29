@@ -70,3 +70,45 @@ test('updating does not re-enable an explicitly disabled Sidecar',async()=>{
 test('insufficient staging space refuses before payload transfer or service shutdown',async()=>{
  const f=fixture();try{f.adapters.diskInfo=()=>({bavail:1,bsize:1});await assert.rejects(update(f.target,'check',f),/update_insufficient_space/);assert.equal(f.fetches(),2);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available,undefined);}finally{f.cleanup();}
 });
+test('overlapping scheduled workers cannot overwrite state or duplicate the daily check',async()=>{
+ const f=fixture();try{
+  fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false}));
+  let entered,release;const gate=new Promise(r=>release=r),started=new Promise(r=>entered=r);let first=true;
+  const blocked={...f,fetcher:async url=>{if(first){first=false;entered();await gate;}return f.fetcher(url);}};
+  const worker=update(f.target,'scheduled',blocked);await started;
+  const before=fs.readFileSync(path.join(f.target,'update-state.json'),'utf8');
+  await assert.rejects(update(f.target,'scheduled',f),e=>e.code==='EEXIST');
+  assert.equal(fs.readFileSync(path.join(f.target,'update-state.json'),'utf8'),before);
+  release();await worker;const calls=f.fetches();await update(f.target,'scheduled',f);assert.equal(f.fetches(),calls);
+ }finally{f.cleanup();}
+});
+test('a worker reads the current installation after acquiring ownership, not a prior snapshot',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);await update(f.target,'apply',f);
+  const again=await update(f.target,'check',f);assert.equal(again.available,false);assert.equal((await update(f.target,'status',f)).available,false);
+ }finally{f.cleanup();}
+});
+test('failed payload transfer removes only its own partial stage and permits a clean retry',async()=>{
+ const f=fixture();try{
+  const keep=path.join(f.target,'updates','keep-evidence');fs.mkdirSync(keep,{recursive:true});fs.writeFileSync(path.join(keep,'keep'),'retain');
+  const broken={...f,fetcher:async url=>{const response=await f.fetcher(url);if(response.body)return {ok:true,body:(async function*(){yield Buffer.from('corrupt');throw Error('interrupted transfer');})()};return response;}};
+  await assert.rejects(update(f.target,'check',broken));assert.deepEqual(fs.readdirSync(path.join(f.target,'updates')),['keep-evidence']);assert.equal(fs.readFileSync(path.join(keep,'keep'),'utf8'),'retain');
+  assert((await update(f.target,'check',f)).available);
+ }finally{f.cleanup();}
+});
+test('a pinned project scope keeps its exact launcher and skill while global updates',async()=>{
+ const f=fixture();try{
+  const workspace=path.join(f.directory,'project');const project=f.adapters.install({bundle:f.old.bundle,target:f.target,workspace,updatePin:true});
+  const launcher=fs.readFileSync(project.launcher,'utf8'),skill=fs.readFileSync(path.join(project.skills[0],'SKILL.md'),'utf8');
+  await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);
+  assert.equal(fs.readFileSync(project.launcher,'utf8'),launcher);assert.equal(fs.readFileSync(path.join(project.skills[0],'SKILL.md'),'utf8'),skill);
+  const registry=JSON.parse(fs.readFileSync(path.join(f.target,'deployments.json')));assert(Object.values(registry).find(s=>s.workspace===workspace).update_pin);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(registry.global.release,'bundle-manifest.json'))).build_id,f.fresh.build_id);
+ }finally{f.cleanup();}
+});
+test('when all scopes are pinned apply does not shutdown the current service',async()=>{
+ const f=fixture();try{f.adapters.prepare=()=>assert.fail('Pinned scopes must not reserve the controller');f.adapters.install({bundle:f.old.bundle,target:f.target,updatePin:true});await update(f.target,'check',f);assert.equal((await update(f.target,'apply',f)).next_action,'all_deployments_pinned');assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}
+});
+test('corrupted update history is refused without resetting sequence or contacting releases',async()=>{
+ const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-state.json'),'{broken');await assert.rejects(update(f.target,'check',f),/update_state_invalid/);assert.equal(f.fetches(),0);assert.equal(fs.readFileSync(path.join(f.target,'update-state.json'),'utf8'),'{broken');assert(!fs.existsSync(path.join(f.target,'update.lock')));}finally{f.cleanup();}
+});

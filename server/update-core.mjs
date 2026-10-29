@@ -41,3 +41,11 @@ export async function downloadFile(url,destination,{size,hash,fetcher=fetch}={})
  try{for await(const chunk of reply.body){length+=chunk.length;if(length>size)throw Error('update_download_size');digest.update(chunk);fs.writeSync(fd,chunk);}if(length!==size||digest.digest('hex')!==hash)throw Error('update_download_hash');fs.closeSync(fd);fs.renameSync(destination+'.part',destination);}
  catch(e){try{fs.closeSync(fd);}catch{}try{fs.unlinkSync(destination+'.part');}catch{}throw e;}
 }
+export async function readBoundedJSON(reply,maxBytes=262144){
+ if(!reply.ok)throw Error('update_metadata_unavailable');
+ const declared=reply.headers?.get('content-length');if(declared&&Number(declared)>maxBytes)throw Error('update_metadata_size');
+ // Streaming prevents an oversized metadata body from being buffered first.
+ if(reply.body){const chunks=[];let length=0;for await(const chunk of reply.body){length+=chunk.length;if(length>maxBytes)throw Error('update_metadata_size');chunks.push(Buffer.from(chunk));}return JSON.parse(Buffer.concat(chunks).toString('utf8'));}
+ // Inert test transports may expose only text/json; real fetch always has body.
+ const text=await reply.text();if(Buffer.byteLength(text)>maxBytes)throw Error('update_metadata_size');return JSON.parse(text);
+}

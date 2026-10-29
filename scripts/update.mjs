@@ -1,6 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {spawnSync} from 'node:child_process';
 import {install} from './install.mjs';import {storageOperation} from '../server/storage.mjs';
-import {verifyRelease,verifyStaged,downloadFile,updateSettings,acquireUpdateLock,newerVersion} from '../server/update-core.mjs';
+import {verifyRelease,verifyStaged,downloadFile,updateSettings,acquireUpdateLock,newerVersion,readBoundedJSON} from '../server/update-core.mjs';
 import {nativePlatform} from '../server/platform.mjs';
 import {randomUUID} from 'node:crypto';
 import {diagnostics} from './diagnostics.mjs';
@@ -8,42 +8,49 @@ import {acquireServiceLease} from '../server/service-lease.mjs';
 import {request} from './desktop.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function update(target,command,{fetcher=fetch,adapters={}}={}){
+ target=path.resolve(target);
+ const storage=adapters.storage||storageOperation;storage('verify',target);
+ if(command==='status')return updateLocked(target,command,{fetcher,adapters});
+ let ownership;
+ if(!adapters.storage){
+  ownership=await acquireServiceLease(target);
+  // The kernel lease is authoritative; a dead worker's marker is stale even
+  // when its PID has since been reused by an unrelated process.
+  try{const file=path.join(target,'update.lock');if(fs.existsSync(file))fs.unlinkSync(file);}catch(error){await ownership.release();throw error;}
+ }
+ let unlock;try{unlock=acquireUpdateLock(target);}catch(error){await ownership?.release();throw error;}
+ try{return await updateLocked(target,command,{fetcher,adapters});}
+ finally{try{unlock();}finally{await ownership?.release();}}
+}
+async function updateLocked(target,command,{fetcher,adapters}){
  // Only imported tests inject inert native/installer boundaries; no CLI/env bypass.
  const storage=adapters.storage||storageOperation,installer=adapters.install||install;
  target=path.resolve(target);storage('verify',target);
  const installed=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));
  const bundle=JSON.parse(fs.readFileSync(path.join(installed.release,'bundle-manifest.json')));
  const settings=updateSettings(target,bundle.version),stateFile=path.join(target,'update-state.json');
- const read=()=>{try{return JSON.parse(fs.readFileSync(stateFile));}catch{return {};}};
+ const read=()=>{
+  if(!fs.existsSync(stateFile))return {};
+  try{const value=JSON.parse(fs.readFileSync(stateFile));if(!value||typeof value!=='object'||Array.isArray(value)||value.sequence!=null&&(!Number.isSafeInteger(value.sequence)||value.sequence<0))throw Error();return value;}
+  catch{throw Error('update_state_invalid');}
+ };
  const save=v=>{fs.writeFileSync(stateFile+'.tmp',JSON.stringify(v),{mode:0o600});fs.renameSync(stateFile+'.tmp',stateFile);};
  if(command==='scheduled'){
   const now=Date.now(),last=read();
-  if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await update(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
+  if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await updateLocked(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
   if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=86400000)){
    const result=diagnostics(path.join(target,'data'),{submit:true,target});save({...read(),reporting_at:now,reporting_status:result.next_action||'complete'});
   }
   if(settings.mode==='manual')return {skipped:true};
   if(!last.attempt_at||now-last.attempt_at>=86400000){
    save({...read(),attempt_at:now});
-   try{await update(target,'check',{fetcher,adapters});}catch(error){save({...read(),attempt_at:now,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_check_failed'});return {deferred:true,next_action:'retry_next_day'};}
+   try{await updateLocked(target,'check',{fetcher,adapters});}catch(error){save({...read(),attempt_at:now,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_check_failed'});return {deferred:true,next_action:'retry_next_day'};}
   }
-  if(settings.mode==='automatic'&&read().available){try{return await update(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
+  if(settings.mode==='automatic'&&read().available){try{return await updateLocked(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
   return {checked:true};
  }
  if(command==='status'){let worker;try{worker=JSON.parse(fs.readFileSync(path.join(target,'update-worker-result.json')));}catch{}return {settings,...read(),worker,interrupted_switch:fs.existsSync(path.join(target,'update-switching.json'))};}
  if(!['check','apply','rollback','recover'].includes(command))throw Error('Use update status|check|apply|rollback');
- let ownership;
- if(!adapters.storage){
-  ownership=await acquireServiceLease(target);
-  const lockFile=path.join(target,'update.lock');
-  if(fs.existsSync(lockFile)){
-   // Holding the native lease proves a leftover marker has no live updater
-   // owner. A reused PID must not strand the installation indefinitely.
-   try{fs.unlinkSync(lockFile);}
-   catch(error){await ownership.release();throw error;}
-  }
- }
- let unlock;try{unlock=acquireUpdateLock(target);}catch(error){await ownership?.release();throw error;}
  const switchingFile=path.join(target,'update-switching.json');let switching=false,safeToUnlock=true;
  try{
   const state=read();
@@ -56,28 +63,36 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    const asset=release.assets?.find(a=>a.name===`update-${process.platform}-${process.arch}.json`);if(!asset)return {available:false,next_action:'no_signed_release_for_platform'};
    const assetURL=new URL(asset.browser_download_url);if(assetURL.protocol!=='https:'||assetURL.hostname!=='github.com'||!assetURL.pathname.startsWith('/shayann07/antigravity-computer-use/releases/download/'))throw Error('update_metadata_origin_invalid');
    const envelopeResponse=await fetcher(asset.browser_download_url,{signal:AbortSignal.timeout(15000)});if(!envelopeResponse.ok)throw Error('update_metadata_unavailable');
-   const text=await envelopeResponse.text();if(text.length>262144)throw Error('update_metadata_size');const envelope=JSON.parse(text);
+   const envelope=await readBoundedJSON(envelopeResponse);
    const bytes=Buffer.from(envelope.manifest,'base64'),m=verifyRelease(bytes,envelope.signature,fs.readFileSync(keyFile),{channel:settings.channel});
    if(m.sequence<=(state.sequence||0)||!newerVersion(m.version,bundle.version)){save({...state,available:false,attempt_at:Date.now()});return {available:false};}
    // A fresh directory lets an interrupted download retry without adopting partial bytes.
    const stage=path.join(target,'updates',String(m.sequence)+'-'+randomUUID());fs.mkdirSync(stage,{recursive:true,mode:0o700});
+   try{
    const required=Object.values(m.files).reduce((n,f)=>n+f.size,0)*2+100*1024*1024;const disk=adapters.diskInfo?adapters.diskInfo(stage):fs.statfsSync(stage);if(disk.bavail*disk.bsize<required)throw Error('update_insufficient_space');
    for(const [name,f]of Object.entries(m.files)){const destination=path.join(stage,name);fs.mkdirSync(path.dirname(destination),{recursive:true});await downloadFile(f.url,destination,{size:f.size,hash:f.sha256,fetcher});if(process.platform!=='win32'&&(name==='node'||name.startsWith('bin/')||name.endsWith('.command')))fs.chmodSync(destination,0o700);}
    verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
+   }catch(error){
+    // Only this invocation's freshly created stage may be removed. Never touch
+    // retained releases, rollback journals, previous stages or user folders.
+    if(path.dirname(stage)===path.join(target,'updates')&&!fs.lstatSync(stage).isSymbolicLink())fs.rmSync(stage,{recursive:true,force:true});
+    throw error;
+   }
   }
   const current=cli(installed,['status']);if(!['idle','not_running','stopped'].includes(current.state)||current.approved_apps?.length)return {deferred:true,next_action:'wait_for_task_end'};
   const serviceRunning=current.state!=='not_running'&&current.reconnect_required!==true;
-  if(serviceRunning){
+  const reserve=async()=>{if(!serviceRunning)return true;
    const session=adapters.prepare?null:JSON.parse(fs.readFileSync(path.join(target,'data/desktop-session.json')));
    const prepared=adapters.prepare?await adapters.prepare(current):await request(session,'prepare_update',{},5000,current.permission_mode);
-   if(!prepared.prepared)return {deferred:true,next_action:'wait_for_task_end'};
-  }
+   return prepared.prepared===true;
+  };
   const runRollback=adapters.rollback||(file=>{const p=spawnSync(path.join(installed.release,nativePlatform().node),[path.join(installed.release,'scripts/rollback.mjs'),file],{encoding:'utf8',timeout:30000,windowsHide:true});if(p.status!==0)throw Error('update_rollback_failed');});
   if(command==='recover'){
    if(!fs.existsSync(switchingFile))return {recovered:false};
    const interrupted=JSON.parse(fs.readFileSync(switchingFile));
    if(!Array.isArray(interrupted.rollback)||!interrupted.previous_installation)throw Error('update_recovery_journal_invalid');
    for(const file of interrupted.rollback){if(path.dirname(path.dirname(path.resolve(file)))!==path.join(target,'backups')||path.basename(file)!=='rollback.json')throw Error('update_recovery_journal_invalid');}
+   if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
    switching=true;safeToUnlock=false;
    if(serviceRunning)cli(installed,['shutdown']);
    for(const file of [...interrupted.rollback].reverse())runRollback(file);
@@ -89,7 +104,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   const markSwitch=()=>{if(fs.existsSync(switchingFile))throw Error('update_interrupted_requires_recovery');journal={pid:process.pid,previous_installation:installed,rollback:[]};fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600,flag:'wx'});switching=true;};
   const addJournal=file=>{journal.rollback.push(file);fs.writeFileSync(switchingFile+'.tmp',JSON.stringify(journal),{mode:0o600});fs.renameSync(switchingFile+'.tmp',switchingFile);};
   if(command==='rollback'){
-   if(!state.rollback?.length)throw Error('update_no_rollback');markSwitch();
+   if(!state.rollback?.length)throw Error('update_no_rollback');if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600});
    if(serviceRunning)cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
@@ -104,6 +119,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   if(stagedBundle.build_id!==m.build_id||stagedBundle.version!==m.version||stagedBundle.platform!==m.platform||stagedBundle.arch!==m.arch)throw Error('update_bundle_identity_mismatch');
   const registry=JSON.parse(fs.readFileSync(path.join(target,'deployments.json')));
   if(!Object.values(registry).some(scope=>!scope.update_pin))return {deferred:true,next_action:'all_deployments_pinned'};
+  if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
   markSwitch();
   // Installer refuses live controllers. Shutdown independently confirms native cleanup.
   if(serviceRunning)cli(installed,['shutdown']);
@@ -126,7 +142,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;cli(installed,['start']);save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
- }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);unlock();await ownership?.release();}
+ }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const [target,command,parent]=process.argv.slice(2);
