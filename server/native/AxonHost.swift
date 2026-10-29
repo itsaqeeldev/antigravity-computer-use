@@ -637,6 +637,9 @@ func markedEvent(_ e: CGEvent?) -> CGEvent? {
 
 func post(_ e: CGEvent?) throws {
     try MacFence.check()
+    guard AXIsProcessTrusted(), CGPreflightPostEventAccess() else {
+        throw AxonError("mac_permissions_required", "Native input permission was revoked. No further input was sent.")
+    }
     guard let event = markedEvent(e) else { throw AxonError("event_creation_failed", "Cannot construct native input.") }
     try MacInputLedger.record(event, before: true)
     try MacFence.dispatched(); event.post(tap: .cghidEventTap)

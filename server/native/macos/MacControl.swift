@@ -133,6 +133,10 @@ enum MacFence {
               watchdog.count == 2, let pid = pid_t(watchdog[0]), try macProcessStart(pid) == String(watchdog[1]) else {
             throw AxonError("control_stopped", "Independent Stop monitoring is unavailable.")
         }
+        guard let guardian = try? String(contentsOfFile: file + ".guardian", encoding: .utf8).split(separator: "|"),
+              guardian.count == 2, let pid = pid_t(guardian[0]), try macProcessStart(pid) == String(guardian[1]) else {
+            throw AxonError("control_stopped", "Native permission authority is unavailable.")
+        }
         if current["hwnd"] != nil {
             let (_, pid, _, _) = try resolveWindow(current)
             let identity = try macIdentity(pid)

@@ -34,6 +34,11 @@ browser extension or required MCP server.
 > have passed, but overall orchestration speed and wider reliability qualification
 > remain unfinished. See [what is verified](#status-and-limits) before installing.
 
+**macOS development:** an experimental Apple Silicon/Intel adapter shares the
+same controller, tool schemas and `/computer-use` skill. It is undergoing native
+CI and installation checks; actual Mac desktop acceptance is still pending.
+[Mac candidate and qualification details](docs/MACOS.md).
+
 ## See it in action
 
 <p align="center">

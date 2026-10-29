@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "9cb6a11bf000b8aba1a758cc30b049adb5f5b82633a36c3695355bf3099cad69",
+      "local_sha256": "77b94fe1b20eb3d0c138b01b76bbbe394866bf6840d87d94f90dee7b1194f78b",
       "modified": true
     },
     {
@@ -456,7 +456,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "63b13d09412f5930b3c3abfaf0ab2b8eaa87622bf7cd68d7b778753ecb0823a6"
+      "sha256": "5833c1750476c683e57c11418dc0486aaf31542646e46a4a2810f46888d49aa1"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -524,7 +524,7 @@
     },
     {
       "path": "scripts/macos-native-check.mjs",
-      "sha256": "04b1ebdc72f87e45050d3860f3f3bf687309c9a114d9bc1ec4b6597dd678d357"
+      "sha256": "cc3b5f1d765ae272b15cb5011abfbe0ed50e33f75e70caef5660dd2fd49b6e3e"
     },
     {
       "path": ".github/workflows/macos.yml",
@@ -532,7 +532,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "d16a997b46bb7ee2198bcc3b8bf3bdf9d853d8e3fa34191e34c72bb5855ce4c7"
+      "sha256": "d478ee851e57fa704e23e09c7c5c111200267329e7c053d9dcc0a2b67ac5c702"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "b785d59823c3b68f106c41afe7f1b58454d61e4ab964cf14d5a45af572370bbc"
+      "sha256": "cd7080b66f1b6212ebb8b86c735184dd913b5aeebed4d845653d152dc669982f"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -565,6 +565,14 @@
     {
       "path": "scripts/macos-install-check.mjs",
       "sha256": "28d852134d515616054e49663c92e55e66feac29952fd8ad3ded976b44fa8512"
+    },
+    {
+      "path": "skills/computer-use/SKILL.md",
+      "sha256": "e58d31b6f8ff8b078c1f1dabebce5512f1b6a30cae834d9febec3134bf0bc58b"
+    },
+    {
+      "path": "docs/MACOS.md",
+      "sha256": "43b038c28628902532618665deb9eea5c0dfe4e9d73c1e6ad12dc3a98fd2f576"
     }
   ]
 }

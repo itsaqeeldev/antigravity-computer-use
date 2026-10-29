@@ -1,3 +1,20 @@
+# Shared macOS adapter — 29 October 2026
+
+Development branch: `codex/macos-and-latency-review`. The macOS adapter uses the
+existing shared Node runtime, observations, batches, limits, tool vocabulary,
+installer, rollback and global skill. Native AX/ScreenCaptureKit/CGEvent/AppKit
+implementations supply OS calls and enforce local consent and independent Stop.
+Windows now also reads common policy/visual tokens from `control-contract.json`.
+
+Apple Silicon and Intel compilation passed at `7dc7a54`; native storage/lease
+checks passed, while a shared test fixture failed because it populated an
+unqualified data directory. The fixture is repaired without changing the guard.
+Installation and lifecycle qualification is still running on the candidate;
+interactive Mac acceptance, including actual Antigravity tasks, is **unrun**.
+See [Mac qualification](docs/MACOS.md) and the exact-head CI. This branch is not a
+published release, a Windows installation update, or proof of performance parity.
+The separate Antigravity latency worktree remains untouched.
+
 # Automatic-startup repair — recorded 28 October 2026
 
 On 27 October, enabled the existing Computer Use Sidecar at the owner's request. Antigravity automatically started the published beta.2 build `23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777`, without a manual launcher or App restart. Both installed scopes passed 75-file payload checks. Passive startup created no guardian; native read-only discovery passed, End left no grants, and emergency Stop remained latched. Unrelated settings were preserved. The enabled setting was rechecked on 28 October; no new runtime build, desktop input or full AI qualification was performed. See [HANDOFF.md](HANDOFF.md).

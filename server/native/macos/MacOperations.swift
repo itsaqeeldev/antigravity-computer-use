@@ -113,7 +113,24 @@ func macContractTest() throws {
     guard a == b, a != c, MacFence.sensitive("click", ["__risk":"routine"], label: "Delete file"),
           !MacFence.sensitive("click", ["__risk":"routine"], label: "Open settings Button"),
           try macProcessStart(getpid()) == macProcessStart(getpid()) else { throw AxonError("contract_test_failed", "Approval fingerprint or classification differs.") }
-    emit(["ok": true, "control_contract": 1, "checks": ["shared state codec", "malformed state refusal", "canonical approval fingerprint", "sensitive action classification", "kernel process birth identity"], "desktop_input_sent": false])
+    // Exercise the actual native fence in isolated project-local storage.
+    // Refusals only: no fake live permission, application grant or input event.
+    try MacFence.initialize()
+    MacFence.current = ["__session": token]
+    let live = "active|\(token)|\(MacFenceState.now + 10_000_000)|"
+    func refused(_ state: String, _ description: String) throws {
+        try MacFence.write(state)
+        do { try MacFence.check(); throw AxonError("contract_test_failed", "Fence accepted \(description).") }
+        catch let error as AxonError { if error.code != "control_stopped" { throw error } }
+    }
+    for mode in ["idle", "paused", "stopped"] { try refused("\(mode)|\(token)|\(MacFenceState.now + 10_000_000)|", mode) }
+    try refused("active|\(token)|1|", "expired control")
+    try refused("active|another-session|\(MacFenceState.now + 10_000_000)|", "wrong session")
+    try refused(live, "missing independent Stop monitor")
+    try Data("stopped".utf8).write(to: URL(fileURLWithPath: MacFence.latch))
+    defer { try? FileManager.default.removeItem(atPath: MacFence.latch); try? MacFence.write("idle||0|") }
+    try refused(live, "latched emergency Stop")
+    emit(["ok": true, "control_contract": 1, "checks": ["shared state codec", "malformed state refusal", "canonical approval fingerprint", "sensitive action classification", "kernel process birth identity", "native idle/paused/stopped/expired/session/monitor/Stop refusals"], "desktop_input_sent": false])
 }
 
 func macMoveCursor(_ point: CGPoint, _ args: [String: Any]) throws -> [String: Any] {
@@ -253,7 +270,15 @@ func macFitWindow(_ args: [String: Any]) throws -> [String: Any] {
           AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, pointValue) == .success else {
         throw AxonError("input_outcome_unknown", "The app did not confirm its new geometry. Observe before retrying.")
     }
-    return ["rect": axRect(window) as Any, "fully_visible": true]
+    let deadline = Date().addingTimeInterval(0.4)
+    repeat {
+        try MacFence.check()
+        if let actual = axRect(window), screen.contains(CGRect(x:actual[0],y:actual[1],width:actual[2],height:actual[3])) {
+            return ["rect":actual,"fully_visible":true]
+        }
+        Thread.sleep(forTimeInterval:0.02)
+    } while Date() < deadline
+    throw AxonError("input_outcome_unknown", "The app acknowledged fitting but its bounds are not fully visible. Observe before continuing; do not replay input.")
 }
 
 func macLaunch(_ args: [String: Any]) throws -> [String: Any] {

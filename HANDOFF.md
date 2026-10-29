@@ -313,3 +313,23 @@ For a source review start with `server/runtime.mjs`, `desktop-tools.mjs`,
 `desktop-service.mjs`, `service-lease.mjs`, `scripts/desktop.mjs`, `arguments.mjs`,
 `install.mjs`, `rollback.mjs` and native `Guardian.cs`, `AxonHost.cs`, `CursorSafety.cs`
 and `DesktopVisuals.cs`. See [review guidance](docs/review-guide.md).
+# 29 October 2026 — shared Mac adapter candidate
+
+Continue from `codex/macos-and-latency-review` for the Mac adapter. Read
+[docs/MACOS.md](docs/MACOS.md) for architecture, candidate installation and the
+explicit pending hardware checklist. Shared runtime/tool/permission contracts
+must remain common to both platforms; native implementation details differ.
+
+Both architectures compiled on CI at `7dc7a54`. A storage fixture failed before
+installer qualification and is repaired in `787ddb1`; inspect the latest CI,
+not those historical results. Further source hardening checks input permission
+at every CGEvent and verifies fit-window bounds. Real desktop acceptance is
+unrun. Headless tests must never be reported as a human Stop or app-workflow pass.
+Keep the candidate unmerged/unreleased until those boundaries are addressed.
+
+The installed Windows recording build and published beta.2 remain different;
+this work did not update either. The real 39-second Upscaly demo is already on
+main. Antigravity's separate `reduce_orchestration_latency` worktree was not
+modified or merged. Project speed remains unfinished; projected savings are not
+matched real Antigravity benchmark results. No automation or goal was recreated.
+
