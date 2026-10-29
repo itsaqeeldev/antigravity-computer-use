@@ -1,5 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
 import {Incidents} from '../server/incidents.mjs';import {updateSettings} from '../server/update-core.mjs';
+import {writeAtomicJSON} from '../server/atomic-json.mjs';
 export function diagnostics(directory,{submit=false,target=path.dirname(directory),run=spawnSync,now=Date.now()}={}){
  const incidents=new Incidents(directory),reports=incidents.read();if(!submit)return {reports,pending:reports.filter(r=>r.pending).length};
  if(!updateSettings(target).reporting)return {submitted:0,next_action:'reporting_consent_required'};
@@ -16,7 +17,10 @@ export function diagnostics(directory,{submit=false,target=path.dirname(director
    const result=run('gh',['issue','create','--repo','shayann07/antigravity-computer-use','--title',title,'--body-file','-'],{input:body,encoding:'utf8',timeout:15000,windowsHide:true});if(result.status!==0)return {submitted,next_action:'github_submission_failed'};}
   item.pending=false;submitted++;
  }
- // Reload after network work so incidents created meanwhile are not discarded.
- const latest=incidents.read();for(const item of latest){const sent=reports.find(r=>r.id===item.id&&!r.pending);if(sent)item.pending=false;}
- fs.writeFileSync(incidents.file+'.tmp',JSON.stringify(latest),{mode:0o600});fs.renameSync(incidents.file+'.tmp',incidents.file);return {submitted};
+ // Report acknowledgements live separately: the reporting worker never rewrites
+ // the controller's incident journal or its temporary file.
+ let acks={};try{const value=JSON.parse(fs.readFileSync(incidents.ackFile));if(value&&typeof value==='object'&&!Array.isArray(value))acks=value;}catch{}
+ for(const item of reports.filter(r=>!r.pending))acks[item.id]=item.count;
+ const bounded=Object.fromEntries(Object.entries(acks).filter(([id,count])=>/^[a-f0-9]{24}$/.test(id)&&Number.isSafeInteger(count)&&count>=0).slice(-100));
+ writeAtomicJSON(incidents.ackFile,bounded);return {submitted};
 }

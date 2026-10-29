@@ -20,14 +20,13 @@ in `.localdata/`. No release completion is claimed here.
 
 ### Open diagnostics concurrency defect
 
-`Incidents.record()` and the reporting worker both rewrite `incidents.json`
-using the same `.tmp` pathname in separate processes. The worker reloads after
-network work, but its read/modify/write is not serialized with recording. A
-simultaneous record can collide with the temporary file or be overwritten, so
-local recording is not yet qualified under concurrent submission. Repair this
-with crash-safe cross-process coordination, retain pending records on failure,
-and add deterministic overlapping-process tests before release; do not treat
-the existing single-process reporting tests as evidence for this case.
+The old recorder and reporting worker both rewrote `incidents.json` through the
+same `.tmp` pathname. A deterministic two-process test reproduced `ENOENT` when
+a new incident arrived during publication. The candidate now stores bounded
+report acknowledgements separately, and the regression verifies that a new
+incident and a newer occurrence of the same incident remain pending. Concurrent
+reporting workers and interrupted acknowledgement writes still need independent
+qualification before release; single-process reporting tests do not prove them.
 
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
