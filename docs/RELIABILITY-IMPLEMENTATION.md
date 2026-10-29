@@ -18,6 +18,13 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+The current Windows installation was locally upgraded from source `f6bfa1f` to
+build `6b4d9d967478f383c5cb620bee7f6d2a898510040b10926e08b534fd7a059c7b`.
+Its 108 files and global skill match, the service starts passively idle, and
+configuration and project pins were preserved. Stop was not latched during the
+upgrade. Automatic signed-update acceptance and an actual model task on this
+build remain pending. The upgrade receipt is kept in `.localdata/`.
+
 Signed updater metadata now requires a three-component numeric minimum OS and
 a valid detected OS version before comparison. Malformed and out-of-range
 components are refused rather than coerced. Focused signature and transaction
