@@ -8,6 +8,14 @@ test('no reporting consent means no network command and reports stay pending',as
 test('missing GitHub authentication keeps pending reports and applies retry backoff',async()=>{const f=fixture(true);try{let calls=0;const run=()=>{calls++;return {status:1,stderr:'private credentials'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'github_authentication_or_network_required');assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).next_action,'reporting_backoff');assert.equal(calls,1);assert(f.i.read()[0].pending);}finally{f.clean();}});
 test('consented submission sends sanitized metadata once and resolves duplicate issues',async()=>{for(const duplicate of [false,true]){const f=fixture(true);try{let created=0;const run=(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:JSON.stringify(duplicate?[{number:1,title:'[automatic incident '+f.i.read()[0].id+'] '+process.platform+': stale_observation'}]:[])};created++;assert(!options.input.includes('private password'));assert(args.includes('--body-file'));return {status:0,stdout:'https://github.com/example/issue'};};assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run})).submitted,1);assert.equal(created,duplicate?0:1);assert.equal(f.i.read()[0].pending,false);}finally{f.clean();}}});
 test('submission revalidates stored incidents and drops injected private fields',async()=>{const f=fixture(true);try{const records=f.i.read();records[0].screenshot='C:/private-secret';records[0].clipboard='private-secret';fs.writeFileSync(f.i.file,JSON.stringify(records));let created=false;await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:(_exe,args,options)=>{if(args[1]==='list')return {status:0,stdout:'[]'};created=true;assert(!options.input.includes('private-secret'));return {status:0};}});assert(created);}finally{f.clean();}});
+test('corrupt incident data is preserved and prevents recording or submission',async()=>{
+ for(const corrupt of ['journal','ack','oversized']){const f=fixture(true);try{
+  const file=corrupt==='ack'?f.i.ackFile:f.i.file,contents=corrupt==='oversized'?'x'.repeat(256*1024+1):'{broken';fs.writeFileSync(file,contents);
+  assert.throws(()=>f.i.record('computer_ready',{error:{code:'guardian_exited'}}),e=>e.code==='diagnostic_journal_invalid');assert.equal(fs.readFileSync(file,'utf8'),contents);
+  assert.equal((await diagnostics(f.directory)).next_action,'diagnostic_journal_invalid');
+  assert.equal((await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('must not contact GitHub')})).next_action,'diagnostic_journal_invalid');
+ }finally{f.clean();}}
+});
 
 test('overlapping reporters defer the second submission and preserve pending incidents',async()=>{
  const f=fixture(true);let held=false,entered,release;const started=new Promise(r=>entered=r),gate=new Promise(r=>release=r);let creates=0;

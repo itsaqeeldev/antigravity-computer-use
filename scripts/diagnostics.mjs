@@ -4,11 +4,11 @@ import {writeAtomicJSON} from '../server/atomic-json.mjs';
 import {storageOperationAsync} from '../server/storage.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
 async function reportingLease(directory){await storageOperationAsync('verify',directory);const lockDir=path.join(directory,'reporting-lease');fs.mkdirSync(lockDir,{recursive:true,mode:0o700});return acquireServiceLease(lockDir);}
 export async function diagnostics(directory,{submit=false,target=path.dirname(directory),run=spawnSync,now=Date.now(),acquire=reportingLease}={}){
- const incidents=new Incidents(directory);if(!submit){const reports=incidents.read();let intent;try{const value=JSON.parse(fs.readFileSync(path.join(directory,'reporting-intent.json')));if(/^[a-f0-9]{24}$/.test(value?.id||''))intent=value.id;}catch{}return {reports,pending:reports.filter(r=>r.pending).length,...(intent?{next_action:'github_submission_outcome_unknown',incident_id:intent}:{})};}
+ const incidents=new Incidents(directory);if(!submit){let reports;try{reports=incidents.read({strict:true});}catch{return {reports:[],pending:null,next_action:'diagnostic_journal_invalid'};}let intent;try{const value=JSON.parse(fs.readFileSync(path.join(directory,'reporting-intent.json')));if(/^[a-f0-9]{24}$/.test(value?.id||''))intent=value.id;}catch{}return {reports,pending:reports.filter(r=>r.pending).length,...(intent?{next_action:'github_submission_outcome_unknown',incident_id:intent}:{})};}
  if(!updateSettings(target).reporting)return {submitted:0,next_action:'reporting_consent_required'};
  let lease;try{lease=await acquire(directory);}catch(error){return {submitted:0,next_action:error.code==='service_already_running'?'reporting_in_progress':'reporting_lock_unavailable'};}
  try{
- const reports=incidents.read();
+ let reports;try{reports=incidents.read({strict:true});}catch{return {submitted:0,next_action:'diagnostic_journal_invalid'};}
  const throttleFile=path.join(directory,'reporting-state.json');let last;try{last=JSON.parse(fs.readFileSync(throttleFile));}catch{}
  if(last?.attempt_at&&now-last.attempt_at<3600000)return {submitted:0,next_action:'reporting_backoff'};
  fs.mkdirSync(directory,{recursive:true});fs.writeFileSync(throttleFile,JSON.stringify({attempt_at:now}),{mode:0o600});

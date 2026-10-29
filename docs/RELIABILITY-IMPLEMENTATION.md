@@ -128,6 +128,10 @@ a full local pass. A subsequent full run also hit the human-launcher fixture's
 10-second timeout; the focused test and a full retry passed, but the reason for
 the timeout remains unproven. Abrupt process death can still interrupt an
 in-flight record.
+Malformed or oversized journal data and malformed acknowledgement files now
+refuse recording and reporting with `diagnostic_journal_invalid`; existing bytes
+are retained for inspection. This prevents a damaged journal from being treated
+as an empty one and overwritten. Focused tests cover each case.
 
 The old recorder and reporting worker both rewrote `incidents.json` through the
 same `.tmp` pathname. A deterministic two-process test reproduced `ENOENT` when

@@ -8,11 +8,11 @@ function incident(command,result){const code=result.error?.code||result.verifica
 }
 export class Incidents {
  constructor(directory){this.directory=directory;this.file=path.join(directory,'incidents.json');this.ackFile=path.join(directory,'incident-acks.json');}
- read(){
+ read({strict=false}={}){
   try{
-   if(fs.statSync(this.file).size>256*1024)return [];
-   const data=JSON.parse(fs.readFileSync(this.file));if(!Array.isArray(data))return [];
-   let acknowledgements={};try{const a=JSON.parse(fs.readFileSync(this.ackFile));if(a&&typeof a==='object'&&!Array.isArray(a))acknowledgements=a;}catch{}
+   if(fs.statSync(this.file).size>256*1024)throw Error('incident journal too large');
+   const data=JSON.parse(fs.readFileSync(this.file));if(!Array.isArray(data))throw Error('incident journal is not an array');
+   let acknowledgements={};try{const a=JSON.parse(fs.readFileSync(this.ackFile));if(!a||typeof a!=='object'||Array.isArray(a))throw Error('invalid acknowledgements');acknowledgements=a;}catch(error){if(strict&&error.code!=='ENOENT')throw error;}
    return data.slice(-100).filter(e=>/^[a-f0-9]{24}$/.test(e.id||'')).map(e=>({
     id:e.id,build:/^[a-zA-Z0-9_-]{1,64}$/.test(e.build||'')?e.build:'unknown',platform:['win32','darwin','linux'].includes(e.platform)?e.platform:'unknown',arch:['x64','arm64'].includes(e.arch)?e.arch:'unknown',
     operation:safe(e.operation),code:safe(e.code),state:safe(e.state),delivery_unknown:e.delivery_unknown===true,exit_code:Number.isSafeInteger(e.exit_code)?e.exit_code:null,
@@ -20,11 +20,11 @@ export class Incidents {
     first:/^\d{4}-\d\d-\d\dT[\d:.]+Z$/.test(e.first||'')?String(e.first).slice(0,24):null,
     last:/^\d{4}-\d\d-\d\dT[\d:.]+Z$/.test(e.last||'')?String(e.last).slice(0,24):null,pending:e.pending!==false&&!(Number.isSafeInteger(acknowledgements[e.id])&&acknowledgements[e.id]>=(e.count||0))
    }));
-  }catch{return [];}
+  }catch(error){if(strict&&error.code!=='ENOENT')throw Object.assign(Error('Incident journal requires inspection; existing data was retained.'),{code:'diagnostic_journal_invalid',cause:error});return [];}
  }
  record(command,result,{guard}={}){
   const details=incident(command,result);if(!details)return;const {event,id}=details;
-  const all=this.read();let item=all.find(e=>e.id===id);if(!item){item={id,...event,count:0,first:new Date().toISOString(),pending:true};all.push(item);}if(item.count===Number.MAX_SAFE_INTEGER)throw Object.assign(new Error('Incident counter exhausted'),{code:'incident_counter_exhausted'});item.count++;item.pending=true;item.last=new Date().toISOString();
+  const all=this.read({strict:true});let item=all.find(e=>e.id===id);if(!item){item={id,...event,count:0,first:new Date().toISOString(),pending:true};all.push(item);}if(item.count===Number.MAX_SAFE_INTEGER)throw Object.assign(new Error('Incident counter exhausted'),{code:'incident_counter_exhausted'});item.count++;item.pending=true;item.last=new Date().toISOString();
   const io=guard?{...fs,renameSync(from,to){guard();return fs.renameSync(from,to);}}:fs;
   writeAtomicJSON(this.file,all.slice(-100),{io});return id;
  }
