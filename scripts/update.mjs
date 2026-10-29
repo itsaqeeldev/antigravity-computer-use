@@ -70,7 +70,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   const startVerified=(record,errorCode)=>{
    const expected=JSON.parse(fs.readFileSync(path.join(record.release,'bundle-manifest.json'))).build_id;
    const health=cli(record,['start']);
-   if(health.ok===false||health.build_id!==expected||!['idle','stopped'].includes(health.state))throw Error(errorCode);
+   if(health.ok!==true||health.build_id!==expected||!['idle','stopped'].includes(health.state))throw Error(errorCode);
    return health;
   };
   if(command==='check'){
@@ -104,7 +104,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
     throw error;
    }
   }
-  const current=cli(installed,['status']);if(!['idle','not_running','stopped'].includes(current.state)||current.approved_apps?.length)return {deferred:true,next_action:'wait_for_task_end'};
+  const current=cli(installed,['status']);if(current.ok!==true)throw Error('update_controller_check_failed');if(!['idle','not_running','stopped'].includes(current.state)||current.approved_apps?.length)return {deferred:true,next_action:'wait_for_task_end'};
   const serviceRunning=current.state!=='not_running'&&current.reconnect_required!==true;
   const reserve=async()=>{if(!serviceRunning)return true;
    const session=adapters.prepare?null:JSON.parse(fs.readFileSync(path.join(target,'data/desktop-session.json')));
@@ -158,14 +158,14 @@ async function updateLocked(target,command,{fetcher,adapters}){
     safeToUnlock=false;next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,stagedUpdate:true,journalCreated:addJournal});records.push(path.join(next.backup,'rollback.json'));
    }
    if(!next)throw Error('update_no_deployment');await controllerLease?.release();controllerLease=null;
-   const health=cli(next,['start']);if(health.build_id!==m.build_id||!['idle','stopped'].includes(health.state))throw Error('update_health_failed');
+   const health=startVerified(next,'update_health_failed');if(health.build_id!==m.build_id)throw Error('update_health_failed');
    // Project installation order must not replace the global Sidecar policy.
    // A pinned global scope stays the passive owner even after project updates.
    {
     const global=passiveRecord(next);
     if(global.release!==next.release){
      cli(next,['shutdown']);const expected=JSON.parse(fs.readFileSync(path.join(global.release,'bundle-manifest.json'))).build_id;
-     const passive=cli(global,['start']);if(passive.build_id!==expected||!['idle','stopped'].includes(passive.state))throw Error('update_global_health_failed');
+     const passive=startVerified(global,'update_global_health_failed');if(passive.build_id!==expected)throw Error('update_global_health_failed');
     }
    }
    save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};

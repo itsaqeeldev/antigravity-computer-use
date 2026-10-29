@@ -18,6 +18,12 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+Updater status and post-switch health must now explicitly report `ok:true` in
+addition to the expected identity and passive state. Failed or missing health
+acknowledgements trigger rollback; a failed initial status does not authorize
+shutdown. Transaction tests cover these cases with isolated adapters, not a real
+published update.
+
 Mac Intel CI run `40946383380` failed during the compiler lookup after roughly
 ten seconds and reported missing Xcode tools. The previous code discarded the
 underlying spawn error, so the log cannot prove whether tools were absent or the
