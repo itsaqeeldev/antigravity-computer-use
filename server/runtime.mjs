@@ -37,12 +37,12 @@ export function imagePoint(image,x,y){
   return [r[0]+Math.floor(x*r[2]/image.width),r[1]+Math.floor(y*r[3]/image.height)];
 }
 
-// The first token is the native snapshot ID, which changes on every capture
-// even if the visible tree does not. Compare the remaining rendered view.
+// Snapshot IDs and row indexes are observation-scoped transport handles, not
+// visible content. Mac can renumber unchanged controls on the next capture.
 export function comparableView(tree){
  const space=typeof tree==='string'?tree.indexOf(' '):-1;
  if(space<0)fail('invalid_observation','The observed tree cannot be compared. Take a fresh snapshot.');
- return tree.slice(space+1);
+ return tree.slice(space+1).replace(/^(\[)\d+(\])/gm,'$1#$2').replace(/(\| focus \[)\d+(\])/,'$1#$2');
 }
 
 // Keep the controls belonging to a matching named section. Returning only its

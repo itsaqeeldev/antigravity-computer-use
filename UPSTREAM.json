@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "5a227d5ef3ccac295d25dce4a6a8b233573e309cb82be6130ab5e4bc499e9a6b"
+      "sha256": "d7ec9eefb3cc23467f7c1581d855a53bd429d0711b4ce9308e5e43c3be3aaa43"
     },
     {
       "path": "server/mcp.mjs",
@@ -436,7 +436,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "419d824ff55786072a3603816b358704ede8070f96ffe3231eaea1d88c41dc60"
+      "sha256": "151a6ee20fd59e421a90e43f41c11df72c3bcad86be54ea600418179e0283d67"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "04a84e546e5ad5a2ecc893b28192133f885ad8527c5733e22bf7c786557616a8"
+      "sha256": "339e3dbcd7e5ca9ffbe32e57dede601f73cb32e89ed190545232048181ebc434"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

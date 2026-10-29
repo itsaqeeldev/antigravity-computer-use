@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {call,TOOLS,validate} from '../server/desktop-tools.mjs';
-import {Runtime,appKey} from '../server/runtime.mjs';
+import {Runtime,appKey,comparableView} from '../server/runtime.mjs';
 import {parseRunArguments} from '../scripts/arguments.mjs';
 const args=steps=>({hwnd:7,observation_id:'initial',reason:'Verify once, never replay',steps});
 const describe=kind=>({inputSchema:TOOLS.find(tool=>tool.name==='computer_'+kind).inputSchema});
@@ -85,9 +85,9 @@ test('wait_change times out with a fresh frame without sending input or retainin
  assert.equal(result.changed,false);assert.equal(result.timed_out,true);assert(frames.has(result.metadata.observation_id));assert.equal(frames.size,1);
 });
 
-test('real rendered snapshots do not count a new snapshot ID as a view change',async()=>{
+test('real rendered snapshots do not count new snapshot IDs or element indexes as view changes',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'},frames=new Map();let capture=0,label='Loading';
- const runtime={frames,generation:1,driver:{epoch:1,async call(op){assert.equal(op,'snapshot');return{result:{snapshot_id:'s'+(++capture),title:'App',hwnd:7,nodes:[{i:1,role:'Text',name:label,depth:0}]}};}},
+ const runtime={frames,generation:1,driver:{epoch:1,async call(op){assert.equal(op,'snapshot');const index=++capture;return{result:{snapshot_id:'s'+index,title:'App',hwnd:7,nodes:[{i:index,role:'Text',name:label,depth:0}]}};}},
   guardian:{send(){}},check(){},stamp(){return{};},async grant(){return app;}};
  runtime.observe=Runtime.prototype.observe.bind(runtime);
  const first=await runtime.observe({hwnd:7,with_image:false});
@@ -96,6 +96,14 @@ test('real rendered snapshots do not count a new snapshot ID as a view change',a
  const next=await runtime.observe({hwnd:7,with_image:false});label='Complete';
  const changed=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:next.metadata.observation_id,timeout_ms:100,reason:'Wait'});
  assert.equal(changed.changed,true);assert.match(changed.metadata.tree,/Complete/);
+});
+
+test('change comparison preserves user text and focus details while ignoring transport indexes',()=>{
+ const first='s1 "App" hwnd=7 | focus [2] Edit "Name"\n[2] Edit "Order [12]" = "One"';
+ const same='s2 "App" hwnd=7 | focus [99] Edit "Name"\n[99] Edit "Order [12]" = "One"';
+ assert.equal(comparableView(first),comparableView(same));
+ assert.notEqual(comparableView(first),comparableView(same.replace('Order [12]','Order [13]')));
+ assert.notEqual(comparableView(first),comparableView(same.replace('Edit "Name"','Edit "Other"')));
 });
 
 test('batched wait_change passes the fresh frame forward and stops after timeout',async()=>{
