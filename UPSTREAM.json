@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "5df28293f09ce7ca65fdb4aa5791fde1f16bba4ee543dc3db003b13d2fcaa3b6"
+      "sha256": "bf835ce5a4a3ed37981088a8ea4e746864da1487bfc56ec73def3ca84eaf2fc2"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -692,7 +692,7 @@
     },
     {
       "path": "tests/transport-failure.test.mjs",
-      "sha256": "c2ac41a4a6de8676e7fe50b55938f397d9cb54c05521c4e5dfbc0208267fd0e3"
+      "sha256": "3f86bb1dcbf5079a2aa128fbdd57fa812ad78caa03f1d5ed4e82afde19eef696"
     }
   ]
 }

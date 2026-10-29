@@ -414,3 +414,8 @@ never-completing partial acknowledgements. The existing real-service cancellatio
 test now exercises an inert action, verifies one dispatch and one Stop request,
 and checks the unknown-delivery advice. No test sends desktop input or establishes
 the physical watchdog/held-input-cleanup acceptance gate.
+
+The first Intel CI run timed out the 4 MiB oversized-response fixture at its
+artificial 250 ms limit before the size condition arrived. The runtime retained
+unknown delivery correctly. The fixture now separates that test's deadline from
+the dedicated short-deadline cases; the failure is retained in run `40883083236`.
