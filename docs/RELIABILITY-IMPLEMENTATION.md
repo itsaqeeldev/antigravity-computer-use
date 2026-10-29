@@ -27,6 +27,12 @@ Reservation now requires both `ok:true` and `prepared:true`; every update-path
 shutdown requires `ok:true` and `closed:true` before installation or rollback
 continues. An isolated transaction test verifies ambiguous acknowledgements do
 not switch files. Actual signed-update cleanup remains unqualified.
+If the replacement never starts, a failed shutdown may now proceed to rollback
+only after a positive `not_running` status and acquisition of the native data
+lease. Initial cleanup has already been confirmed and the switch journal blocks
+new input. Active, unresponsive or ambiguous status still requires operator
+inspection. Isolated tests cover these branches; real failed-start recovery on a
+published bundle remains pending.
 
 Mac Intel CI run `40946383380` failed during the compiler lookup after roughly
 ten seconds and reported missing Xcode tools. The previous code discarded the

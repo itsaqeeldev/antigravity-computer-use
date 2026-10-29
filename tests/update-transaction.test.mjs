@@ -51,6 +51,19 @@ test('update requires explicit reservation and cleanup acknowledgements',async()
 test('new service health failure rolls back actual installer changes and restarts prior build',async()=>{
  const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();await assert.rejects(update(f.target,'apply',f),/native health fixture failure/);const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);assert.equal((await update(f.target,'status',f)).last_error,'update_rolled_back');}finally{f.cleanup();}
 });
+test('failed startup with no service rolls back after a positive not-running check',async()=>{
+ const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();const original=f.adapters.cli;let shutdowns=0;
+  f.adapters.cli=(record,args)=>{if(args[0]==='shutdown'&&++shutdowns>1)throw Error('no_session');return original(record,args);};
+  await assert.rejects(update(f.target,'apply',f),/native health fixture failure/);
+  const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);assert.equal((await update(f.target,'status',f)).last_error,'update_rolled_back');
+ }finally{f.cleanup();}
+});
+test('failed startup does not roll back when service status is ambiguous or active',async()=>{
+ for(const status of [{ok:false,state:'not_running'}, {ok:true,state:'active'}]){const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();const original=f.adapters.cli;let shutdowns=0;
+  f.adapters.cli=(record,args)=>{if(args[0]==='shutdown'&&++shutdowns>1)throw Error('no_session');if(args[0]==='status'&&shutdowns>1)return status;return original(record,args);};
+  await assert.rejects(update(f.target,'apply',f),/update_recovery_requires_operator/);assert(fs.existsSync(path.join(f.target,'update-switching.json')));
+ }finally{f.cleanup();}}
+});
 test('a false or missing new-service success acknowledgement triggers rollback',async()=>{
  for(const ok of [false,undefined]){const f=fixture();try{
   await update(f.target,'check',f);const original=f.adapters.cli;

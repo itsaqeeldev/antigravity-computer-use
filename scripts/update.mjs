@@ -172,7 +172,17 @@ async function updateLocked(target,command,{fetcher,adapters}){
    save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};
   }catch(error){
    if(error.code==='installation_recovery_failed')throw Error('update_recovery_requires_operator');
-   if(next)try{shutdownVerified(next);}catch{throw Error('update_recovery_requires_operator');}
+   if(next)try{shutdownVerified(next);}catch{
+    // Startup may have failed before a service existed. The earlier cleanup
+    // was confirmed and update-switching blocks new input. Only a positive
+    // not-running status may proceed to a native ownership check; an active,
+    // unresponsive or ambiguous service still requires operator review.
+    let status;try{status=cli(next,['status']);}catch{throw Error('update_recovery_requires_operator');}
+    if(status.ok!==true||status.state!=='not_running'||status.approved_apps?.length)throw Error('update_recovery_requires_operator');
+   }
+   // Hold the same fence used for installation through rollback as well: a
+   // Sidecar must not restart between the status check and restoring files.
+   if(!controllerLease&&!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
    for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
