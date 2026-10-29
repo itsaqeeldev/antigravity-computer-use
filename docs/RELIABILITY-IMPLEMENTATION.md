@@ -26,8 +26,10 @@ a new incident arrived during publication. The candidate now stores bounded
 report acknowledgements separately, and the regression verifies that a new
 incident and a newer occurrence of the same incident remain pending. A separate
 process-termination test confirms an interrupted acknowledgement publication
-leaves the incident pending. Concurrent reporting workers, native crash and
-power-loss behavior still need qualification before release.
+leaves the incident pending. A deterministic reentrant simulation reproduced two
+issue-create calls when reporters both pass the backoff check before either
+publishes it. No real GitHub issue was created. Cross-process serialization and
+native crash/power-loss behavior still need qualification before release.
 
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
