@@ -35,6 +35,11 @@ batch steps. Focused tests exercise failure precedence, frame cleanup, argument
 bounds and skipped input. Labels are literal substrings, so callers must choose
 specific observed text and avoid queries that hide errors. This is source/test
 evidence only; a real Antigravity app workflow and its latency remain unmeasured.
+Text waits now check the final returned view as well as the initial match. A
+success label that vanishes does not advance the batch, and a known failure
+appearing in the final view stops it. Focused regressions cover both transitions;
+the returned view is still a point-in-time observation, not a guarantee that an
+application cannot change afterward.
 
 The separate `wait_change` command waits for a change in the exact accessible
 tree shown by a fresh observation. It preserves that observation's query and

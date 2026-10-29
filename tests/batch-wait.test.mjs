@@ -54,6 +54,22 @@ test('wait abort labels are bounded and success remains compatible',async()=>{
  assert.equal(result.matched,true);assert.equal(result.metadata.observation_id,'s2');assert(!runtime.frames.has('s1'));
 });
 
+test('wait rechecks the returned frame and aborts a batch if failure replaces a transient success',async()=>{
+ let input=0,reads=0;const frames=new Map();
+ const runtime={frames,check(){},async action(){input++;return{metadata:{observation_id:'post-action'}};},
+  async observe(){const id='v'+(++reads);frames.set(id,{});return{metadata:{observation_id:id,tree:reads===1?'Ready':'Failed'}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',abort_on:['Failed']},{kind:'click',name:'Publish'}]));
+ assert.equal(input,1);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.verification_error.code,'wait_failure_observed');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v2');assert(!frames.has('v1'));
+});
+
+test('wait does not treat a vanished success label as confirmation',async()=>{
+ let reads=0;const frames=new Map();
+ const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});return{metadata:{observation_id:id,tree:reads===1?'Ready':'Loading'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100});
+ assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.tree,'Loading');
+});
+
 test('wait_change compares the original view and returns a fresh usable observation',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);
  const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading',viewQuery:'Status',viewMaxNodes:250}]]);let observed;

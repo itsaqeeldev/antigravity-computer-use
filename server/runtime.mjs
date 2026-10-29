@@ -258,10 +258,22 @@ export class Runtime {
       const tree=latest.metadata.tree.toLowerCase();
       const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
       if(failure){this.frames.delete(latest.metadata.observation_id);return {matched:false,aborted:true,abort_match:failure,...await this.observe({hwnd:args.hwnd,query:args.query})};}
-      if(tree.includes(args.until.toLowerCase())){this.frames.delete(latest.metadata.observation_id);return {matched:true,...await this.observe({hwnd:args.hwnd,query:args.query})};}
-      this.frames.delete(latest.metadata.observation_id);
-      if(Date.now()>=until)break;
-      await new Promise(resolve=>setTimeout(resolve,500));
+      if(tree.includes(args.until.toLowerCase())){
+        // Do not authorize the next batch step based on a transient match in
+        // an older frame. Confirm both success and failure on the returned view.
+        this.frames.delete(latest.metadata.observation_id);
+        const verified=await this.observe({hwnd:args.hwnd,query:args.query});
+        const verifiedTree=verified.metadata.tree.toLowerCase();
+        const verifiedFailure=(args.abort_on||[]).find(text=>verifiedTree.includes(text.toLowerCase()));
+        if(verifiedFailure)return {matched:false,aborted:true,abort_match:verifiedFailure,...verified};
+        if(verifiedTree.includes(args.until.toLowerCase()))return {matched:true,...verified};
+        this.frames.delete(verified.metadata.observation_id);
+        if(Date.now()>=until)break;
+      } else {
+        this.frames.delete(latest.metadata.observation_id);
+        if(Date.now()>=until)break;
+      }
+      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
     return {matched:false,timed_out:true,...await this.observe({hwnd:args.hwnd,query:args.query})};
   }
