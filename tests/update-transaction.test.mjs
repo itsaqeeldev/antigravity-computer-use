@@ -23,7 +23,7 @@ function fixture(){
  const payload={};const files={};const walk=folder=>{for(const entry of fs.readdirSync(folder,{withFileTypes:true})){const file=path.join(folder,entry.name);if(entry.isDirectory())walk(file);else {const name=path.relative(fresh.bundle,file).replaceAll('\\','/'),bytes=fs.readFileSync(file),url='https://github.com/shayann07/antigravity-computer-use/releases/download/v1.1.0/'+sha256(bytes);files[name]={size:bytes.length,sha256:sha256(bytes),url};payload[url]=bytes;}}};walk(fresh.bundle);
  const bytes=Buffer.from(JSON.stringify({schema:1,version:'1.1.0',build_id:fresh.build_id,platform:process.platform,arch:process.arch,sequence:2,min_os:'0.0.0',expires:'2099-01-01',files}));
  const envelope={manifest:bytes.toString('base64'),signature:sign(null,bytes,privateKey).toString('base64')};let fetches=0,state='idle',failHealth=false;const calls=[];
- const adapters={storage,install:installer,keyFile,rollback,prepare:async()=>({prepared:true}),cli(record,args){calls.push(args[0]);if(args[0]==='shutdown'){state='not_running';return {ok:true};}if(args[0]==='start'){const b=JSON.parse(fs.readFileSync(path.join(record.release,'bundle-manifest.json')));if(failHealth&&b.build_id===fresh.build_id)throw Error('native health fixture failure');state='idle';return {ok:true,state,build_id:b.build_id};}return {ok:true,state,approved_apps:[]};}};
+ const adapters={storage,install:installer,keyFile,rollback,prepare:async()=>({ok:true,prepared:true}),cli(record,args){calls.push(args[0]);if(args[0]==='shutdown'){state='not_running';return {ok:true,closed:true};}if(args[0]==='start'){const b=JSON.parse(fs.readFileSync(path.join(record.release,'bundle-manifest.json')));if(failHealth&&b.build_id===fresh.build_id)throw Error('native health fixture failure');state='idle';return {ok:true,state,build_id:b.build_id};}return {ok:true,state,approved_apps:[]};}};
  const fetcher=async url=>{fetches++;if(url.includes('api.github.com'))return {ok:true,json:async()=>({assets:[{name:`update-${process.platform}-${process.arch}.json`,browser_download_url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v1.1.0/metadata.json'}]})};if(url.endsWith('/metadata.json'))return {ok:true,text:async()=>JSON.stringify(envelope)};return {ok:true,body:(async function*(){yield payload[url];})()};};
  return {directory,target,home,old,fresh,adapters,fetcher,calls,setState:v=>state=v,setFailHealth:()=>failHealth=true,fetches:()=>fetches,cleanup:()=>fs.rmSync(directory,{recursive:true,force:true})};
 }
@@ -39,6 +39,14 @@ test('signed full-bundle update preserves settings and Stop, then rollback resto
 });
 test('active and paused tasks defer before shutdown or installation',async()=>{
  const f=fixture();try{await update(f.target,'check',f);for(const state of ['active','paused']){f.setState(state);assert((await update(f.target,'apply',f)).deferred);}assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}
+});
+test('update requires explicit reservation and cleanup acknowledgements',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);const before=fs.readFileSync(path.join(f.target,'installation.json'),'utf8');
+  f.adapters.prepare=async()=>({ok:false,prepared:true});assert.equal((await update(f.target,'apply',f)).next_action,'wait_for_task_end');assert(!f.calls.includes('shutdown'));
+  f.adapters.prepare=async()=>({ok:true,prepared:true});const original=f.adapters.cli;f.adapters.cli=(record,args)=>args[0]==='shutdown'?{ok:true,closed:false}:original(record,args);
+  await assert.rejects(update(f.target,'apply',f),/update_cleanup_unconfirmed/);assert.equal(fs.readFileSync(path.join(f.target,'installation.json'),'utf8'),before);
+ }finally{f.cleanup();}
 });
 test('new service health failure rolls back actual installer changes and restarts prior build',async()=>{
  const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();await assert.rejects(update(f.target,'apply',f),/native health fixture failure/);const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);assert.equal((await update(f.target,'status',f)).last_error,'update_rolled_back');}finally{f.cleanup();}

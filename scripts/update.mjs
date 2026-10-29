@@ -73,6 +73,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(health.ok!==true||health.build_id!==expected||!['idle','stopped'].includes(health.state))throw Error(errorCode);
    return health;
   };
+  const shutdownVerified=record=>{const result=cli(record,['shutdown']);if(result.ok!==true||result.closed!==true)throw Error('update_cleanup_unconfirmed');};
   if(command==='check'){
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
@@ -109,7 +110,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   const reserve=async()=>{if(!serviceRunning)return true;
    const session=adapters.prepare?null:JSON.parse(fs.readFileSync(path.join(target,'data/desktop-session.json')));
    const prepared=adapters.prepare?await adapters.prepare(current):await request(session,'prepare_update',{},5000,current.permission_mode);
-   return prepared.prepared===true;
+   return prepared.ok===true&&prepared.prepared===true;
   };
   const runRollback=adapters.rollback||(file=>{const p=spawnSync(path.join(installed.release,nativePlatform().node),[path.join(installed.release,'scripts/rollback.mjs'),file],{encoding:'utf8',timeout:30000,windowsHide:true});if(p.status!==0)throw Error('update_rollback_failed');});
   if(command==='recover'){
@@ -119,7 +120,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    for(const file of interrupted.rollback){if(path.dirname(path.dirname(path.resolve(file)))!==path.join(target,'backups')||path.basename(file)!=='rollback.json')throw Error('update_recovery_journal_invalid');}
    if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
    switching=true;safeToUnlock=false;
-   if(serviceRunning)cli(installed,['shutdown']);
+   if(serviceRunning)shutdownVerified(installed);
    for(const file of [...interrupted.rollback].reverse())runRollback(file);
    const prior=passiveRecord(interrupted.previous_installation);startVerified(prior,'update_recovery_health_failed');
    save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
@@ -131,7 +132,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(!state.rollback?.length)throw Error('update_no_rollback');if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];writeAtomicJSON(switchingFile,journal);
-   if(serviceRunning)cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
+   if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
    const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));startVerified(restored,'update_rollback_health_failed');save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
@@ -146,7 +147,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
   markSwitch();
   // Installer refuses live controllers. Shutdown independently confirms native cleanup.
-  if(serviceRunning)cli(installed,['shutdown']);
+  if(serviceRunning)shutdownVerified(installed);
   // Hold the same native lease used by controllers while swapping files. An
   // old Sidecar cannot restart into a half-switched deployment.
   let controllerLease;if(!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
@@ -164,14 +165,14 @@ async function updateLocked(target,command,{fetcher,adapters}){
    {
     const global=passiveRecord(next);
     if(global.release!==next.release){
-     cli(next,['shutdown']);const expected=JSON.parse(fs.readFileSync(path.join(global.release,'bundle-manifest.json'))).build_id;
+     shutdownVerified(next);const expected=JSON.parse(fs.readFileSync(path.join(global.release,'bundle-manifest.json'))).build_id;
      const passive=startVerified(global,'update_global_health_failed');if(passive.build_id!==expected)throw Error('update_global_health_failed');
     }
    }
    save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};
   }catch(error){
    if(error.code==='installation_recovery_failed')throw Error('update_recovery_requires_operator');
-   if(next)try{cli(next,['shutdown']);}catch{throw Error('update_recovery_requires_operator');}
+   if(next)try{shutdownVerified(next);}catch{throw Error('update_recovery_requires_operator');}
    for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;startVerified(passiveRecord(installed),'update_recovery_health_failed');save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}

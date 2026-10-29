@@ -23,6 +23,10 @@ addition to the expected identity and passive state. Failed or missing health
 acknowledgements trigger rollback; a failed initial status does not authorize
 shutdown. Transaction tests cover these cases with isolated adapters, not a real
 published update.
+Reservation now requires both `ok:true` and `prepared:true`; every update-path
+shutdown requires `ok:true` and `closed:true` before installation or rollback
+continues. An isolated transaction test verifies ambiguous acknowledgements do
+not switch files. Actual signed-update cleanup remains unqualified.
 
 Mac Intel CI run `40946383380` failed during the compiler lookup after roughly
 ten seconds and reported missing Xcode tools. The previous code discarded the
