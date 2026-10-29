@@ -11,6 +11,7 @@ import {storageOperation} from '../server/storage.mjs';
 import {Incidents} from '../server/incidents.mjs';
 import {Runtime,appKey} from '../server/runtime.mjs';
 import {EventEmitter} from 'node:events';
+import {Driver} from '../server/driver.mjs';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -184,6 +185,21 @@ test('shutdown reports cleanup failure and remains reachable for recovery',async
   assert(fs.existsSync(service.file));assert.equal((await request(session,'status')).state,'stopped');
   fail=false;assert.equal((await request(session,'shutdown')).closed,true);assert(!fs.existsSync(service.file));
  }finally{fail=false;await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('IPC End and shutdown refuse unconfirmed worker exit, then recover without clearing Stop',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-unconfirmed-worker-')),taskFile=path.join(dir,'task-state.json'),latch=path.join(dir,'emergency.stop');
+ try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){fs.rmSync(dir,{recursive:true,force:true});t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+ const guardian=new EventEmitter();guardian.send=()=>{};guardian.close=async()=>{};
+ const child=new EventEmitter();child.exitCode=null;child.signalCode=null;child.stdin={destroy(){}};child.kill=()=>false;
+ const driver=new Driver();driver.proc=child;driver.inputMayBeHeld=true;driver.exitTimeoutMs=10;driver.releaseHeldInputs=async()=>true;
+ const runtime=new Runtime({guardian,driver,sessions:{register(){},close(){}},taskFile,latchFile:latch});runtime.guardFile=path.join(dir,path.basename(runtime.guardFile));runtime.beginTask();runtime.state='active';driver.onEvent=event=>{if(event.event==='input_cleanup_failed')runtime.stop().catch(()=>{});};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));const send=(name,args={})=>request(session,name,args,5000,'standalone');
+ try{
+  const ended=await send('end');assert.equal(ended.error.code,'input_cleanup_failed');assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,true);assert.equal((await send('status')).state,'stopped');
+  guardian.emit('state','idle','normal_shutdown');assert.equal((await send('status')).state,'stopped','a stale idle event must not undo Stop');
+  const shutdown=await send('shutdown');assert.equal(shutdown.error.code,'input_cleanup_failed');assert(fs.existsSync(service.file));assert.equal((await send('prepare_update')).prepared,false);
+  child.exitCode=0;child.emit('exit',0);assert.equal((await send('end')).ended,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal((await send('status')).state,'stopped');
+ }finally{child.exitCode=0;await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct skill IPC authenticates, rejects overlapping actions, and permits independent stop',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-direct-'));let release,stops=0,calls=0;

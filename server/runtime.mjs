@@ -91,6 +91,9 @@ export class Runtime {
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
       const previousState=this.state;
+      // A delayed idle/active notification must never undo an emergency Stop.
+      // Native human re-arm is acknowledged separately by the resume event.
+      if(previousState==='stopped'&&s!=='stopped')return;
       if(reason||s!==this.state)this.lastControlReason=reason||s;
       this.state=s;
       if(reason==='guardian_exited'&&previousState!=='idle'&&this.latchFile)try{fs.writeFileSync(this.latchFile,'stopped');}catch{}
@@ -102,7 +105,14 @@ export class Runtime {
         if(s==='stopped'||s==='paused')this.driver.abort?.().catch(()=>{});
       }
     });
-    this.guardian.on('resume',(_state,source)=>{this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+contract.session_ms;});
+    this.guardian.on('resume',(_state,source)=>{
+      if(this.state==='stopped'){
+        if(source!=='human_resume'||_state!=='idle'||persistenceFailure(this.lastControlReason))return;
+        if(this.latchFile){try{fs.lstatSync(this.latchFile);return;}catch(error){if(error.code!=='ENOENT')return;}}
+        this.state='idle';
+      }
+      this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+contract.session_ms;
+    });
   }
   stamp(){return {__session:this.token};}
   beginTask(){
@@ -155,14 +165,17 @@ export class Runtime {
     try{
       controls=await this.showControls();
       if(controls.error)throw Object.assign(Error(controls.error.message),{code:controls.error.code});
-      if(['idle','active','paused','stopped'].includes(controls.state))this.state=controls.state;
+      if(['idle','active','paused','stopped'].includes(controls.state)&&!(this.state==='stopped'&&controls.state!=='stopped'))this.state=controls.state;
       const visible=controls.controls_visible===true;
       if(!visible)throw Object.assign(Error('Local controls did not report a visible bar.'),{code:'guardian_controls_not_visible'});
       return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused'&&!this.recoveredTask,controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
         next_action:this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':this.recoveredTask?'inspect_recovered_task':'discover_or_launch'};
     }catch(error){this.recoveryVisibility=controls?.controls_visible===false?false:null;this.recoveryFailure={code:error.code||'guardian_unavailable',message:error.code==='desktop_context_unavailable'?'Start the installed local launcher on the visible desktop. No desktop was switched and Stop remains latched.':'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return unavailable();}
   }
-  check(){if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);}
+  check(){
+    if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);
+    if(this.latchFile){let latched=false;try{fs.lstatSync(this.latchFile);latched=true;}catch(error){if(error.code!=='ENOENT'){this.stop().catch(()=>{});fail('stop_persistence_failed','Cannot verify the emergency Stop latch; no input was sent.');}}if(latched){this.stop().catch(()=>{});fail('control_stopped','Emergency Stop remains latched; local human re-arm is required.');}}
+  }
   async identity(hwnd){
     if(!Number.isSafeInteger(Number(hwnd))||Number(hwnd)<=0)fail('no_target','Select an HWND from computer_apps.');
     return (await this.driver.call('identity',{hwnd:Number(hwnd)})).result;
@@ -192,9 +205,10 @@ export class Runtime {
     this.guardian.send({op:'attach',pid:this.driver.info?.pid});
     const current=await this.app(hwnd);if(appKey(current)!==key)fail('identity_changed','Application restarted during approval.');
     if(!this.token){this.token=randomUUID();this.deadline=Date.now()+contract.session_ms;this.remaining=contract.action_budget;}
+    const activationGeneration=this.generation;
     const active=await this.guardian.request({op:'activate',token:this.token,deadline:(BigInt(this.deadline)*10000n+621355968000000000n).toString()});
-    if(!active.allowed)fail('control_inactive','Use the local controls to re-arm.');
-    this.state='active';this.grants.set(key,{...current,purpose});return current;
+    if(!active.allowed||this.state==='stopped'||this.state==='paused'||this.generation!==activationGeneration)fail('control_inactive','Control changed during activation. Use local controls and observe again.');
+    this.state='active';this.check();this.grants.set(key,{...current,purpose});return current;
   }
   async observe(args){
     const w=await this.grant(Number(args.hwnd),args.reason,{observationOnly:true});this.check();
@@ -386,8 +400,9 @@ export class Runtime {
     await this.guardian.start();
     if(this.state==='stopped'||this.state==='paused')this.check();
     if(!this.token){this.token=randomUUID();this.deadline=Date.now()+contract.session_ms;this.remaining=contract.action_budget;}
+    const activationGeneration=this.generation;
     const active=await this.guardian.request({op:'activate',token:this.token,deadline:(BigInt(this.deadline)*10000n+621355968000000000n).toString()});
-    if(!active.allowed)fail('control_inactive','Use the local controls.');this.state='active';
+    if(!active.allowed||this.state==='stopped'||this.state==='paused'||this.generation!==activationGeneration)fail('control_inactive','Control changed during activation. Use local controls and observe again.');this.state='active';this.check();
     const payload={app,args:args.args||[],...this.stamp(),__risk:'sensitive'};
     await this.driver.start();
     this.guardian.send({op:'attach',pid:this.driver.info.pid});

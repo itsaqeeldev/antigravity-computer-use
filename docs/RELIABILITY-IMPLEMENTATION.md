@@ -932,6 +932,12 @@ new native operations and does not report cleanup complete until the worker's
 exit is observed. A worker error event is not treated as proof of exit. Mocked
 timeout tests and a real inert child-process exit test cover the boundary;
 desktop/native hung-worker qualification is still pending.
+The service-level regression also exposed a delayed guardian `idle` event that
+could overwrite the runtime's stopped state. Stopped now ignores non-stopped
+state notifications until a native human-resume event confirms the latch is
+absent. Active operations recheck the latch, and delayed activation replies
+cannot override a concurrent Stop. Fixture and IPC tests cover these races;
+physical human re-arm on the new build remains pending.
 The prior driver fix at `503be09` passed both Mac CI jobs in run `40968689619`.
 With free disk space restored, the Windows-local suite including the new End-path
 regression passed 305 tests with 11 skips; skips are not qualification passes.

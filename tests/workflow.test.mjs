@@ -114,8 +114,8 @@ test('duplicate stop event preserves the emergency stop reason; resume starts fr
   guardian.emit('state','active');r.frames.set('old',{});r.grants.set('app',{});r.token='old';
   guardian.emit('state','stopped','escape');guardian.emit('state','stopped');
   assert.equal(r.status().control_reason,'escape');assert.equal(r.frames.size,0);assert.equal(r.grants.size,0);assert.equal(r.token,'');
-  guardian.emit('state','active');r.frames.set('pre-resume',{});r.deadline=0;guardian.emit('resume','active');
-  assert.equal(r.frames.size,0);assert(r.deadline>Date.now());assert.equal(r.status().control_reason,'human_resume');
+  guardian.emit('state','active');assert.equal(r.state,'stopped');r.frames.set('pre-resume',{});guardian.emit('resume','idle','human_resume');
+  assert.equal(r.state,'idle');assert.equal(r.frames.size,0);assert.equal(r.status().control_reason,'human_resume');
  }finally{fs.unlinkSync(r.guardFile);}
 });
 

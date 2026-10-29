@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b9d2a2b48090a5ef4bc1f33541d4a4f38d4ff9b3058323c61d811305c10af421"
+      "sha256": "8d554055caeb6e32db66a03bbe6d3c9ef6c3f2d6a059c8727c8b19139c5cd1c0"
     },
     {
       "path": "server/mcp.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "f0060d9025b742c58ec163a4895844dddde07adba9ee572f8e3dc6f67f4ac0fe"
+      "sha256": "f7e3699f1d1a33066d58060054612a0f0d1c860f635f444f9d81fe71d6e751bf"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -336,7 +336,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "119de5da4feea6dab159cc4a3cc207df2fe25f95738a14587b85188949262805"
+      "sha256": "c792784ebd4719ef2b3a54c09a19cac4749b295a3063957a3bc6b30549d1d54a"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "dc12daf0e0e4fb0dcbae3d1dc270705d3ea773b2658a572a926ef3108b556c13"
+      "sha256": "b0178352445e5486fcd35d6135a7775c44b2cd9b14ddc9eb426175ceefa2a5bd"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "c6c3c829fb7803db7cbe304cbb46ce91bdc669ac21195d02263e677be96db082"
+      "sha256": "96ca7c2f39de07210650365594bc99b14e17ba885d79b121d775d76ef53000f7"
     },
     {
       "path": "server/native/GuardCleanup.cs",
