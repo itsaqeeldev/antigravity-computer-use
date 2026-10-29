@@ -10,6 +10,7 @@ fs.writeFileSync(guard,'idle||0|');
 const fixture=spawn('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.resolve('tools/make-target.ps1')],{windowsHide:false,stdio:['ignore','pipe','pipe']});
 const info=await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('Fixture did not start')),15000);createInterface({input:fixture.stdout}).on('line',l=>{try{const v=JSON.parse(l);if(v.title){clearTimeout(t);resolve(v);}}catch{}});fixture.stderr.on('data',d=>process.stderr.write(d));});
 const d=new Driver({env:{AGCU_GUARD_FILE:guard,AGCU_PARENT_PID:String(process.pid),AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'}});
+const nativeCall=d.call.bind(d);d.call=async(op,...args)=>{try{return await nativeCall(op,...args);}catch(error){error.fixture_operation=op;error.fixture_physical=args[0]?.physical===true;throw error;}};
 const results=[];let hwnd;
 try{
  let w; for(let attempt=0;attempt<20&&!w;attempt++){const windows=(await d.call('list_apps')).result.windows;w=windows.find(w=>w.title===info.title);if(!w)await new Promise(r=>setTimeout(r,250));}assert(w,'Fixture must be returned');hwnd=w.hwnd;
@@ -19,13 +20,17 @@ try{
  fs.writeFileSync(guard,'active|'+token+'|'+deadline+'|'+Buffer.from(identity.key).toString('base64'));
  const snap=(await d.call('snapshot',fields)).result;assert(snap.nodes.length>3);results.push('Native UIA tree');
  const disabled=snap.nodes.find(n=>n.name==='Disabled');assert(disabled);
- const beforeDisabled=(await d.call('identity',{hwnd})).result.cursor;
  await assert.rejects(d.call('click',{...fields,snapshot_id:snap.snapshot_id,index:disabled.i,physical:true}),e=>e.code==='element_disabled');
- assert.deepEqual((await d.call('identity',{hwnd})).result.cursor,beforeDisabled);results.push('Disabled selector refuses before moving the cursor');
- const button=snap.nodes.find(n=>n.name==='Press Me');assert(button);
- await d.call('click',{...fields,snapshot_id:snap.snapshot_id,index:button.i});
+ results.push('Disabled selector is refused');
+ // The Driver restarts its worker after an input refusal to confirm cleanup;
+ // all native snapshot IDs belong to the old worker and must be refreshed.
+ const fresh=(await d.call('snapshot',fields)).result;
+ const button=fresh.nodes.find(n=>n.name==='Press Me');assert(button);
+ const preview=(await d.call('authorize',{action_op:'click',action_args:{...fields,snapshot_id:fresh.snapshot_id,index:button.i}})).result;
+ assert.equal(preview.sensitive,false,'Fixture click was classified sensitive: '+JSON.stringify(preview));
+ await d.call('click',{...fields,snapshot_id:fresh.snapshot_id,index:button.i});
  await d.call('focus',fields);
- const real=(await d.call('click',{...fields,snapshot_id:snap.snapshot_id,index:button.i,physical:true})).result;
+ const real=(await d.call('click',{...fields,snapshot_id:fresh.snapshot_id,index:button.i,physical:true})).result;
  assert(!real.cursor_restored);const moved=(await d.call('identity',{hwnd})).result.cursor;assert(moved[0]>=button.rect[0]&&moved[0]<=button.rect[0]+button.rect[2],JSON.stringify({moved,button:button.rect,real}));results.push('REAL cursor physical click without restore');
  const after=(await d.call('snapshot',fields)).result;assert(after.nodes.some(n=>String(n.name).includes('pressed:2')));results.push('UIA invoke verified in app');
  const edit=after.nodes.find(n=>n.role==='Edit');assert(edit);

@@ -39,7 +39,14 @@ refused the actual disabled Upscaly 2× button with `element_disabled`; it then
 closed the app and ended control. Real Mac checks remain pending.
 An attempted existing native fixture run stopped with `confirmation_required`;
 it is not a pass and no approval was manufactured to make it proceed. The
-failure is retained as local test evidence and the real-app test remains open.
+failure is retained as local test evidence.
+Follow-up identified the cause: the test reused a native snapshot after Driver
+restarted its worker to clean up the rejected input. A fresh snapshot restored
+the intended observed target. A separate attempt compared absolute cursor
+positions and failed while physical input could occur, so that unstable assertion
+was removed. The corrected fixture passed 13 checks, including disabled refusal;
+its explicit fixture grant is a test double, not human approval or device-wide
+qualification. The actual Upscaly refusal above remains the real-app evidence.
 
 The supported Windows local upgrade to source `0a919f8` produced and installed
 build `4d112e9e4137e1999750430cc3170995bc8cc421a76f998c517c3cd459a66910`.
