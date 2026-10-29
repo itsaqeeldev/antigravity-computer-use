@@ -24,6 +24,13 @@ checks the transition past the former limit. Exhaustion of the safe integer rang
 is reported as diagnostic storage failure instead of silently losing occurrences.
 This is source-level evidence, not qualification of automatic GitHub reporting.
 
+Rollback previously accepted any successful start command without checking the
+restored service's identity, and interrupted recovery checked state without its
+build ID. Explicit rollback, interrupted recovery and automatic failure recovery
+now require the expected restored build in an idle or stopped state. They retain
+the recovery journal on a false or mismatched health result. Isolated transaction
+tests exercise these failures; native interrupted-update acceptance is still open.
+
 ### Open diagnostics concurrency defect
 
 The old recorder and reporting worker both rewrote `incidents.json` through the

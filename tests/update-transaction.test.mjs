@@ -43,6 +43,25 @@ test('active and paused tasks defer before shutdown or installation',async()=>{
 test('new service health failure rolls back actual installer changes and restarts prior build',async()=>{
  const f=fixture();try{await update(f.target,'check',f);f.setFailHealth();await assert.rejects(update(f.target,'apply',f),/native health fixture failure/);const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);assert.equal((await update(f.target,'status',f)).last_error,'update_rolled_back');}finally{f.cleanup();}
 });
+test('rollback refuses false or mismatched restored health and retains recovery journal',async()=>{
+ for(const bad of [{ok:false,state:'idle'}, {ok:true,state:'idle',build_id:'wrong'}]){
+  const f=fixture();try{
+   await update(f.target,'check',f);await update(f.target,'apply',f);
+   const original=f.adapters.cli;f.adapters.cli=(record,args)=>args[0]==='start'?bad:original(record,args);
+   await assert.rejects(update(f.target,'rollback',f),/update_rollback_health_failed/);
+   assert(fs.existsSync(path.join(f.target,'update-switching.json')),'failed health must retain the recovery journal');
+   assert((await update(f.target,'status',f)).interrupted_switch);
+  }finally{f.cleanup();}
+ }
+});
+test('automatic rollback retains recovery journal if prior service health is wrong',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);const original=f.adapters.cli;
+  f.adapters.cli=(record,args)=>{if(args[0]==='start'){const b=JSON.parse(fs.readFileSync(path.join(record.release,'bundle-manifest.json')));if(b.build_id===f.fresh.build_id)throw Error('new_build_failed');return {state:'idle',build_id:'wrong'};}return original(record,args);};
+  await assert.rejects(update(f.target,'apply',f),/update_recovery_health_failed/);
+  assert(fs.existsSync(path.join(f.target,'update-switching.json')));
+ }finally{f.cleanup();}
+});
 test('daily scheduler throttles checks and manual mode performs no network work',async()=>{
  const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false}));await update(f.target,'scheduled',f);const first=f.fetches();await update(f.target,'scheduled',f);assert.equal(f.fetches(),first);fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting:false}));await update(f.target,'scheduled',f);assert.equal(f.fetches(),first);}finally{f.cleanup();}
 });
@@ -90,6 +109,15 @@ test('a persisted interrupted-switch journal restores the old installation on sc
   assert.equal((await update(f.target,'status',f)).interrupted_switch,true);
   const recovered=await update(f.target,'scheduled',f);assert(recovered.recovered);assert(!fs.existsSync(path.join(f.target,'update-switching.json')));
   const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
+ }finally{f.cleanup();}
+});
+test('interrupted-switch recovery requires the restored build identity before clearing its journal',async()=>{
+ const f=fixture();try{
+  const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));
+  const staged=f.adapters.install({bundle:f.fresh.bundle,target:f.target});
+  const marker=path.join(f.target,'update-switching.json');fs.writeFileSync(marker,JSON.stringify({previous_installation:previous,rollback:[path.join(staged.backup,'rollback.json')]}));
+  const original=f.adapters.cli;f.adapters.cli=(record,args)=>args[0]==='start'?{state:'idle',build_id:'wrong'}:original(record,args);
+  await assert.rejects(update(f.target,'recover',f),/update_recovery_health_failed/);assert(fs.existsSync(marker));
  }finally{f.cleanup();}
 });
 test('updating does not re-enable an explicitly disabled Sidecar',async()=>{
