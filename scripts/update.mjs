@@ -47,7 +47,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    save({...read(),attempt_at:now});
    try{await updateLocked(target,'check',{fetcher,adapters});}catch(error){save({...read(),available:false,attempt_at:now,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_check_failed'});return {deferred:true,next_action:'retry_next_day'};}
   }
-  if(settings.mode==='automatic'&&read().available){try{return await updateLocked(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
+  if(settings.mode==='automatic'&&read().available){try{return await updateLocked(target,'apply',{fetcher,adapters});}catch(error){save({...read(),available:false,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
   return {checked:true};
  }
  if(command==='status'){
@@ -74,7 +74,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    return health;
   };
   if(command==='check'){
-   const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
+   const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
    const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await response.json();
    if(Array.isArray(release))release=release.find(r=>!r.draft);if(!release||release.draft)throw Error('update_release_unavailable');

@@ -22,6 +22,10 @@ Signed updater metadata now requires a three-component numeric minimum OS and
 a valid detected OS version before comparison. Malformed and out-of-range
 components are refused rather than coerced. Focused signature and transaction
 tests pass; this does not qualify an actual published update.
+Scheduled updates also clear stale availability when the signing key is absent
+or an apply fails. The prior staged files remain available for inspection, but
+the scheduler waits for a new check instead of repeatedly attempting an invalid
+apply. Transaction tests cover both cases without a live installation.
 
 The owner observed stationary cursor clicks in the direct Upscaly test. Named
 clicks had defaulted to accessibility invocation; the shared runtime now requests

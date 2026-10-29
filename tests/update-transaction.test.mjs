@@ -98,6 +98,22 @@ test('a failed scheduled check never applies a previously staged update on a lat
   assert((await update(f.target,'scheduled',f)).applied,'a later successful check can stage and apply the update');
  }finally{f.cleanup();}
 });
+test('a missing signing key clears prior availability and does not attempt a stale apply',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);const stateFile=path.join(f.target,'update-state.json');const state=JSON.parse(fs.readFileSync(stateFile));state.attempt_at=0;fs.writeFileSync(stateFile,JSON.stringify(state));
+  fs.unlinkSync(f.adapters.keyFile);await update(f.target,'scheduled',f);
+  const status=await update(f.target,'status',f);assert.equal(status.available,false);assert.equal(status.last_error,'release_signing_not_configured');assert(!f.calls.includes('shutdown'));
+  await update(f.target,'scheduled',f);assert(!f.calls.includes('shutdown'));
+ }finally{f.cleanup();}
+});
+test('a failed scheduled apply waits for a new check before retrying',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);const state=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));fs.appendFileSync(path.join(state.staged,'scripts/desktop.mjs'),'tamper');
+  assert.equal((await update(f.target,'scheduled',f)).next_action,'inspect_update_status');
+  assert.equal((await update(f.target,'status',f)).available,false);assert(!f.calls.includes('shutdown'));
+  assert.equal((await update(f.target,'scheduled',f)).checked,true);assert(!f.calls.includes('shutdown'));
+ }finally{f.cleanup();}
+});
 test('explicit install update preferences and reporting consent survive upgrades',()=>{
  const f=fixture();try{f.adapters.install({bundle:f.fresh.bundle,target:f.target,updateMode:'manual',updateChannel:'beta',reporting:true});f.adapters.install({bundle:f.fresh.bundle,target:f.target});assert.deepEqual(updateSettings(f.target),{mode:'manual',channel:'beta',reporting:true});}finally{f.cleanup();}
 });
