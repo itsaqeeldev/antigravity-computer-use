@@ -24,6 +24,9 @@ underlying spawn error, so the log cannot prove whether tools were absent or the
 probe timed out. The storage-builder probe now distinguishes timeout, spawn failure
 and unavailable tools, and allows a 30-second bounded lookup. A focused synthetic
 test covers those distinctions; actual Intel CI and device checks remain required.
+The Mac host build now uses the same bounded SDK probe and reports probe timeouts
+accurately; Swift compilation also has a finite 120-second limit. A timeout is
+not proof that the toolchain is missing or that the resulting build is valid.
 
 Stop persistence errors are no longer reported as successful durable Stop. The
 runtime invalidates control and cleans up input, reports `stop_persistence_failed`

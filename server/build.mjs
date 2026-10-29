@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { macToolProbe } from './macos-build.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WIN_SOURCES = [
@@ -62,9 +63,10 @@ function exeFor(stamp) {
 function findSwiftc() {
   for (const c of ['/usr/bin/swiftc', '/usr/local/bin/swiftc']) if (fs.existsSync(c)) return c;
   try {
-    const r = spawnSync('xcrun', ['-f', 'swiftc'], { encoding: 'utf8' });
+    const r = spawnSync('xcrun', ['-f', 'swiftc'], { encoding: 'utf8', timeout: 30000 });
+    if(r.error?.code==='ETIMEDOUT')return macToolProbe(r,'compiler');
     if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
-  } catch { /* xcrun absent */ }
+  } catch(error) { if(error.code==='macos_toolchain_probe_timeout')throw error; /* xcrun absent */ }
   return null;
 }
 
@@ -273,9 +275,8 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
     throw new BuildError('Could not find swiftc.',
       'Install the Xcode Command Line Tools: xcode-select --install');
   }
-  const sdkResult=spawnSync('/usr/bin/xcrun',['--sdk','macosx','--show-sdk-path'],{encoding:'utf8',timeout:10000});
-  if(sdkResult.status!==0)throw new BuildError('Cannot locate the macOS SDK.',sdkResult.stderr);
-  const sdk=sdkResult.stdout.trim();
+  const sdkResult=spawnSync('/usr/bin/xcrun',['--sdk','macosx','--show-sdk-path'],{encoding:'utf8',timeout:30000});
+  const sdk=macToolProbe(sdkResult,'SDK');
 
   const h = createHash('sha256');
   for (const f of SOURCES) h.update(fs.readFileSync(f));
@@ -301,7 +302,7 @@ function ensureMacHost({ force = false, log = () => {} } = {}) {
     '-framework', 'ScreenCaptureKit',
     '-framework', 'Carbon',
     ...SOURCES,
-  ], { encoding: 'utf8' });
+  ], { encoding: 'utf8', timeout: 120000 });
 
   if (res.error) throw new BuildError('Could not run swiftc: ' + res.error.message, null);
   if (res.status !== 0 || !fs.existsSync(temp)) {
