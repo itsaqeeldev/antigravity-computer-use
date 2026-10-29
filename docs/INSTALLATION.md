@@ -2,6 +2,10 @@
 
 Version **0.3.0-beta.2** is the published Windows direct `/computer-use` prerelease with bundled Node and native helpers. Download the [complete Windows ZIP and checksums](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). General orchestration latency and hardware/input qualification remain open; see [HANDOFF.md](../HANDOFF.md). Historical v0.2.0 uses the older MCP route, including the recording labelled as such in the README.
 
+For the **experimental macOS candidate**, including architecture-matched prebuilt
+downloads and human OS permission setup, see [Mac installation](MACOS.md).
+The Windows command below does not install the Mac candidate.
+
 ## Quick install
 
 Paste this in Windows PowerShell:

@@ -4,6 +4,12 @@
 their release tags. Create a short-lived branch for an active change and remove
 it after integration; old work branches are not separate supported editions.
 
+The active Mac candidate uses `codex/macos-and-latency-review`; it shares the
+existing runtime and is not a second product edition. Antigravity's separate
+`reduce_orchestration_latency` worktree owns its unmerged speed revisions. Review
+the two changes independently; neither branch is evidence that the other's
+qualification is complete. Keep the Mac change draft until real hardware checks.
+
 On 28 October 2026 the following historical branches were retired after checking
 their ancestry and open pull requests. There were no open pull requests using
 them. A full pre-cleanup Git bundle is retained locally under ignored `.localdata/`.

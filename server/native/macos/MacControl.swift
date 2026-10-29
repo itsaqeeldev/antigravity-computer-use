@@ -2,6 +2,7 @@
 // primitives remain in the attributed upstream AxonHost.swift foundation.
 import AppKit
 import ApplicationServices
+import Carbon
 import CoreGraphics
 import CryptoKit
 import Darwin
@@ -150,7 +151,10 @@ enum MacFence {
             if keyboardPID != 0, let window=keyboardWindow {
                 guard let focused=axAttr(AXUIElementCreateApplication(keyboardPID),kAXFocusedUIElementAttribute as String),
                       CFGetTypeID(focused)==AXUIElementGetTypeID() else {throw AxonError("focus_changed","No keyboard target is currently observable.")}
-                var element: AXUIElement?=focused as! AXUIElement;var inside=false
+                let target=focused as! AXUIElement
+                let role=(axString(target,kAXRoleAttribute as String) ?? "")+(axString(target,kAXSubroleAttribute as String) ?? "")
+                guard !IsSecureEventInputEnabled(), !role.lowercased().contains("secure") else {throw AxonError("protected_app","Keyboard focus became secure. Human handoff is required; no further input was sent.")}
+                var element: AXUIElement?=target;var inside=false
                 for _ in 0..<64 {
                     guard let node=element else {break}
                     if CFEqual(node,window) {inside=true;break}

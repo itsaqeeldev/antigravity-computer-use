@@ -1,3 +1,21 @@
+# macOS candidate validation — 29 October 2026
+
+The shared-core Mac port lives on `codex/macos-and-latency-review`, not in a
+published release. Native Apple Silicon and Intel compilation, native refusal
+contracts, private storage/link/ACL/lease checks, shared regressions, sealed
+packaging, fake-home install/start/End/Stop/restart/update/rollback passed at
+`6c48fb7`: [Mac CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40817884413).
+Subsequent cleanup/identity changes require their own exact-head checks.
+The local Windows suite at `e0533a9` passed 154 tests with zero failures and seven
+skips (five ACL qualification, two Mac-only). Native Windows compilation passed;
+the source inventory includes the shared skill and Mac adapter.
+
+CI sends no desktop input or permission clicks. Actual Mac Antigravity tasks,
+native Open/Save behavior, physical interruption/held-input cleanup/re-arm,
+permission revocation, lock/sleep/session transitions, mixed displays and visual
+cleanup remain unqualified. [Mac checklist](docs/MACOS.md). Neither Windows
+orchestration speed nor installed/published Windows identity was changed here.
+
 # Automatic-startup qualification — 27 October 2026
 
 Actual Antigravity-managed startup passed on published beta.2: the service parent was the App's `language_server.exe`; no manual launcher/App restart was used, and no guardian process opened. Native read-only app discovery passed the visible-desktop preflight and returned three windows. Both scope pins and 75 sealed files per scope matched build `23ddd7bdfc2f2c19060308c441ef7fef43d700ccfdccaa88b76bb488105d2777`. End retained Stop and cleared grants. Only the project's Sidecar enabled setting changed; unrelated configuration was checked equal. The existing focused Sidecar configuration test passed. Private evidence: `.localdata/autostart-repair-20261027/result.json`. This is startup/discovery qualification, not physical re-arm/input or full Upscaly AI acceptance. The enabled setting was rechecked on 28 October without restarting or retesting the service.

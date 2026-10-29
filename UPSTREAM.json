@@ -468,7 +468,7 @@
     },
     {
       "path": "docs/BRANCHES.md",
-      "sha256": "8b6aeeeb74f1d0bd53c31cf8ed0d46d142741ee8eff1e08f029042b699c38f19"
+      "sha256": "1a5da62f8e7daffc07eab75a6403c4e2c76f4263887dd75d9b9dba61452ab660"
     },
     {
       "path": "docs/media/hero.svg",
@@ -532,7 +532,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "45c30547189958c10086da527fd85f2634d01acff8095154a52f139cd01479b0"
+      "sha256": "3406c6db1d579ec813232f65c7da35e552837e040db85a674d4f1284e5c7aefa"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",

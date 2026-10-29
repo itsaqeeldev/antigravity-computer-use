@@ -4,6 +4,13 @@ The native foundation is `ridelink0/claude-computer-use`, revision `70347e652ab1
 
 Retained implementation: persistent C# `AxonHost.cs`, `Presence.cs`, `Overlay.cs`; Node driver/build, renderer, session input lease and classification utilities; selected original fixtures/tests. Modified files add Antigravity integration, native human grants/action approvals, native input fencing, independent stop/worker termination, real-cursor behavior, monitor-edge glow and prebuilt packaging. `upstream-index.mjs` is an unexecuted source reference and is excluded from runtime bundles. Its old model-asserted grants are not the new MCP entry point.
 
+The experimental macOS adapter also reuses the foundation's MIT
+`server/native/AxonHost.swift` accessibility/input implementation at the same
+revision. Its original hash and modified bytes are recorded in `UPSTREAM.json`.
+The new `server/native/macos/` files implement the shared permission contract,
+watchdog, storage, AppKit visuals and Mac-specific operations. The tool API,
+observations, batching, receipts and installer remain in the common Node runtime.
+
 OpenAI `openai/openai-cua-sample-app`, revision `6dd34b40acc1d002696ccd41aaf0a1f2f2be290c`, MIT: `python-app/app/desktop/release_inputs.py` is adapted into `ControlFence.Recover` (independent release attempts after failures; now restricted to inputs recorded in the original InputLedger ownership journal). Lifecycle concepts from `desktop/runtime.py` are adapted into driver abort/independent recovery. These are ports, not byte-identical copies. Copyright (c) 2025 OpenAI; full MIT license is in `licenses/OpenAI.txt`.
 
 Anthropic `anthropics/claude-quickstarts`, revision `9ec32b91df50b0d4906cae64b13c6298055ff40d`, MIT: `computer-use-best-practices/computer_use/image.py` sizing algorithm is ported into `upstream-utils.mjs`; `tools/batch.py` sequential first-failure algorithm is adapted into the MCP batch implementation. Our transport image budget is not a claim about Gemini's encoder. Copyright (c) 2023 Anthropic; full MIT license in `licenses/Anthropic.txt`.

@@ -8,8 +8,12 @@ Windows now also reads common policy/visual tokens from `control-contract.json`.
 
 Apple Silicon and Intel compilation passed at `7dc7a54`; native storage/lease
 checks passed, while a shared test fixture failed because it populated an
-unqualified data directory. The fixture is repaired without changing the guard.
-Installation and lifecycle qualification is still running on the candidate;
+unqualified data directory. The fixture was repaired without changing the guard.
+Candidate `787ddb1` and the subsequent native-fence candidate `6c48fb7` passed
+the full matrix, including installation, passive start, End, persistent Stop,
+restart, update and rollback. Further cleanup/identity changes are checked at
+their own head. The local Windows suite at `e0533a9` passed 154 tests, zero failed,
+with five ACL and two Mac-only skips. Skips are not qualification passes;
 interactive Mac acceptance, including actual Antigravity tasks, is **unrun**.
 See [Mac qualification](docs/MACOS.md) and the exact-head CI. This branch is not a
 published release, a Windows installation update, or proof of performance parity.
