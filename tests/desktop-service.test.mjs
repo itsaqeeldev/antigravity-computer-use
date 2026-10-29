@@ -178,8 +178,8 @@ test('direct skill IPC authenticates, rejects overlapping actions, and permits i
 test('direct IPC batches use a fresh change-wait frame without replaying prior actions',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-change-ipc-'));const app={hwnd:7,pid:9,started:'one',path:'fixture.exe'};const key=appKey(app),seen=[];
  const runtime={frames:new Map(),generation:1,driver:{epoch:1},status(){return{state:'active'};},check(){},async grant(){return app;},async close(){},
-  async action(op,a){seen.push({op,frame:a.observation_id});if(seen.length===1){this.frames.set('post-action',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});return{metadata:{observation_id:'post-action'}};}return{metadata:{observation_id:'finished'}};},
-  async observe(){this.frames.set('changed',{key,workerEpoch:1});return{metadata:{observation_id:'changed',tree:'Ready'}};}};
+  async action(op,a){seen.push({op,frame:a.observation_id});if(seen.length===1){this.frames.set('post-action',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'});return{metadata:{observation_id:'post-action'}};}return{metadata:{observation_id:'finished'}};},
+  async observe(){this.frames.set('changed',{key,workerEpoch:1});return{metadata:{observation_id:'changed',tree:'new-snapshot "App" hwnd=7\nReady'}};}};
  runtime.waitChange=Runtime.prototype.waitChange.bind(runtime);
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{

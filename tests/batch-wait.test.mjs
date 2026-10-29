@@ -56,8 +56,8 @@ test('wait abort labels are bounded and success remains compatible',async()=>{
 
 test('wait_change compares the original view and returns a fresh usable observation',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);
- const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading',viewQuery:'Status',viewMaxNodes:250}]]);let observed;
- const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){observed=a;frames.set('fresh',{key,workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'Complete'}};}};
+ const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading',viewQuery:'Status',viewMaxNodes:250}]]);let observed;
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){observed=a;frames.set('fresh',{key,workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'new-snapshot "App" hwnd=7\nComplete'}};}};
  const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Inspect view'});
  assert.equal(result.changed,true);assert.equal(result.metadata.observation_id,'fresh');assert(!frames.has('initial'));assert(frames.has('fresh'));
  assert.equal(observed.query,'Status');assert.equal(observed.max_nodes,250);assert.equal(observed.with_image,false);
@@ -68,7 +68,7 @@ test('wait_change compares the original view and returns a fresh usable observat
 
 test('wait_change refuses stale frames and stops on identity or control changes',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
- const runtime={frames:new Map(),generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){this.frames.set('fresh',{key:'different',workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'Changed'}};}};
+ const runtime={frames:new Map(),generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){this.frames.set('fresh',{key:'different',workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'new-snapshot "App" hwnd=7\nChanged'}};}};
  await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'missing'}),e=>e.code==='stale_observation');
  runtime.frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});
  await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial'}),e=>e.code==='identity_changed');assert(!runtime.frames.has('fresh'));
@@ -79,10 +79,23 @@ test('wait_change refuses stale frames and stops on identity or control changes'
 
 test('wait_change times out with a fresh frame without sending input or retaining polling frames',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app),frames=new Map();let reads=0;
- frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});
- const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){const id='poll'+(++reads);frames.set(id,{key,workerEpoch:1});return{metadata:{observation_id:id,tree:'Loading'}};}};
+ frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'});
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){const id='poll'+(++reads);frames.set(id,{key,workerEpoch:1});return{metadata:{observation_id:id,tree:id+' "App" hwnd=7\nLoading'}};}};
  const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',timeout_ms:100,reason:'Wait for a view'});
  assert.equal(result.changed,false);assert.equal(result.timed_out,true);assert(frames.has(result.metadata.observation_id));assert.equal(frames.size,1);
+});
+
+test('real rendered snapshots do not count a new snapshot ID as a view change',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},frames=new Map();let capture=0,label='Loading';
+ const runtime={frames,generation:1,driver:{epoch:1,async call(op){assert.equal(op,'snapshot');return{result:{snapshot_id:'s'+(++capture),title:'App',hwnd:7,nodes:[{i:1,role:'Text',name:label,depth:0}]}};}},
+  guardian:{send(){}},check(){},stamp(){return{};},async grant(){return app;}};
+ runtime.observe=Runtime.prototype.observe.bind(runtime);
+ const first=await runtime.observe({hwnd:7,with_image:false});
+ const unchanged=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:first.metadata.observation_id,timeout_ms:100,reason:'Wait'});
+ assert.equal(unchanged.changed,false);assert.equal(unchanged.timed_out,true);assert(capture>=2);
+ const next=await runtime.observe({hwnd:7,with_image:false});label='Complete';
+ const changed=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:next.metadata.observation_id,timeout_ms:100,reason:'Wait'});
+ assert.equal(changed.changed,true);assert.match(changed.metadata.tree,/Complete/);
 });
 
 test('batched wait_change passes the fresh frame forward and stops after timeout',async()=>{

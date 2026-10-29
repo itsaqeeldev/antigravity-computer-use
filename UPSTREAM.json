@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "c1987c1eebc9b13bd6fe3a21554e46ddeebffcfce2f98b0f3f9c2dfbb804f756"
+      "sha256": "5a227d5ef3ccac295d25dce4a6a8b233573e309cb82be6130ab5e4bc499e9a6b"
     },
     {
       "path": "server/mcp.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "4349f9a9dc6f45254dd655df68c861a676be8cc4aa7788be500b6a817780ce41"
+      "sha256": "95d658b260e2ef62bb7a5b1ad1562837ddca04e43e4b823f872d47e9398aa1b4"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -436,7 +436,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "091de7d7945e0e24eda85cfd77bb469eb4597e25c225a9b1b45f83fb0e9bbf73"
+      "sha256": "419d824ff55786072a3603816b358704ede8070f96ffe3231eaea1d88c41dc60"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "906b4c93cbf463ba5e3be87531f85f3fd60f97fe2dd225b727b883939595d591"
+      "sha256": "04a84e546e5ad5a2ecc893b28192133f885ad8527c5733e22bf7c786557616a8"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

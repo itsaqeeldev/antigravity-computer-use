@@ -50,6 +50,11 @@ missed; a detected change can be unrelated and must not be treated as success.
 A direct authenticated IPC test now exercises the batch and actual shared wait
 logic with an inert runtime, checking fresh-frame propagation and one dispatch
 per action. It does not operate a desktop or establish host/model latency.
+An additional review found that rendered trees start with a changing native
+snapshot ID, which made the initial implementation report a change on every
+capture. The comparison now excludes that identifier. A regression using the
+actual renderer verifies unchanged snapshots time out and a changed label is
+detected. This feature was not installed when the defect was found.
 
 Review found that Windows `set_value` could dispatch an accessibility write and
 then silently repeat it as keyboard input if the provider threw or returned

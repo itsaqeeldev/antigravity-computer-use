@@ -37,6 +37,14 @@ export function imagePoint(image,x,y){
   return [r[0]+Math.floor(x*r[2]/image.width),r[1]+Math.floor(y*r[3]/image.height)];
 }
 
+// The first token is the native snapshot ID, which changes on every capture
+// even if the visible tree does not. Compare the remaining rendered view.
+export function comparableView(tree){
+ const space=typeof tree==='string'?tree.indexOf(' '):-1;
+ if(space<0)fail('invalid_observation','The observed tree cannot be compared. Take a fresh snapshot.');
+ return tree.slice(space+1);
+}
+
 // Keep the controls belonging to a matching named section. Returning only its
 // label made "Export format" hide PNG/JPEG and forced another full-tree read.
 // Reuse the foundation's bounded, depth-first subtree traversal; all indexes
@@ -178,7 +186,7 @@ export class Runtime {
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
     for(const [id,frame] of this.frames)if(Date.now()-frame.at>contract.frame_ms||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
     while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
-    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:rendered,viewQuery:args.query,viewMaxNodes:args.max_nodes});
+    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:comparableView(rendered),viewQuery:args.query,viewMaxNodes:args.max_nodes});
     return {metadata:response,image};
   }
   async action(op,args){
@@ -272,7 +280,7 @@ export class Runtime {
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
-      if(latest.metadata.tree!==baseline.viewTree)return {changed:true,...latest};
+      if(comparableView(latest.metadata.tree)!==baseline.viewTree)return {changed:true,...latest};
       if(Date.now()>=until)return {changed:false,timed_out:true,...latest};
       this.frames.delete(latest.metadata.observation_id);
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
