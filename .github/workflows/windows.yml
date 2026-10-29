@@ -15,6 +15,8 @@ jobs:
       - run: node --test tests/*.test.mjs
       - run: node scripts/check-provenance.mjs
       - run: node server/build.mjs --force
+      - name: Guardian refuses a noninteractive desktop without creating UI
+        run: node scripts/qualify-guardian-desktop.mjs
       - name: Build prebuilt Windows development candidate
         run: node scripts/bundle.mjs --output .localdata/windows-bundle
       - name: Native signed updater qualification or explicit ACL limitation

@@ -38,3 +38,9 @@ test('explicit controls can recover a failed episode without clearing emergency 
 test('launcher failures have a structured recovery action without exposing synthetic approval',()=>{
  const result=failureReply(Object.assign(Error('Local setup failed'),{code:'guardian_spawn_failed'}),{record:false});assert.equal(result.ok,false);assert.equal(result.next_action,'inspect_diagnostics');assert.equal(result.error.code,'guardian_spawn_failed');assert(!Object.hasOwn(result,'approved'));
 });
+test('isolated-desktop guardian errors survive startup and never report visible controls',async()=>{
+ let child;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
+ const guardian=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const boot=guardian.start();child.stdout.write(JSON.stringify({ev:'error',code:'desktop_context_unavailable',message:'Hidden desktop'})+'\n');await assert.rejects(boot,e=>e.code==='desktop_context_unavailable');assert.equal(guardian.initialized,false);
+ const runtime={guardian,state:'idle',status:()=>({state:'idle'}),async showControls(){return {controls_visible:false,error:{code:'desktop_context_unavailable',message:'Hidden desktop'}};}};
+ const result=await Runtime.prototype.ready.call(runtime);assert.equal(result.ready,false);assert.equal(result.controls_visible,false);assert.equal(result.error.code,'desktop_context_unavailable');
+});

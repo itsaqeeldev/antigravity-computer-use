@@ -26,7 +26,7 @@ export class Guardian extends EventEmitter {
       if(this.proc!==proc)return;
       let m;try{m=JSON.parse(line);}catch{return;}
       if(m.ev==='ready'){clearTimeout(this.bootTimer);this.initialized=true;this.pid=m.pid;this.ready();}
-      if(m.ev==='error'){clearTimeout(this.bootTimer);this.bootReject(failure('guardian_start_failed',m.message));proc.kill();}
+      if(m.ev==='error'){clearTimeout(this.bootTimer);this.bootReject(failure(m.code==='desktop_context_unavailable'?m.code:'guardian_start_failed',m.message));proc.kill();}
       if(m.ev==='state'){this.state=m.state;this.customCursor=m.custom_cursor;this.emit('state',m.state,m.reason);}
       if(m.ev==='human_resume'||m.ev==='host_resume')this.emit('resume',m.state,m.ev);
       if(m.ev==='settings'){this.takeoverMode=m.takeover_mode;this.emit('settings',m);}

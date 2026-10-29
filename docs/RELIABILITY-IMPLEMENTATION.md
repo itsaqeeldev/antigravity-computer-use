@@ -173,3 +173,20 @@ and Mac Intel signed assets with the repository secret. It has read-only GitHub
 permissions and does not publish, tag, merge or alter installer pins. The
 workflow must exist on the default branch before GitHub permits dispatch; its
 first actual run and production release-transport qualification remain pending.
+
+## Guardian desktop preflight follow-up
+
+Source review found that the guardian's `Visible` property did not establish
+that its desktop was the user's current input desktop. The Windows guardian now
+performs the existing read-only `DesktopContext` check before creating its UI
+and again before showing controls. Hidden/isolated contexts return
+`desktop_context_unavailable`; no desktop is created or switched. Active native
+fences also refuse dispatch after an input-desktop change, and the guardian
+latches Stop on that transition.
+
+Local source regression passed 182 tests with zero failures and seven skips;
+Windows native compilation passed. The new CI negative qualification launches no
+guardian when the current desktop is interactive, and otherwise asserts native
+refusal before creating controls. Positive interactive qualification of the new
+helper remains pending: the owner pressed physical Esc during the previous
+desktop trial, so further desktop work was not resumed by a goal continuation.

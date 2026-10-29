@@ -122,6 +122,8 @@ namespace Axon {
             if (state.Length < 3 || state[0] != "active" || state[1] != Token ||
                 !Int64.TryParse(state[2], out until) || DateTime.UtcNow.Ticks >= until)
                 throw new AxonError("control_stopped", "Control is paused, stopped or expired. Use the local controls.", null);
+            if(!(bool)DesktopContext.Inspect()["interactive"])
+                throw new AxonError("desktop_context_unavailable","The input desktop changed. No further automation is allowed; return to the normal desktop and use local human controls.",null);
         }
         internal static void Before(string op, Dictionary<string, object> a, string label, bool readOnly=false) {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
@@ -228,6 +230,10 @@ namespace Axon {
         internal static void Emit(object data) { lock(outputLock) { Console.Out.WriteLine(new JavaScriptSerializer().Serialize(data)); Console.Out.Flush(); } }
         internal static int Run() {
             Console.InputEncoding = new UTF8Encoding(false); Console.OutputEncoding = new UTF8Encoding(false);
+            var desktop=DesktopContext.Inspect();
+            if(!(bool)desktop["interactive"]) {
+                Emit(new {ev="error",code="desktop_context_unavailable",message="Local controls are not attached to the visible input desktop. Start the installed human launcher from the normal desktop. No desktop was switched.",desktop_context=desktop});return 1;
+            }
             ControlFence.WatchParent();
             Application.EnableVisualStyles();
             using(Guardian guardian=new Guardian()) {
@@ -281,7 +287,7 @@ namespace Axon {
                 DismissControls();
                 initialized=true;
                 Emit(new {ev="settings",takeover_mode=takeover.Mode,record_visuals=recordVisuals});
-                Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true });
+                Emit(new { ev="ready", pid=Process.GetCurrentProcess().Id, hotkey=true, presence=true,desktop_context=DesktopContext.Inspect() });
                 Thread reader = new Thread(Read); reader.IsBackground = true; reader.Start();
                 return true;
         }
@@ -411,6 +417,7 @@ namespace Axon {
         }
         void Tick(object sender, EventArgs e) {
             if(controlsRequested && DateTime.UtcNow>=controlsUntil)DismissControls();
+            if((state=="active"||state=="paused"||prompting)&&!(bool)DesktopContext.Inspect()["interactive"]) {Emergency("input_desktop_changed");DismissControls();return;}
             if (prompting || captureHidden) return;
             if(activity!="" && (DateTime.UtcNow-activityAt).TotalMilliseconds>1200) {activity="";RefreshHud();}
             if(++visualTick%3==0 && state=="active" && DesktopVisuals.MotionEnabled) {phase+=.14f;Invalidate();}
@@ -435,7 +442,11 @@ namespace Axon {
         void Receive(Dictionary<string, object> m) {
             string op = Convert.ToString(m["op"]); object id=m.ContainsKey("id")?m["id"]:null;
             if(op=="visual_status") {Emit(new {id=id,state=state,controls_visible=Visible,cursor=CursorSafety.Applied,watchdog_pid=CursorSafety.WatchdogPid,glow_opacity=Overlay.GlowOpacity,takeover_mode=takeover.Mode,record_visuals=recordVisuals});return;}
-            if(op=="show_controls") {ShowControls(state=="stopped"||state=="idle"?30000:0);Emit(new {id=id,state=state,controls_visible=Visible,human_rearm_required=state=="stopped"});return;}
+            if(op=="show_controls") {
+                var context=DesktopContext.Inspect();
+                if(!(bool)context["interactive"]) {DismissControls();Emit(new {id=id,state=state,controls_visible=false,desktop_context=context,error=new {code="desktop_context_unavailable",message="Controls cannot be shown on the visible input desktop. Use the installed local launcher; no desktop was switched."}});return;}
+                ShowControls(state=="stopped"||state=="idle"?30000:0);Emit(new {id=id,state=state,controls_visible=Visible,desktop_context=context,human_rearm_required=state=="stopped"});return;
+            }
             if(op=="dismiss_controls") {if(state=="active"||state=="paused")Emergency("dismiss");DismissControls();Emit(new {id=id,state=state,controls_visible=Visible});return;}
             if(op=="activity" && state=="active") {
                 string action=Convert.ToString(m["action"]);
