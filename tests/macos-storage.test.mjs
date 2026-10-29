@@ -57,12 +57,13 @@ native('Mac source storage refuses an invalid marker hard link without changing 
  const base=testDirectory('mac-source-marker'),parent=fs.mkdtempSync(path.join(base,'run-'));
  const root=path.join(parent,'.localdata'),target=path.join(parent,'unrelated.txt');
  fs.writeFileSync(path.join(parent,'package.json'),JSON.stringify({name:'antigravity-native-computer-use'}));
- fs.mkdirSync(root,{mode:0o700});fs.writeFileSync(target,'unrelated data',{mode:0o600});
+ fs.mkdirSync(root,{mode:0o755});fs.chmodSync(root,0o755);fs.writeFileSync(target,'unrelated data',{mode:0o600});
  fs.linkSync(target,path.join(root,'.agcu-private-storage'));
  fs.writeFileSync(path.join(root,'existing-evidence.txt'),'keep',{mode:0o600});
  try{
   assert.throws(()=>storageOperation('data',root,{helper:ensureStorageGuard()}));
   assert.equal(fs.readFileSync(target,'utf8'),'unrelated data');
+  assert.equal(fs.statSync(root).mode&0o777,0o755,'invalid storage must not be chmodded');
  }finally{fs.rmSync(parent,{recursive:true,force:true});}
 });
 native('Mac kernel lease has one owner and reports directory replacement as ownership loss',async()=>{

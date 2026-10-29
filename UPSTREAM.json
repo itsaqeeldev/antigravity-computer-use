@@ -548,7 +548,7 @@
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
-      "sha256": "a60b3c8c1b818eb8d2f3a2672798b1f71ba43081a64a6fd9187b53bd38a95700"
+      "sha256": "4c5a036c5125a90139b80bab49480253ae15e31c75d0004e2dd5ac789e263c4c"
     },
     {
       "path": "server/native/macos/StorageMain.swift",
@@ -556,7 +556,7 @@
     },
     {
       "path": "tests/macos-storage.test.mjs",
-      "sha256": "3663ed14854daf0ff91a5812b7823ccdb074db6573f690a56d68495f4d7eded0"
+      "sha256": "c4c0fbb52bd8fbc5c7b81495e422e3a1e9c4d372c307e581f2bae890ce7aa887"
     },
     {
       "path": "server/native/ControlContract.cs",

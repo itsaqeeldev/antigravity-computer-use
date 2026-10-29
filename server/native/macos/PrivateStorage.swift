@@ -169,6 +169,10 @@ enum MacPrivateStorage {
                     try reject("storage_not_dedicated", root, "Refusing to change permissions on unrelated existing data.")
                 }
             } else if sourceData {
+                var existing = stat()
+                guard fstatat(dirFd, marker, &existing, AT_SYMLINK_NOFOLLOW) != 0 && errno == ENOENT else {
+                    try reject("storage_not_dedicated", root, "Refusing to change permissions on storage with an invalid marker.")
+                }
                 guard chmod(root, 0o700) == 0 else {
                     try reject("storage_permissions_failed", root, "Cannot make the application directory private.")
                 }
