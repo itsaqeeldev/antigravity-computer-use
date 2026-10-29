@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {PassThrough} from 'node:stream';import {EventEmitter} from 'node:events';import {generateKeyPairSync,sign} from 'node:crypto';
 import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server/runtime.mjs';import {Incidents} from '../server/incidents.mjs';import {verifyRelease,verifyStaged,sha256,acquireUpdateLock,downloadFile} from '../server/update-core.mjs';import {testDirectory} from './paths.mjs';import {controllerStartSource} from '../scripts/install.mjs';
 import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
-import {spawn} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERSION} from '../server/version.mjs';
 test('concurrent guardian requests wait for one ready process',async()=>{
  let starts=0,child;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
@@ -69,9 +69,11 @@ test('the actual human launcher can reveal controls after cached ready failure w
   fs.writeFileSync(starter,controllerStartSource(null));
   const output=await new Promise((resolve,reject)=>{
    const child=process.platform==='win32'?spawn(process.env.ComSpec||'C:/Windows/System32/cmd.exe',['/d','/s','/c',`""${starter}""`],{windowsVerbatimArguments:true,windowsHide:true,env:{...process.env,AGCU_DATA_DIR:directory,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']}):spawn('/bin/sh',[starter],{env:{...process.env,AGCU_DATA_DIR:directory,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']});
-   let stdout='',stderr='';const timer=setTimeout(()=>{child.kill();reject(Error('Human launcher fixture timed out'));},10000);
+   let stdout='',stderr='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;
+    if(process.platform==='win32'&&child.pid)spawnSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,timeout:5000});else child.kill();
+   },10000);
    child.stdout.on('data',data=>stdout+=data);child.stderr.on('data',data=>stderr+=data);
-   child.once('error',error=>{clearTimeout(timer);reject(error);});child.once('exit',code=>{clearTimeout(timer);code===0?resolve(stdout):reject(Error(stderr||stdout));});
+   child.once('error',error=>{clearTimeout(timer);reject(error);});child.once('close',code=>{clearTimeout(timer);timedOut?reject(Error('Human launcher fixture timed out: '+stderr)):code===0?resolve(stdout):reject(Error(stderr||stdout));});
   });
   assert.equal(shows,1);assert.equal(runtime.recoveryFailure,null);assert.equal(runtime.state,'stopped');
   assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.match(output,/"controls_visible":true/);

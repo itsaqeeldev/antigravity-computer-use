@@ -35,3 +35,13 @@ test('a killed lease helper cannot publish a stale incident journal',async t=>{
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'incidents.json'))),[{new:true}]);
  }finally{process.kill=originalKill;if(oldLease)await oldLease.release();if(newLease)await newLease.release();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('the native lease holder recovers its reserved interrupted publication file',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'incident-stale-temp-'));let lease;
+ try{
+  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage refused: '+error.code);return;}throw error;}
+  const lock=path.join(dir,'incident-writer-lease');fs.mkdirSync(lock);const temp=path.join(dir,'.incident-publish.tmp');fs.writeFileSync(temp,'interrupted',{mode:0o600});
+  lease=await acquireServiceLease(lock);await lease.publishIncidents(Buffer.from('[{"recovered":true}]'));await lease.release();lease=null;
+  assert(!fs.existsSync(temp));assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'incidents.json'))),[{recovered:true}]);
+ }finally{if(lease)await lease.release();fs.rmSync(dir,{recursive:true,force:true});}
+});

@@ -90,6 +90,11 @@ test passed in the local full suite and the preceding Windows CI, but those pass
 do not establish why this run failed. The original failure remains in Actions run
 `40934910247`; its failed job was rerun for comparison. Treat a successful retry
 as a separate observation, not proof that startup cannot hang.
+Another local full run timed out the human-launcher fixture and its immediate
+cleanup masked the timeout with `EPERM`. The harness now terminates its own
+Windows child process tree on timeout and waits for process closure before
+cleanup, retaining the original timeout message. The focused test and a full
+retry passed; this does not establish the underlying timeout cause.
 Another Windows run (`40937717822`) timed out in the ownership helper and then
 hit `EPERM` while removing its fixture directory. Source review identified a
 possible cleanup race: startup rejected immediately after requesting helper
@@ -137,6 +142,10 @@ pinned runtimes do not use this protocol, and real Mac qualification remains ope
 Malformed or oversized helper replies now fail the pending publication promptly
 and retire that helper; the result remains outcome-unknown rather than replaying
 a potentially committed incident. A focused protocol regression covers this path.
+Native publication now uses one reserved temporary file. A later lease holder
+checks that file's ownership and privacy before removing an interrupted write;
+the Windows native regression exercises recovery. Mac CI and hardware validation
+are still required for the corresponding implementation.
 The first asynchronous version delayed error responses while acquiring the lease,
 causing a client timeout in the full suite. Recording is now queued off the reply
 path; replies identify it as pending, status exposes pending/failure, and orderly

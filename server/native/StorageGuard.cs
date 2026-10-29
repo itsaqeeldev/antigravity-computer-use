@@ -50,9 +50,11 @@ internal static class StorageGuard {
                     string line;while((line=Console.In.ReadLine())!=null){
                         var request=new JavaScriptSerializer().DeserializeObject(line) as Dictionary<string,object>;
                         if(request==null||!request.ContainsKey("op")||Convert.ToString(request["op"])!="publish_incidents"||Path.GetFileName(root)!="incident-writer-lease")throw new InvalidOperationException("Invalid lease operation.");
-                        string parent=Path.GetDirectoryName(root),target=Path.Combine(parent,"incidents.json"),temp=Path.Combine(parent,".incidents-"+Guid.NewGuid().ToString("N")+".tmp");
+                        string parent=Path.GetDirectoryName(root),target=Path.Combine(parent,"incidents.json"),temp=Path.Combine(parent,".incident-publish.tmp");
                         byte[] bytes=Convert.FromBase64String(Convert.ToString(request["data"]));if(bytes.Length>256*1024)throw new InvalidOperationException("Incident journal exceeds limit.");
                         Verify(parent,true);if(File.Exists(target))Verify(target,false);
+                        // Only the lease holder may recover this reserved file.
+                        if(File.Exists(temp)){Verify(temp,false);File.Delete(temp);}
                         try{using(var stream=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){stream.Write(bytes,0,bytes.Length);stream.Flush(true);}Verify(temp,false);
                             if(File.Exists(target))File.Replace(temp,target,null);else File.Move(temp,target);
                         }finally{if(File.Exists(temp))File.Delete(temp);}

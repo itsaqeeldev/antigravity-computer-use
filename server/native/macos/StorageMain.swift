@@ -72,7 +72,13 @@ func storageReply(_ value: [String: Any]) {
                             throw PrivateStorageError(code:"storage_not_private",path:parent,message:"Incident journal is not private.")
                         }
                     } else if errno != ENOENT { throw PrivateStorageError(code:"storage_unavailable",path:parent,message:"Cannot inspect incident journal.") }
-                    let temp = ".incidents-" + UUID().uuidString + ".tmp"
+                    let temp = ".incident-publish.tmp"
+                    var stale = stat()
+                    if fstatat(pfd,temp,&stale,AT_SYMLINK_NOFOLLOW) == 0 {
+                        guard (stale.st_mode & S_IFMT) == S_IFREG, stale.st_uid == getuid(), stale.st_nlink == 1, stale.st_mode & 0o077 == 0, unlinkat(pfd,temp,0) == 0 else {
+                            throw PrivateStorageError(code:"storage_not_private",path:parent,message:"Cannot safely recover the reserved incident temporary file.")
+                        }
+                    } else if errno != ENOENT { throw PrivateStorageError(code:"storage_unavailable",path:parent,message:"Cannot inspect incident temporary file.") }
                     let fd = openat(pfd,temp,O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW,0o600)
                     guard fd >= 0 else { throw PrivateStorageError(code:"storage_permissions_failed",path:parent,message:"Cannot create incident journal temporary file.") }
                     var written=0;let ok = bytes.withUnsafeBytes { raw -> Bool in
