@@ -6,10 +6,12 @@ not the normal desktop-use skill. The report/PR is the handoff back to this repo
 ```text
 Qualify and repair Antigravity Computer Use on this Mac.
 Repository: https://github.com/shayann07/antigravity-computer-use
-Mac candidate PR: https://github.com/shayann07/antigravity-computer-use/pull/1
+Integration branch: `codex/review-intel-mac` in that repository.
 
-Read the current PR head and checks before checking out its branch. Preserve
-local changes. Create a short-lived repair branch from the candidate. Read
+Fetch and inspect the current integration branch and CI checks. Record its full
+commit before testing. Preserve local changes and active work; do not reset or
+overwrite an existing checkout. Create a short-lived repair branch from that
+exact integration commit. Do not assume historical PR #1 is current. Read
 AGENTS.md, HANDOFF.md, docs/MACOS.md, docs/RELIABILITY-IMPLEMENTATION.md,
 VALIDATION.md and the shared skill. Documentation is not proof of functionality.
 
@@ -29,12 +31,19 @@ scroll/drag, Open/Save with independently verified outputs, multiple approved ap
 and owned dialogs, approval/denial, physical Esc during queued/held input,
 pause/resume, End, a second task, permission revocation, sleep/wake, available
 displays and cursor/glow restoration after crashes. Use disposable documents.
+Check that named clicks move the real pointer by default; also test explicit
+semantic-only clicks, disabled controls, and that error/Stop paths do not replay
+input. Record which actions are physically observed rather than inferred.
 
 Qualify updater authenticity, idle deferral, preserved Stop/config/pins,
 failed-start rollback and skill discovery after upgrade. Production releases need
 a maintainer-pinned signing key; never create an unsigned bypass to run a test.
 Use explicit inert fixtures for cryptographic tests and label their limits.
 Never claim that a fixture proves physical input or Antigravity orchestration.
+Run the incident concurrency and helper-death tests on the exact Mac build,
+including interrupted publication and refusal of a linked temporary file.
+Record all skips and failures; older pinned project deployments may still use an
+older writer, so do not claim universal cross-version safety without evidence.
 
 Fix reproducible defects and add meaningful regressions. Preserve unknown input
 delivery and no replay. If host UI cannot be controlled through a supported tool,
@@ -45,7 +54,7 @@ checks, build identities, reproduction, changes and evidence references. Keep
 screenshots, recordings, personal paths and document content out of public data.
 
 With available GitHub authentication, push the repair branch and create a draft
-PR targeting the current Mac candidate branch. Reference PR #1. File deduplicated
+PR targeting `codex/review-intel-mac`. File deduplicated
 sanitized issues for unresolved reproducible defects. These project reports are
 authorized. Without auth, prepare commits/report/issue text locally and state
 what remains unsent. Do not self-merge or publish a general Mac release.
