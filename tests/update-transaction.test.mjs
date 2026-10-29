@@ -175,6 +175,22 @@ test('a competing controller prevents rollback and retains the recovery journal'
   await assert.rejects(update(f.target,'rollback',f),e=>e.code==='service_already_running');assert.equal(restored,false);assert(fs.existsSync(path.join(f.target,'update-switching.json')));
  }finally{f.cleanup();}
 });
+test('rollback rejects out-of-tree or duplicate journals before shutdown',async()=>{
+ for(const kind of ['outside','duplicate','relative']){const f=fixture();try{
+  await update(f.target,'check',f);await update(f.target,'apply',f);const stateFile=path.join(f.target,'update-state.json'),state=JSON.parse(fs.readFileSync(stateFile));
+  state.rollback=kind==='outside'?[path.join(f.directory,'rollback.json')]:kind==='relative'?['backups/x/rollback.json']:[state.rollback[0],state.rollback[0]];fs.writeFileSync(stateFile,JSON.stringify(state));
+  const before=fs.readFileSync(path.join(f.target,'installation.json'),'utf8');f.calls.length=0;await assert.rejects(update(f.target,'rollback',f),/update_recovery_journal_invalid/);
+  assert(!f.calls.includes('shutdown'));assert.equal(fs.readFileSync(path.join(f.target,'installation.json'),'utf8'),before);
+ }finally{f.cleanup();}}
+});
+test('rollback and recovery refuse an unverified private tree before shutdown',async()=>{
+ for(const mode of ['rollback','recover']){const f=fixture();try{
+  if(mode==='rollback'){await update(f.target,'check',f);await update(f.target,'apply',f);}
+  else{const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json'))),staged=f.adapters.install({bundle:f.fresh.bundle,target:f.target});fs.writeFileSync(path.join(f.target,'update-switching.json'),JSON.stringify({previous_installation:previous,rollback:[path.join(staged.backup,'rollback.json')]}));}
+  f.calls.length=0;f.adapters.storage=operation=>{if(operation==='verify-tree')throw Error('unsafe_tree');};
+  await assert.rejects(update(f.target,mode,f),/unsafe_tree/);assert(!f.calls.includes('shutdown'));
+ }finally{f.cleanup();}}
+});
 test('interrupted-switch recovery requires the restored build identity before clearing its journal',async()=>{
  const f=fixture();try{
   const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));

@@ -75,6 +75,11 @@ async function updateLocked(target,command,{fetcher,adapters}){
   };
   const shutdownVerified=record=>{const result=cli(record,['shutdown']);if(result.ok!==true||result.closed!==true)throw Error('update_cleanup_unconfirmed');};
   const acquireController=adapters.acquireControllerLease||(!adapters.storage?()=>acquireServiceLease(path.join(target,'data')):async()=>null);
+  const validateRollbackFiles=(files,allowEmpty=false)=>{
+   if(!Array.isArray(files)||(!allowEmpty&&!files.length))throw Error('update_recovery_journal_invalid');const seen=new Set();
+   for(const file of files){if(typeof file!=='string'||!path.isAbsolute(file))throw Error('update_recovery_journal_invalid');const resolved=path.resolve(file),key=process.platform==='win32'?resolved.toLowerCase():resolved;
+    if(path.dirname(path.dirname(resolved))!==path.join(target,'backups')||path.basename(resolved)!=='rollback.json'||seen.has(key))throw Error('update_recovery_journal_invalid');seen.add(key);}
+  };
   if(command==='check'){
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
@@ -117,8 +122,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(command==='recover'){
    if(!fs.existsSync(switchingFile))return {recovered:false};
    const interrupted=JSON.parse(fs.readFileSync(switchingFile));
-   if(!Array.isArray(interrupted.rollback)||!interrupted.previous_installation)throw Error('update_recovery_journal_invalid');
-   for(const file of interrupted.rollback){if(path.dirname(path.dirname(path.resolve(file)))!==path.join(target,'backups')||path.basename(file)!=='rollback.json')throw Error('update_recovery_journal_invalid');}
+   if(!interrupted.previous_installation)throw Error('update_recovery_journal_invalid');validateRollbackFiles(interrupted.rollback,true);storage('verify-tree',target);
    if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
    switching=true;safeToUnlock=false;
    if(serviceRunning)shutdownVerified(installed);
@@ -130,7 +134,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   const markSwitch=()=>{if(fs.existsSync(switchingFile))throw Error('update_interrupted_requires_recovery');journal={pid:process.pid,previous_installation:installed,rollback:[]};writeAtomicJSON(switchingFile,journal,{exclusive:true});switching=true;};
   const addJournal=file=>{journal.rollback.push(file);writeAtomicJSON(switchingFile,journal);};
   if(command==='rollback'){
-   if(!state.rollback?.length)throw Error('update_no_rollback');if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
+   if(state.rollback==null||Array.isArray(state.rollback)&&!state.rollback.length)throw Error('update_no_rollback');validateRollbackFiles(state.rollback);storage('verify-tree',target);if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};markSwitch();
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];writeAtomicJSON(switchingFile,journal);
    if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;const fence=await acquireController();try{for(const file of [...state.rollback].reverse())runRollback(file);}finally{await fence?.release();}
