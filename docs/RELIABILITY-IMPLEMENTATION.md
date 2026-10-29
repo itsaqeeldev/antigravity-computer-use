@@ -27,6 +27,13 @@ an automatic signed-update acceptance test or a real Antigravity task on the new
 build. Private receipt and rollback location remain under the installation and
 the upgrade evidence is under `.localdata/reliability-current/`.
 
+Windows CI on documentation head `2ab0861` failed the real foreground-service
+startup test after its 10-second readiness deadline; stderr was empty. The same
+test passed in the local full suite and the preceding Windows CI, but those passes
+do not establish why this run failed. The original failure remains in Actions run
+`40934910247`; its failed job was rerun for comparison. Treat a successful retry
+as a separate observation, not proof that startup cannot hang.
+
 The incident counter no longer clamps at one million when reading records: that
 clamp could cause a new occurrence to appear already acknowledged. A regression
 checks the transition past the former limit. Exhaustion of the safe integer range
