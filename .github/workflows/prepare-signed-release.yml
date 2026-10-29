@@ -6,6 +6,7 @@ on:
       - .github/workflows/prepare-signed-release.yml
       - scripts/sign-update.mjs
       - scripts/sign-update-ci.mjs
+      - scripts/verify-signed-assets.mjs
       - release-public-key.pem
   workflow_dispatch:
     inputs:
@@ -43,6 +44,8 @@ jobs:
           package-manager-cache: false
       - name: Check provenance
         run: node scripts/check-provenance.mjs
+      - name: Verify release asset validation regressions
+        run: node --test tests/signed-assets.test.mjs
       - name: Build sealed bundle
         run: node scripts/bundle.mjs --output .localdata/release-bundle
       - name: Sign published-update metadata and prepare payload assets
