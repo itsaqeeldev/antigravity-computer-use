@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "f5884c81b797d57979eb89adbbd7fdf9be455ba9c779a0d892561be2b5597c82"
+      "sha256": "29a8c304b5022ddf6b5ee81d04e2fba06d04339a2bb786c192768706ef6a034f"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "7005b925c40ea1cbc7299aeeb51e0d78320ef6447709fa41fe5bdb2d9eaa377e"
+      "sha256": "0cb8baa4ad199697bd40a981d9345a70af9b1668eafa53073ca11425e4dbefc0"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -556,7 +556,7 @@
     },
     {
       "path": "tests/macos-storage.test.mjs",
-      "sha256": "7617974ba11c5c7eeb7a304e3bf43b8fd11bc6dc9033555ee21336f6bf699a0a"
+      "sha256": "3663ed14854daf0ff91a5812b7823ccdb074db6573f690a56d68495f4d7eded0"
     },
     {
       "path": "server/native/ControlContract.cs",

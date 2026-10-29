@@ -53,6 +53,18 @@ native('Mac private storage refuses links, unsafe parents and extended Allow ACL
  finally {assert.equal(spawnSync('/bin/chmod',['-a','everyone allow read',privateDir]).status,0);}
  storageOperation('verify-tree',privateDir,{helper});
 });
+native('Mac source storage refuses an invalid marker hard link without changing its target',()=>{
+ const base=testDirectory('mac-source-marker'),parent=fs.mkdtempSync(path.join(base,'run-'));
+ const root=path.join(parent,'.localdata'),target=path.join(parent,'unrelated.txt');
+ fs.writeFileSync(path.join(parent,'package.json'),JSON.stringify({name:'antigravity-native-computer-use'}));
+ fs.mkdirSync(root,{mode:0o700});fs.writeFileSync(target,'unrelated data',{mode:0o600});
+ fs.linkSync(target,path.join(root,'.agcu-private-storage'));
+ fs.writeFileSync(path.join(root,'existing-evidence.txt'),'keep',{mode:0o600});
+ try{
+  assert.throws(()=>storageOperation('data',root,{helper:ensureStorageGuard()}));
+  assert.equal(fs.readFileSync(target,'utf8'),'unrelated data');
+ }finally{fs.rmSync(parent,{recursive:true,force:true});}
+});
 native('Mac kernel lease has one owner and reports directory replacement as ownership loss',async()=>{
  const base=testDirectory('mac-lease'),dir=path.join(base,'data'),helper=ensureStorageGuard();fs.chmodSync(base,0o700);
  storageOperation('data',dir,{helper});const first=await acquireServiceLease(dir);

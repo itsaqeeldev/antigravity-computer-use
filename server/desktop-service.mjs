@@ -144,7 +144,9 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
     idleReleased=true;busy=true;
     Promise.resolve().then(()=>runtime.finish()).catch(()=>runtime.stop()).catch(()=>{}).finally(()=>{busy=false;});
   },idleCheckMs);expiry.unref();
-  process.once('SIGTERM',()=>shutdown().catch(()=>{}));process.once('SIGINT',()=>shutdown().catch(()=>{}));
+  const onSignal=()=>shutdown().catch(()=>{});
+  process.once('SIGTERM',onSignal);process.once('SIGINT',onSignal);
+  server.once('close',()=>{process.removeListener('SIGTERM',onSignal);process.removeListener('SIGINT',onSignal);});
   return {shutdown,server,file,ownership,status:()=>({...runtime.status(),listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost})};
 }
 

@@ -68,6 +68,20 @@ test('a passive sidecar releases idle control and serves a later session without
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 
+test('service shutdown removes its process signal handlers',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-signal-cleanup-'));
+ const before={term:process.listenerCount('SIGTERM'),int:process.listenerCount('SIGINT')};
+ const runtime={status:()=>({state:'idle'}),async close(){}};
+ try{
+  const service=await serveDesktop({directory:dir,runtime});
+  assert.equal(process.listenerCount('SIGTERM'),before.term+1);
+  assert.equal(process.listenerCount('SIGINT'),before.int+1);
+  await service.shutdown();
+  assert.equal(process.listenerCount('SIGTERM'),before.term);
+  assert.equal(process.listenerCount('SIGINT'),before.int);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('passive idle cleanup never resumes or clears a human Pause or Stop',async()=>{
  for(const state of ['paused','stopped']){
   const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-stop-'));let finishes=0;
