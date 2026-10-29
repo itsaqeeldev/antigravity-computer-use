@@ -34,7 +34,10 @@ real Windows helper test confirms exclusion, detection of helper termination and
 subsequent reacquisition. A mocked overlap test confirms the second reporter
 defers. Consent is rechecked before submission. Mac native lease and power-loss
 behavior remain to qualify. An uncertain remote create outcome still needs
-investigation because GitHub search visibility may lag submission.
+human review if GitHub never reveals the issue: a durable send intent prevents
+automatic replay while search may lag, and reconciliation clears it when the
+issue appears. A user-facing resolution flow for a confirmed absent issue is
+still needed; do not silently discard the intent.
 
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)

@@ -30,6 +30,25 @@ test('revoked consent during issue lookup prevents submission',async()=>{
  }finally{f.clean();}
 });
 
+test('uncertain issue creation is not replayed while search is stale and later reconciles',async()=>{
+ const f=fixture(true);let creates=0,found=false;
+ try{
+  const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:JSON.stringify(found?[{number:1}]:[])}:(creates++,{status:null});
+  const first=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:10000000});assert.equal(first.next_action,'github_submission_outcome_unknown');
+  assert.equal((await diagnostics(f.directory)).next_action,'github_submission_outcome_unknown');
+  const second=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:14000000});assert.equal(second.next_action,'github_submission_outcome_unknown');assert.equal(creates,1);assert(f.i.read()[0].pending);
+  found=true;const third=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run,now:18000000});assert.equal(third.submitted,1);assert.equal(creates,1);assert.equal(f.i.read()[0].pending,false);
+ }finally{f.clean();}
+});
+test('completed acknowledgement clears an intent left by an interrupted cleanup',async()=>{
+ const f=fixture(true);try{
+  const item=f.i.read()[0];fs.writeFileSync(f.i.ackFile,JSON.stringify({[item.id]:item.count}));
+  const intent=path.join(f.directory,'reporting-intent.json');fs.writeFileSync(intent,JSON.stringify({id:item.id,count:item.count}));
+  const result=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run:()=>assert.fail('no remote work expected')});
+  assert.equal(result.submitted,0);assert(!fs.existsSync(intent));assert.equal(f.i.read()[0].pending,false);
+ }finally{f.clean();}
+});
+
 test('native reporting lease excludes another reporter and recovers after helper death',async t=>{
  const base=testDirectory('tmp'),target=fs.mkdtempSync(path.join(base,'report-native-')),directory=path.join(target,'data'),lockDir=path.join(directory,'reporting-lease');let held;
  try{
