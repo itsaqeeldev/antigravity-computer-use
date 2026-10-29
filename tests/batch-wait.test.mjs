@@ -70,6 +70,13 @@ test('wait does not treat a vanished success label as confirmation',async()=>{
  assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.tree,'Loading');
 });
 
+test('wait reports a known failure first appearing in its final timeout observation',async()=>{
+ let reads=0;const frames=new Map();
+ const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});if(reads===1)await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:reads===1?'Loading':'Failed'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',abort_on:['Failed'],timeout_ms:100});
+ assert.equal(result.matched,false);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.metadata.observation_id,'v2');assert(!frames.has('v1'));
+});
+
 test('wait_change compares the original view and returns a fresh usable observation',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);
  const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading',viewQuery:'Status',viewMaxNodes:250}]]);let observed;

@@ -275,7 +275,11 @@ export class Runtime {
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
-    return {matched:false,timed_out:true,...await this.observe({hwnd:args.hwnd,query:args.query})};
+    const final=await this.observe({hwnd:args.hwnd,query:args.query});
+    const finalTree=final.metadata.tree.toLowerCase();
+    const finalFailure=(args.abort_on||[]).find(text=>finalTree.includes(text.toLowerCase()));
+    if(finalFailure)return {matched:false,aborted:true,abort_match:finalFailure,...final};
+    return {matched:false,timed_out:true,...final};
   }
   async waitChange(args){
     this.check();

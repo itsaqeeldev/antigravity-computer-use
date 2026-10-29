@@ -40,6 +40,9 @@ success label that vanishes does not advance the batch, and a known failure
 appearing in the final view stops it. Focused regressions cover both transitions;
 the returned view is still a point-in-time observation, not a guarantee that an
 application cannot change afterward.
+If a failure first appears in the final timeout observation, the wait now
+reports that failure instead of masking it as a generic timeout; an inert
+regression covers this boundary.
 
 The separate `wait_change` command waits for a change in the exact accessible
 tree shown by a fresh observation. It preserves that observation's query and
