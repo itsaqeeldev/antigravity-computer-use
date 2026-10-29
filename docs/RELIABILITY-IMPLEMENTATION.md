@@ -18,6 +18,17 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+### Open diagnostics concurrency defect
+
+`Incidents.record()` and the reporting worker both rewrite `incidents.json`
+using the same `.tmp` pathname in separate processes. The worker reloads after
+network work, but its read/modify/write is not serialized with recording. A
+simultaneous record can collide with the temporary file or be overwritten, so
+local recording is not yet qualified under concurrent submission. Repair this
+with crash-safe cross-process coordination, retain pending records on failure,
+and add deterministic overlapping-process tests before release; do not treat
+the existing single-process reporting tests as evidence for this case.
+
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)
 and [Mac CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552937)
