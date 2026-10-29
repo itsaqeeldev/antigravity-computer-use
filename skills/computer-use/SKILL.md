@@ -5,13 +5,15 @@ description: Operate and visually verify real desktop applications, including de
 
 # Computer use
 
-Antigravity is the agent; the local Windows runtime supplies screenshots, accessibility and real mouse/keyboard input. Use its direct terminal command. No MCP or separate model is needed. Do not mix it with Cua Driver or another controller.
+Antigravity is the agent; the local native runtime supplies screenshots, accessibility and real mouse/keyboard input. Windows and macOS use the same tools, observation/action loop, batch limits and permission lifecycle. Use its installed direct terminal command. No MCP or separate model is needed. Do not mix it with Cua Driver or another controller.
 
 ```powershell
 {{DESKTOP_COMMAND}} status
 ```
 
 Check status once, then choose **either** `apps` for an existing/unknown window or `launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'` for a known executable. Launch returns the window, frame and screenshot; reuse them. `observe_pending`, `input_completed:true` or a verification failure after launch means discover the existing process, never launch it again blindly.
+
+On macOS, launch an existing `.app` bundle such as `/Applications/Example.app`; returned `hwnd` values are opaque window handles with the same observation rules. Use the application's Mac shortcuts (`cmd`/`option`) where appropriate. Required macOS Accessibility, Screen Recording and Input Monitoring grants must be completed by the human through the installed **Setup Mac Permissions.command**. Never operate system permission prompts or weaken a refusal. The native Mac adapter is experimental until the documented interactive qualification passes; a compile/contract test is not desktop acceptance.
 
 The installed App sidecar keeps a passive listener across tasks. Finish with `end`; use `shutdown` only for updates/removal. The pinned launcher's build must match the listener. Windows Agent Manager terminal jobs can run on an isolated `exebox` desktop, even in Turbo. If the sidecar is unavailable, the human starts **`{{CONTROLLER_START}}`** on the normal desktop or restarts the App's Computer Use sidecar. Do not use WMI, switch desktops, change policy or restart a live unresponsive controller to get around this boundary.
 

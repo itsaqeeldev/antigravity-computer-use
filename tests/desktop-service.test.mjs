@@ -7,6 +7,7 @@ import net from 'node:net';
 import {BUILD_ID} from '../server/version.mjs';
 import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';
 import {fileURLToPath} from 'node:url';
+import {storageOperation} from '../server/storage.mjs';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -96,6 +97,9 @@ test('a standalone client cannot silently reuse a host-managed service with the 
 
 test('start refuses to replace a live but unresponsive service',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-start-'));const file=path.join(dir,'desktop-session.json');
+ // Establish a dedicated native data root before populating a saved session.
+ // macOS correctly refuses to adopt arbitrary nonempty, unmarked directories.
+ if(process.platform==='darwin')storageOperation('data',dir);
  const raw=JSON.stringify({pid:process.pid,pipe:process.platform==='win32'?'\\\\.\\pipe\\agcu-unresponsive-'+process.pid:path.join(dir,'missing.sock'),secret:'fixture'});fs.writeFileSync(file,raw);
  try{
   const result=await new Promise((resolve,reject)=>{

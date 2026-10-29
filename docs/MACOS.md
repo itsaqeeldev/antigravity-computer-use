@@ -1,0 +1,126 @@
+# macOS adapter — experimental candidate
+
+The Mac implementation uses the same Node runtime, tool schemas, observation
+references, batches, limits, receipts, installation and rollback as Windows.
+There is one `/computer-use` skill. The native adapters implement OS calls;
+there is no second agent, required MCP server or separate feature library.
+
+`server/control-contract.json` supplies the common control states, time/action
+limits, sensitive-effect patterns and visual tokens. Both native consent
+runtimes load it. The Mac helper refuses control when its contract is missing,
+incompatible, paused, expired or stopped. The shared driver refuses the old
+unguarded Swift port.
+
+## Requirements and current status
+
+- macOS 14 or later; Apple Silicon and Intel candidate builds.
+- Antigravity Agent Manager App with global skills and Sidecars.
+- Human-granted Accessibility, Screen Recording and Input Monitoring access.
+- No compiler or external Node installation for a prebuilt candidate. Source
+  builds require Xcode Command Line Tools and Node24.20.0.
+
+The first Apple Silicon CI candidate compiled, passed native contract and
+private-storage/ownership checks, and produced a bundle. Installation and
+restart checks then failed under deep installation paths; the current Mac
+adapter uses an ephemeral IPv4 **127.0.0.1** endpoint with the same private
+256-bit capability authentication. It never listens on an external interface.
+Windows retains its named pipe. This is a transport difference, not a different
+tool or permission API.
+
+**Interactive Mac acceptance remains unrun.** Do not present the candidate as
+qualified Windows parity or a general release. See the exact commit's macOS CI
+for current compilation, installation and packaging results; failed runs are
+retained. No user Mac was controlled from the Windows development environment.
+
+## Try a prebuilt candidate
+
+Use the architecture-matching artifact from the Mac adapter branch's successful
+[macOS workflow run](https://github.com/shayann07/antigravity-computer-use/actions/workflows/macos.yml).
+These CI artifacts are temporary development downloads, not release assets.
+
+1. Extract the artifact ZIP and its `.tar.gz` archive. Keep the complete
+   `macos-bundle` directory together.
+2. Run `install.command` from that folder. It installs the global direct skill
+   and the project's own Sidecar, preserving existing configuration and a rollback
+   backup. The default target is
+   `~/Library/Application Support/AntigravityComputerUse`.
+3. Run **Setup Mac Permissions.command** yourself. Approve the OS-requested
+   permissions in System Settings. The agent must not complete those prompts.
+4. Use `/computer-use` in Antigravity. The tool vocabulary is the same; `launch`
+   accepts `.app` bundles and key chords accept `cmd` and `option`.
+
+From a terminal in the extracted folder, installation is also one command:
+
+```sh
+./install.command
+```
+
+Only an operator should opt into host-managed permissions:
+
+```sh
+./install.command --permission-mode host-managed
+```
+
+The default standalone mode uses native app-session and sensitive-action
+approval dialogs. Host-managed deployment relies on host execution review;
+neither platform claims to authenticate Turbo. The helpers are ad-hoc signed for
+development, not Developer ID signed or notarized. Do not disable Gatekeeper or
+system security to run them. A permission/quarantine refusal needs human review.
+macOS may require new permission approval after an ad-hoc-signed update.
+
+## Native behavior
+
+- Accessibility uses AXUIElement, reusing the attributed MIT Swift foundation.
+- ScreenCaptureKit captures only the unambiguously matched approved window;
+  there is no covering-desktop fallback. Coordinates retain native display
+  origins and screenshot-to-window scaling in the shared runtime.
+- Physical input uses marked CGEvents, eased real-pointer travel and ownership
+  checks. Semantic actions do not invent mouse movement. Ambiguous provider
+  failures return unknown delivery without a physical retry.
+- A separate event-tap watchdog handles physical Esc or Control+Option+F12,
+  invalidates the native fence, terminates birth-time-matched input workers and
+  releases journaled automation-held input. Stop persists across restart;
+  only the local human Re-arm control clears it.
+- Manual takeover is the default. Optional Smart mode ignores small motion and
+  yields on deliberate input. Resume requires fresh observations.
+- AppKit renders the minimal bar, breathing edges and original arrow/text
+  pointer. End/Pause/Stop release the cursor and hide the active visuals. Native
+  screenshots omit the chrome. Actual appearance and crash restoration remain
+  interactive test requirements.
+- POSIX ownership/mode checks, link refusal, extended-Allow-ACL refusal and an
+  OS-held `flock` lease protect the data directory. Parent permissions are never
+  modified. Directory or lease replacement invalidates control.
+- Native file pickers require an already-open owned dialog and exact path
+  readback. If the picker cannot expose a verified target, confirmation refuses;
+  there is no blind Enter fallback. Save-dialog coverage needs real Mac testing.
+- Clipboard paste preserves readable formats and restores them if no other app
+  changed the clipboard. Provider-owned/lazy clipboard formats can refuse.
+
+Authentication, secure fields, locked sessions and OS security prompts require
+human handoff. The shared policy blocks the assistant/Antigravity host windows.
+The adapter does not switch Spaces or create hidden desktops for automation.
+
+## Qualification checklist
+
+CI must compile both architectures, run shared state/observation/batch tests,
+native contract tests, storage/link/ACL/lease checks, package sealed prebuilt
+helpers and exercise install/start/End/Stop/restart/update/rollback in a fake home
+under `.localdata`. These tests send no desktop input and preserve the real home.
+
+On an actual Mac, still verify:
+
+1. Human permission setup and denial; ordinary and sensitive approval/denial.
+2. Actual Antigravity `/computer-use`: a screenshot, physical click/typing,
+   semantic action, scroll, drag, native Open and Save, Unicode and output bytes.
+3. Multiple approved applications and owned dialogs without repeated ordinary
+   prompts; no clicks into covering apps or other Spaces.
+4. Physical Esc during held input and queued actions, no subsequent input,
+   independent cleanup, human re-arm and a second task without host restart.
+5. Pause/authorized resume, incidental input in manual mode and deliberate input
+   in Smart mode; cursor/glow cleanup after completion and helper crashes.
+6. Retina/mixed-scale multiple monitors, negative origins, gaps and display changes.
+7. Actual Sidecar startup while idle, permission revocation, sleep/wake and app
+   restart, retaining Stop and existing host configuration.
+
+Keep evidence inside the checkout's ignored `.localdata`. An unavailable human,
+permission or hardware check stays pending; do not remove its guard to force a pass.

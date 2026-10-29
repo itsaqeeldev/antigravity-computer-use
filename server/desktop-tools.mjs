@@ -1,4 +1,5 @@
 // Adapted stdio dispatch and tool vocabulary from ridelink0/claude-computer-use (MIT).
+import {contract} from './platform.mjs';
 const str={type:'string'},num={type:'integer'},bool={type:'boolean'};
 const nodeCount={...num,minimum:1,maximum:500};
 const settle={...num,minimum:0,maximum:2000};
@@ -24,7 +25,7 @@ export const TOOLS=[
  tool('computer_launch','Launch an existing GUI application (.exe on Windows, .app on macOS) under the host permission policy. Optional observe returns the first unambiguous visible window of that exact launched PID and executable; never relaunch on observe_pending or verification_error.',{app:str,args:{type:'array',items:str},observe:bool,reason:str},['app','reason']),
  tool('computer_open','Open document/folder with its handler; separate confirmation.',{...target,path:str},['hwnd','observation_id','path','reason']),
  tool('computer_file_dialog','Fill and confirm an ALREADY OPEN native file picker. Use owner hwnd, fresh frame and exact path. entry_method clipboard explicitly uses temporary clipboard-preserving paste for atomic filename entry; keyboard is the compatibility default. Never confirms a mismatched filename.',{...target,path:str,action:{type:'string',enum:['open','save']},entry_method:{type:'string',enum:['keyboard','clipboard']}},['hwnd','observation_id','path','reason']),
- tool('computer_run','Run 1-8 predictable actions or observed-text waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:8,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
+ tool('computer_run','Run 1-8 predictable actions or observed-text waits sequentially. Combined wait budget is at most30seconds. Stop on first failure or unmet wait; do not replay completed steps.',{hwnd:num,observation_id:str,steps:{type:'array',minItems:1,maxItems:contract.batch_steps,items:{type:'object'}},reason:str},['hwnd','observation_id','steps','reason']),
  tool('computer_wait','Wait for expected UI text without repeating input, then return a fresh observation.',{hwnd:num,until:selectorText,timeout_ms:{...num,minimum:100,maximum:30000},query:str,reason:str},['hwnd','until','reason']),
  tool('computer_end','Finish normally; no Antigravity restart needed.'),
  tool('computer_controls','Explicitly show local controls for human re-arm or pause/stop. Showing controls never clears an emergency Stop, grants an app or sends input. Stopped controls dismiss automatically after30seconds.'),
@@ -94,7 +95,7 @@ export async function call(r,name,a){
    validate(n,args);return {kind,n,args,framed};
   });
   const waitBudget=plan.filter(step=>step.n==='computer_wait').reduce((sum,step)=>sum+(step.args.timeout_ms??15000),0);
-  if(waitBudget>30000)throw new Error('Combined batch waits must not exceed30seconds. No input was sent.');
+  if(waitBudget>contract.batch_wait_ms)throw new Error('Combined batch waits must not exceed30seconds. No input was sent.');
   const completed=[];let last=null;let observation=a.observation_id;
   for(let i=0;i<plan.length;i++){
    const {kind,n,args,framed}=plan[i];
