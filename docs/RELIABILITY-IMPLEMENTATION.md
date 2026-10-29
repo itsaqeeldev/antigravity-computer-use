@@ -117,8 +117,14 @@ writers using a separate private native lease and atomically publishes the bound
 journal. A two-process test covers distinct incidents, repeated occurrences and
 recovery after terminating a writer. A lost-ownership check immediately before
 publication is tested separately. Earlier pinned releases can still use the old
-writer, and helper death during publication and Mac device behavior need further
-qualification; this is not a claim of universal loss-free reporting.
+writer, and Mac device behavior needs further qualification. A further Windows
+barrier test killed the lease helper just after the writer's ownership check,
+allowed a second writer to commit, then resumed the first writer: both reported
+success but the first overwrote the second. The guard therefore does not close
+the helper-death race. Do not claim universal loss-free reporting; the commit
+must be made by the native lock holder or use an equivalently fenced mechanism.
+The reproduction is under `.localdata/reliability-current/incident-helper-death.mjs`;
+its test-only dependency injection is not part of the checked-in runtime.
 The first asynchronous version delayed error responses while acquiring the lease,
 causing a client timeout in the full suite. Recording is now queued off the reply
 path; replies identify it as pending, status exposes pending/failure, and orderly
