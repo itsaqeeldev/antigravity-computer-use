@@ -17,6 +17,7 @@ import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs
 import {Incidents} from './incidents.mjs';
 import {updateNotice} from './update-notice.mjs';
 import {recoveryAdvice} from './recovery.mjs';
+import {writeAtomicJSON} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -70,7 +71,7 @@ export function observedIndex(elements,selector){
 }
 
 export class Runtime {
-  constructor({driver=null,guardian=null,sessions=null,latchFile=undefined,permissionMode=process.env.AGCU_PERMISSION_MODE||'standalone',takeoverMode=process.env.AGCU_TAKEOVER_MODE||'manual'}={}){
+  constructor({driver=null,guardian=null,sessions=null,latchFile=undefined,taskFile=undefined,permissionMode=process.env.AGCU_PERMISSION_MODE||'standalone',takeoverMode=process.env.AGCU_TAKEOVER_MODE||'manual'}={}){
     if(!['standalone','host-managed'].includes(permissionMode))throw new Error('Invalid startup permission mode');
     this.permissionMode=permissionMode;
     if(!['manual','smart'].includes(takeoverMode))throw new Error('Invalid startup takeover mode');this.takeoverMode=takeoverMode;
@@ -78,12 +79,15 @@ export class Runtime {
     if(!driver&&!guardian)this.privateDataStorage=storageOperation('data',dataDir()).private_storage===true;
     else fs.mkdirSync(dataDir(),{recursive:true}); // inert unit-test dependencies
     this.latchFile=latchFile===undefined?(!driver&&!guardian?path.join(dataDir(),'emergency.stop'):null):latchFile;
+    this.taskFile=taskFile===undefined?(!driver&&!guardian?path.join(dataDir(),'task-state.json'):null):taskFile;
+    let priorTask=false;
+    if(this.taskFile&&fs.existsSync(this.taskFile))try{const record=JSON.parse(fs.readFileSync(this.taskFile,'utf8'));if(record?.schema!==1||typeof record.open!=='boolean')throw Error();priorTask=record.open;}catch{throw Object.assign(Error('Task state is invalid; inspect private storage before starting control.'),{code:'task_state_invalid'});}
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
     fs.writeFileSync(this.guardFile,'idle||0|',{mode:0o600});
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=false;this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.taskDurable=true;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -102,12 +106,18 @@ export class Runtime {
     this.guardian.on('resume',(_state,source)=>{this.frames.clear();this.lastControlReason=source==='host_resume'?'host_authorized_resume':'human_resume';if(this.state==='active')this.deadline=Date.now()+contract.session_ms;});
   }
   stamp(){return {__session:this.token};}
+  beginTask(){
+    if(this.taskOpen&&this.taskDurable)return;
+    this.taskOpen=true;this.taskDurable=false;
+    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true});this.taskDurable=true;}
+    catch{throw Object.assign(Error('Cannot preserve task state; no desktop action was started.'),{code:'task_state_write_failed'});}
+  }
   // A passive App sidecar must not open a HUD, install input hooks or acquire
   // cursor ownership just because a previous task left an emergency latch.
   async prepare(){}
   async showControls(){const result=await this.guardian.request({op:'show_controls'});if(result.controls_visible===true)this.recoveryFailure=null;return result;}
   async ready(){
-    this.taskOpen=true;
+    Runtime.prototype.beginTask.call(this);
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_stop_persistence_without_restart',replay_allowed:false,error:{code:this.lastControlReason,message:'Control is stopped because native control storage failed. Inspect private storage; do not restart or send input.'}};
     const unavailable=()=>({...this.status(),ready:false,controls_visible:this.recoveryVisibility??null,guardian_running:!!this.guardian.proc&&!this.guardian.proc.killed,guardian_exit:this.guardian.lastExit??null,...recoveryAdvice({error:this.recoveryFailure}),error:this.recoveryFailure});
     if(this.recoveryFailure)return unavailable();
@@ -139,7 +149,7 @@ export class Runtime {
     return w;
   }
   async grant(hwnd,purpose='Operate this app for the requested desktop task'){
-    this.taskOpen=true;
+    Runtime.prototype.beginTask.call(this);
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
@@ -304,7 +314,7 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
   }
-  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask)this.taskOpen=false;return {ended:true,state:this.state,restart_required:false};}
+  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.
@@ -316,7 +326,7 @@ export class Runtime {
     return {recorded:true,incident_id,classification:'agent_report_unverified',next_action:'pending_reporting_preferences'};
   }
   async launch(args){
-    this.taskOpen=true;
+    Runtime.prototype.beginTask.call(this);
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();

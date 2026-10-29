@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "fcb633678ec6bb58356624dfc863fdbcf775b41f95ec7875cf0c2c6ec1db02fa"
+      "sha256": "1d593fbb37287ee906efac0f09b4a37176a0bd2bb44b07a638d5e4227f419e92"
     },
     {
       "path": "server/mcp.mjs",
@@ -348,7 +348,7 @@
     },
     {
       "path": "server/native/StorageGuard.cs",
-      "sha256": "bd5f5cebd4442cd57546e42704d9d23a3a8bb6ba9e3b2a4f2279baf214f2fd79"
+      "sha256": "66c7c709fa1e911735d2e05c0aa9316c2fb04e6f4e3f3004bab0b12f0485c3c5"
     },
     {
       "path": "server/storage.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "52d09dba9f8806bf75285933cfaeb86a631c733e3a053be1970af7355af4494d"
+      "sha256": "e886e8225ce1e0d1692d9e589675b567ed4cb2e3704e418a0a7fb55b2ecde07e"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "65413ab5d16d65076328fe1186e80d62df9e8ec6eb4636c825957fcf9f72ae53"
+      "sha256": "4289c6265141507134a1808db17622ca01f20fa3fa97f49edae83d90702002d2"
     },
     {
       "path": "server/native/GuardCleanup.cs",

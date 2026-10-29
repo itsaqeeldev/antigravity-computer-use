@@ -2,12 +2,41 @@ import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';
 import {Runtime} from '../server/runtime.mjs';
 import fs from 'node:fs';import path from 'node:path';
+import {spawn} from 'node:child_process';
 function fixture(){
  const guardian=new EventEmitter();guardian.messages=[];guardian.send=m=>guardian.messages.push(m);guardian.request=async m=>{guardian.messages.push(m);return {state:'stopped',controls_visible:true};};guardian.close=()=>{};guardian.pid=998;
  const driver={abortCalls:0,async abort(){this.abortCalls++;},info:{pid:999}};
  const sessions={register(){},close(){}};
  return new Runtime({guardian,driver,sessions});
 }
+test('task reservation survives controller replacement until confirmed End',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-state-')),file=path.join(dir,'task-state.json');
+ const make=()=>{const guardian=new EventEmitter();guardian.send=()=>{};return new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});};
+ try{
+  const first=make();first.beginTask();assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
+  const restarted=make();assert.equal(restarted.status().task_open,true);
+  await restarted.finish({preserveTask:true});assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
+  await restarted.finish();assert.equal(JSON.parse(fs.readFileSync(file)).open,false);assert.equal(make().status().task_open,false);
+  fs.writeFileSync(file,'{broken');assert.throws(()=>make(),e=>e.code==='task_state_invalid');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('task reservation write failure remains closed to actions and updates',()=>{
+ const r=fixture();const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fail-'));r.taskFile=path.join(dir,'missing','state.json');
+ try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
+ finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('task reservation remains open after actual controller process termination',{timeout:30000},async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-crash-')),file=path.join(dir,'task-state.json');
+ const script=`import {Runtime} from ${JSON.stringify(new URL('../server/runtime.mjs',import.meta.url).href)};import {EventEmitter} from 'node:events';const guardian=new EventEmitter();guardian.send=()=>{};const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:process.argv[1]});r.beginTask();console.log('reserved');setInterval(()=>{},1000);`;
+ const child=spawn(process.execPath,['--input-type=module','-e',script,file],{stdio:['ignore','pipe','pipe'],windowsHide:true});let output='',errors='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>errors+=x);
+ const closed=new Promise(resolve=>child.once('close',resolve));
+ try{
+  const until=Date.now()+15000;while(!output.includes('reserved')&&child.exitCode===null&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,20));
+  assert(output.includes('reserved'),errors);child.kill();await closed;
+  const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});
+  assert.equal(restarted.status().task_open,true);await restarted.finish();assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
+ }finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await closed;fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('pause invalidates frames synchronously and keeps per-app session grants',async()=>{
  const r=fixture();r.state='active';r.frames.set('old',{});r.grants.set('app',{});const generation=r.generation;const pending=r.pause();assert.equal(r.state,'paused');assert(r.generation>generation);assert.equal(r.frames.size,0);assert.equal(r.grants.size,1);await pending;assert.equal(r.driver.abortCalls,1);
 });

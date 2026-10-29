@@ -850,7 +850,10 @@ agent may have requested `ready` and still be selecting a target. `ready`, app
 grant and launch now mark the task open. The update reservation requires an
 explicit closed task, and a running older service without this field is deferred
 until an operator uses the supported upgrade path. Idle visual cleanup preserves
-the task marker; normal End clears it only after input cleanup succeeds. This
-marker is process-local and is not host-attested task identity: a service crash
-or a different caller ending the shared task remains subject to issue #7.
-Fixture and IPC coverage does not qualify real Antigravity orchestration.
+the task marker; normal End clears it only after input cleanup succeeds. The
+marker is flushed in private storage and survives controller restart. Invalid
+or unwritable state fails closed; directory durability on platforms that cannot
+flush directory handles is not power-loss qualification. This marker is not
+host-attested task identity: a different caller ending the shared task remains
+subject to issue #7. Fixture and IPC coverage does not qualify real Antigravity
+orchestration.
