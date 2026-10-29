@@ -873,6 +873,13 @@ helper fails, and native startup refuses new operations while that flag remains.
 A later cleanup must actually succeed before the flag clears. Focused driver
 regressions exercise repeated failure and confirmed recovery; live physical
 held-input failure and recovery remain unqualified on both platforms.
+An additional Runtime-plus-Driver test now exercises End through two failed
+release attempts and one successful attempt: the task stays open and Stop stays
+latched until cleanup is confirmed; End never clears the latch. Its release
+helper is inert, so this is not a physical input-release test.
+The prior driver fix at `503be09` passed both Mac CI jobs in run `40968689619`.
+With free disk space restored, the Windows-local suite including the new End-path
+regression passed 305 tests with 11 skips; skips are not qualification passes.
 
 The installer also checks task state in the destination and previous deployment
 roots before switching files, and checks again after staging. An open marker or

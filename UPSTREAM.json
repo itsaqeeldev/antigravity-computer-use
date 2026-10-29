@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "5e80f0f994e21c0c822a9cb0e7ea3a7182ced27a79e4dc36140884f8f59eda16"
+      "sha256": "5a36ad4ef3d0a7611ea8d83ff646ed6b82c942d0e2c00438c261d5efba9886b0"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "6c6e7a4cfa68dbf97bc0bc0830b3512f623f3d607fb14a5a8627759f8e0eabd7"
+      "sha256": "bce1721689919ef994dec8eca2bed6a8d20474a55a38843c07a798f8f3ed8726"
     },
     {
       "path": "server/native/GuardCleanup.cs",

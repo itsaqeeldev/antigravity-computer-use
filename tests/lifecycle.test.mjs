@@ -1,6 +1,7 @@
 import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';
 import {Runtime} from '../server/runtime.mjs';
+import {Driver} from '../server/driver.mjs';
 import fs from 'node:fs';import path from 'node:path';
 import {spawn} from 'node:child_process';
 function fixture(){
@@ -29,6 +30,18 @@ test('task reservation write failure remains closed to actions and updates',()=>
  const r=fixture();const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fail-'));r.taskFile=path.join(dir,'missing','state.json');
  try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('End keeps task open and Stop latched until held-input release succeeds',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-end-cleanup-')),taskFile=path.join(dir,'task-state.json'),latchFile=path.join(dir,'emergency.stop');
+ const guardian=new EventEmitter();guardian.send=()=>{};guardian.close=async()=>{};
+ const driver=new Driver();let releases=0,confirmed=false;driver.releaseHeldInputs=async()=>{releases++;return confirmed;};
+ const r=new Runtime({guardian,driver,sessions:{register(){},close(){}},taskFile,latchFile});driver.onEvent=event=>{if(event.event==='input_cleanup_failed')r.stop().catch(()=>{});};
+ try{
+  r.beginTask();r.state='active';driver.inputMayBeHeld=true;
+  for(let n=0;n<2;n++){await assert.rejects(r.finish(),e=>e.code==='input_cleanup_failed');assert.equal(r.state,'stopped');assert.equal(driver.inputMayBeHeld,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,true);}
+  assert.equal(fs.readFileSync(latchFile,'utf8'),'stopped');assert.equal(releases,2);
+  confirmed=true;const ended=await r.finish();assert.equal(ended.ended,true);assert.equal(r.state,'stopped');assert.equal(driver.inputMayBeHeld,false);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);assert.equal(fs.readFileSync(latchFile,'utf8'),'stopped');assert.equal(releases,3);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('ready exposes recovery guidance without clearing a restarted task or Stop',async()=>{
  const r=fixture();r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>({state:'idle',controls_visible:true});
