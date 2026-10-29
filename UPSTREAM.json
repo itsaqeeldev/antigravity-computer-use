@@ -232,7 +232,7 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "6c522fd9a20e7f0e678f4454f00b0677989f49de3155cab56496f25480b311eb"
+      "sha256": "1ad06f5d0b1beedde7c4eff3c882a8c6d2766e11017dd6ff61a19fe22a9d0a88"
     },
     {
       "path": "server/native/CursorSafety.cs",
@@ -512,7 +512,7 @@
     },
     {
       "path": "server/control-contract.json",
-      "sha256": "0623d54ac3372139f11d1124b170d1f67caa68af94473d13293d8826cc3f3755"
+      "sha256": "5b2288ffadc45331036d8dc467fca113a8c2040d3dbcce3e77225676f7bb5a6e"
     },
     {
       "path": "server/macos-build.mjs",
@@ -532,7 +532,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "3406c6db1d579ec813232f65c7da35e552837e040db85a674d4f1284e5c7aefa"
+      "sha256": "44028689d1523644967cb74a00eefe43820f5bcb5026bb02f230a26c3f2daea1"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "fc9fe221382fcd8d4d328d9d5e8f16d034b324d8f80cfd6b8f2a67e5a0b82285"
+      "sha256": "926eea2569ddb0b3011d5768a102924cfb73592a831fd0345b461bafebe15a93"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -560,7 +560,7 @@
     },
     {
       "path": "server/native/ControlContract.cs",
-      "sha256": "cc8954bce09992a32fdac68460723cc0665874b1988bf00065988cd358aa7a5f"
+      "sha256": "ee47e2e7f86989c273012a01fc4283a0e1e1d58fe1948ef036a60d5244e18bc7"
     },
     {
       "path": "scripts/macos-install-check.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "adffd9b49b29809fb6cf20d75211ede4fa8c83fdeffb49021d4ab88621137f1e"
+      "sha256": "ca1edf3ebf92c02379fc1f3c685e3be3ae2d2dd78ff3d26c0a84f1fd3fb61b6a"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -681,6 +681,14 @@
     {
       "path": "tests/atomic-json.test.mjs",
       "sha256": "c04bb06fbc7095560ccd25ae5fd11d23b7947f0bfa2c4316e6496952249d0147"
+    },
+    {
+      "path": "tests/NativeRiskPolicyTests.cs",
+      "sha256": "d2258c5e0a31edd5f0ea92b9be16a2219812f359e7ad4dc327b9d666e85a268e"
+    },
+    {
+      "path": "tests/native-risk-policy.test.mjs",
+      "sha256": "ab94ed30544c51367b8dd6f1e4be4aea5ea5ac38be179376aa0a9e7939cc0f44"
     }
   ]
 }

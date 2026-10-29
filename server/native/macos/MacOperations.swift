@@ -111,6 +111,10 @@ func macContractTest() throws {
     let b = try macFingerprint("click", ["__session": "two", "index": 1], "Button")
     let c = try macFingerprint("click", ["index": 2], "Button")
     guard a == b, a != c, MacFence.sensitive("click", ["__risk":"routine"], label: "Delete file"),
+          MacFence.sensitive("click", ["__risk":"routine"], label: "de\u{200D}lete file"),
+          MacFence.sensitive("click", ["__risk":"routine"], label: "  \u{200D}"),
+          MacFence.sensitive("drag", ["__risk":"routine"], label: ""),
+          !MacFence.sensitive("move", ["__risk":"routine"], label: ""),
           !MacFence.sensitive("click", ["__risk":"routine"], label: "Open settings Button"),
           try macProcessStart(getpid()) == macProcessStart(getpid()) else { throw AxonError("contract_test_failed", "Approval fingerprint or classification differs.") }
     // Exercise the actual native fence in isolated project-local storage.

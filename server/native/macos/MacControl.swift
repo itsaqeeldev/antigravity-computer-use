@@ -205,13 +205,16 @@ enum MacFence {
         return args["point"] != nil || args["from"] != nil ? "" : str(args["keys"]) ?? ""
     }
     static func sensitive(_ op: String, _ args: [String: Any], label: String) -> Bool {
+        // Only risk matching drops Unicode format characters. Observed and
+        // entered text retain semantic joiners, direction marks and modifiers.
+        let riskLabel=label.replacingOccurrences(of:"\\p{Cf}",with:"",options:.regularExpression)
         if str(args["__risk"]) != "routine" { return true }
         if (MacContract.value["sensitive_operations"] as? [String] ?? []).contains(op) { return true }
         if op == "key" && MacContract.pattern("sensitive_key_pattern", str(args["keys"]) ?? "") { return true }
         if op != "focus", let pid = args["__pid"] as? Int,
            let path = try? macProcessPath(pid_t(pid)), MacContract.pattern("sensitive_process_pattern",URL(fileURLWithPath:path).lastPathComponent) { return true }
-        if ["click", "drag"].contains(op) && label.isEmpty { return true }
-        return MacContract.pattern("sensitive_label_pattern", label)
+        if (MacContract.value["ambiguous_target_operations"] as? [String] ?? ["click","drag"]).contains(op) && riskLabel.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty { return true }
+        return MacContract.pattern("sensitive_label_pattern", riskLabel)
     }
     static func dispatched() throws { try check(); didDispatch = true }
     static func write(_ text: String) throws {

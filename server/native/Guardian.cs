@@ -50,6 +50,7 @@ namespace Axon {
             object risk;
             if (!a.TryGetValue("__risk",out risk) || Convert.ToString(risk)!="routine") return true;
             if (ControlContract.SensitiveOperation(op)) return true;
+            if (ControlContract.AmbiguousOperation(op) && String.IsNullOrWhiteSpace(label)) return true;
             if(op=="key") {
                 string key=Convert.ToString(a["keys"]).ToLowerInvariant();
                 if(ControlContract.Pattern("sensitive_key_pattern","enter|return|delete|alt\\+|win|meta|super|ctrl\\+[svx]",key)) return true;

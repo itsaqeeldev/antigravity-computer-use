@@ -27,6 +27,11 @@ namespace Axon {
             if(Values.TryGetValue("sensitive_operations",out value))foreach(object name in (object[])value)if(Convert.ToString(name)==op)return true;
             return !Values.ContainsKey("sensitive_operations")&&new List<string>{"launch","clipboard","close_window","paste","paste_files","open","file_dialog"}.Contains(op);
         }
+        internal static bool AmbiguousOperation(string op) {
+            object value;
+            if(Values.TryGetValue("ambiguous_target_operations",out value))foreach(object name in (object[])value)if(Convert.ToString(name)==op)return true;
+            return !Values.ContainsKey("ambiguous_target_operations")&&(op=="click"||op=="drag");
+        }
         internal static Color ColorValue(string key,Color fallback) {
             object ui,value;if(!Values.TryGetValue("ui",out ui))return fallback;
             var fields=ui as Dictionary<string,object>;if(fields==null||!fields.TryGetValue(key,out value))return fallback;

@@ -342,9 +342,33 @@ The full objective remains incomplete. At the audited checkpoint:
    authenticated installation is not yet qualified.
 6. The Intel Mac prompt was supplied. No on-device report or repair PR was present
    in the GitHub audit; interactive Mac permission/app/physical checks are unrun.
-7. Source/native CI is green at `d821262`; newer source changes need their own
+7. Source/native CI is green at `16ef287`; newer source changes need their own
    checks. Skips remain explicitly unqualified.
 8. Public release and one-line bootstrap remain beta.2. The installed global
    beta.3 build is `83487f3a...`, behind current source; its 102 payload files and
    global skill verified. No release/pin update is authorized by a green fixture
    alone. Physical desktop control remains stopped until the owner resumes it.
+
+## Native risk-classification parity
+
+Review found that Windows accepted an unlabeled click or drag as routine while
+Mac required sensitive-action approval. The shared contract now explicitly lists
+these ambiguous target operations, and both native classifiers require approval
+when their risk label is empty or whitespace. Mac now also removes Unicode
+format characters for risk matching, matching Windows: a hidden joiner cannot
+split a sensitive label such as `delete` to evade classification. This does not
+remove joiners, direction marks or other characters from observations or input.
+
+The Windows regression invokes the actual compiled native classifier by
+reflection without entering the host, inspecting applications, creating windows,
+registering hooks or sending input. It failed on the prior implementation and
+passed after the repair. The Mac native contract checks include the corresponding
+hidden-label and ambiguous-target cases; their compilation/execution must be
+verified on the exact CI head. These checks establish classifier behavior, not
+real approval-dialog handling or physical Stop acceptance.
+
+The local Windows suite after this repair passed 202 tests, failed zero and
+skipped seven (five Windows ACL qualification checks and two Mac-only tests).
+Native compilation succeeded. The historical before-fix failure and after-fix
+results are retained under ignored `.localdata/mac-port/`. No live installation
+was updated and desktop control was not resumed for this check.
