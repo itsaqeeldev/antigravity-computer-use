@@ -860,13 +860,17 @@ orchestration.
 After restart with an open marker, status now identifies a recovered task and
 `ready` directs the agent to inspect its prior result without replay. Observing
 existing apps is permitted under the normal permission flow and fresh grants;
-input, clipboard actions and new launches are refused until End confirms
-cleanup. End must only be sent by the owning task; because host-authenticated
-ownership is still unavailable, this is a recovery aid rather than a solution
-to issue #7. Stop and re-arm behavior remain unchanged.
+input, clipboard actions and new launches are refused. A replacement process
+uses a different guard-file input ledger; cleanup of that new ledger cannot
+prove the previous ledger was released. End therefore fails closed with
+`recovered_cleanup_unverified` and keeps the task marker until a verified
+previous-ledger recovery is implemented. This is a known usability limitation,
+not completed recovery. Host-authenticated ownership is still unavailable
+(issue #7). Stop and re-arm behavior remain unchanged.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
-click, deferred update reservation and End, and confirms the inert driver saw no
-input. This is controller integration evidence, not a real desktop replay test.
+click, deferred update reservation and refused End, and confirms the inert
+driver saw no input. This is controller integration evidence, not a real
+desktop replay test.
 
 Held-input cleanup now retains its pending flag if the independent release
 helper fails, and native startup refuses new operations while that flag remains.

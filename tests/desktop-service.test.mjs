@@ -83,7 +83,7 @@ test('update reservation refuses an idle task and unavailable task state',async(
   taskOpen=false;assert.equal((await request(session,'prepare_update')).prepared,true);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
-test('direct IPC refuses replay after task recovery until End confirms cleanup',async t=>{
+test('direct IPC refuses replay and unverified cleanup after task recovery',async t=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-recovered-ipc-')),taskFile=path.join(dir,'task-state.json');
  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){fs.rmSync(dir,{recursive:true,force:true});t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
  fs.writeFileSync(taskFile,JSON.stringify({schema:1,open:true}));let nativeCalls=0,cleanups=0;
@@ -95,7 +95,7 @@ test('direct IPC refuses replay after task recovery until End confirms cleanup',
   const ready=await send('ready');assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_recovered_task');assert.equal(ready.recovered_task,true);
   const result=await send('click',{hwnd:1,observation_id:'old',index:1,reason:'Do not replay'});assert.equal(result.error.code,'recovered_task_requires_end');assert.equal(result.replay_allowed,false);assert.equal(nativeCalls,0);
   assert.equal((await send('prepare_update')).prepared,false);
-  const ended=await send('end');assert.equal(ended.ended,true);assert.equal(cleanups,1);assert.equal((await send('status')).recovered_task,false);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);
+  const ended=await send('end');assert.equal(ended.error.code,'recovered_cleanup_unverified');assert.equal(ended.next_action,'inspect_prior_input_cleanup');assert.equal(cleanups,1);assert.equal((await send('status')).recovered_task,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,true);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 

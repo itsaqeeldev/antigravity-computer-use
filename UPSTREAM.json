@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "979493f9a131c26953d1abc77835cc9758b3c534995425cb5fc9a57df6eb7aba"
+      "sha256": "a50a75ada1be7f17652b29311dffa2b21e367b03a4a7f83a5a82c5806d7804c3"
     },
     {
       "path": "server/mcp.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "ae113eb564afd0b0cd9633991c16cd56ad517f5f45067511a47d683c093124bf"
+      "sha256": "f0060d9025b742c58ec163a4895844dddde07adba9ee572f8e3dc6f67f4ac0fe"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "9ae431d466426b27f012b5e63eca371b90d1b66672cee19a1f12b97f9427088e"
+      "sha256": "ba1289a2c40aabb7d1a2615ab5f73fb9d7473323046490737490775bfd653b72"
     },
     {
       "path": "docs/MACOS.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "5a36ad4ef3d0a7611ea8d83ff646ed6b82c942d0e2c00438c261d5efba9886b0"
+      "sha256": "d722a727369c1e9b5489c69294150bfac13490c0cced575faf750e742275ab94"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "bce1721689919ef994dec8eca2bed6a8d20474a55a38843c07a798f8f3ed8726"
+      "sha256": "9f9e908056dcd5e39f49724c8a48fb11d8244632b13d09a54e3e2a1836682613"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -676,7 +676,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "16ba0051d9825fb79129e7f96b7c60e1525a17a0e34c314206fbc405066561e7"
+      "sha256": "2dbf1239d66d01916bdec9ab85494a605cdbe85f7639ae0286d1ae8c1d2a44d5"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

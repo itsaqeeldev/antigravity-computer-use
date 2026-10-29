@@ -315,7 +315,11 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
   }
-  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
+  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();
+    // The replacement's new guard file is not the previous process's input
+    // ledger. Its cleanup cannot establish what the crashed process held.
+    if(this.recoveredTask&&!preserveTask)fail('recovered_cleanup_unverified','Prior-session input cleanup is unverified. Keep the task open and inspect the previous native ledger; do not repeat input or force an update.');
+    if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.

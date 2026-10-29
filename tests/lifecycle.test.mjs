@@ -22,7 +22,7 @@ test('task reservation survives controller replacement until confirmed End',asyn
   let observed=false;restarted.grant=async(_hwnd,_reason,options)=>{observed=options.observationOnly;throw Error('observation probe');};
   await assert.rejects(restarted.observe({hwnd:1}),/observation probe/);assert.equal(observed,true);
   await restarted.finish({preserveTask:true});assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
-  await restarted.finish();assert.equal(restarted.status().recovered_task,false);assert.equal(JSON.parse(fs.readFileSync(file)).open,false);assert.equal(make().status().task_open,false);
+  await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(restarted.status().recovered_task,true);assert.equal(JSON.parse(fs.readFileSync(file)).open,true);assert.equal(make().status().task_open,true);
   fs.writeFileSync(file,'{broken');assert.throws(()=>make(),e=>e.code==='task_state_invalid');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -57,7 +57,7 @@ test('task reservation remains open after actual controller process termination'
   const until=Date.now()+15000;while(!output.includes('reserved')&&child.exitCode===null&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,20));
   assert(output.includes('reserved'),errors);child.kill();await closed;
   const guardian=new EventEmitter();guardian.send=()=>{};const restarted=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});
-  assert.equal(restarted.status().task_open,true);await restarted.finish();assert.equal(JSON.parse(fs.readFileSync(file)).open,false);
+  assert.equal(restarted.status().task_open,true);await assert.rejects(restarted.finish(),e=>e.code==='recovered_cleanup_unverified');assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
  }finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await closed;fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('pause invalidates frames synchronously and keeps per-app session grants',async()=>{
