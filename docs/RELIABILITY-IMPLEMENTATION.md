@@ -144,8 +144,9 @@ and retire that helper; the result remains outcome-unknown rather than replaying
 a potentially committed incident. A focused protocol regression covers this path.
 Native publication now uses one reserved temporary file. A later lease holder
 checks that file's ownership and privacy before removing an interrupted write;
-the Windows native regression exercises recovery. Mac CI and hardware validation
-are still required for the corresponding implementation.
+the Windows native regression exercises recovery and refuses a symlinked temporary
+file without changing its target. Mac CI and hardware validation are still
+required for the corresponding implementation.
 The first asynchronous version delayed error responses while acquiring the lease,
 causing a client timeout in the full suite. Recording is now queued off the reply
 path; replies identify it as pending, status exposes pending/failure, and orderly

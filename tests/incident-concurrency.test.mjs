@@ -45,3 +45,15 @@ test('the native lease holder recovers its reserved interrupted publication file
   assert(!fs.existsSync(temp));assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'incidents.json'))),[{recovered:true}]);
  }finally{if(lease)await lease.release();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('a linked incident temporary file is refused without changing its target',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'incident-link-temp-'));let lease;
+ try{
+  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage refused: '+error.code);return;}throw error;}
+  const target=path.join(dir,'preserve.txt'),temp=path.join(dir,'.incident-publish.tmp');fs.writeFileSync(target,'preserve',{mode:0o600});
+  try{fs.symlinkSync(target,temp,'file');}catch(error){if(['EPERM','EACCES','ENOSYS'].includes(error.code)){t.skip('file symlink creation is unavailable');return;}throw error;}
+  const lock=path.join(dir,'incident-writer-lease');fs.mkdirSync(lock);lease=await acquireServiceLease(lock);
+  await assert.rejects(lease.publishIncidents(Buffer.from('[]')),e=>['incident_publish_outcome_unknown','service_ownership_lost'].includes(e.code));
+  assert.equal(fs.readFileSync(target,'utf8'),'preserve');assert(!fs.existsSync(path.join(dir,'incidents.json')));
+ }finally{if(lease)await lease.release();fs.rmSync(dir,{recursive:true,force:true});}
+});
