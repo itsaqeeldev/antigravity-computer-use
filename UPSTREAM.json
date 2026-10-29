@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "8590a657453f1c2614a1c160c170e626c7191fea52cfa7d437af1962b831d46f"
+      "sha256": "79f82531d31fe6d9d3d87640472a2cb71f90c2be929d0e604624ed5e7bd7ed15"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -616,7 +616,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "8d64b77b9d188c0fefdbeb8a0d789536e88c67db2f67e47b28d9c30cbb244718"
+      "sha256": "4a3f320890c75b552d5948b24aca39808c587c0e3b5cdfc4f1c6d526c6a06a0e"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

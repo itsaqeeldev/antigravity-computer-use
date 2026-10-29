@@ -30,7 +30,7 @@ test('revoked consent during issue lookup prevents submission',async()=>{
  }finally{f.clean();}
 });
 
-test('native reporting lease excludes another reporter and releases normally',async t=>{
+test('native reporting lease excludes another reporter and recovers after helper death',async t=>{
  const base=testDirectory('tmp'),target=fs.mkdtempSync(path.join(base,'report-native-')),directory=path.join(target,'data'),lockDir=path.join(directory,'reporting-lease');let held;
  try{
   try{storageOperation('data',directory);storageOperation('data',lockDir);held=await acquireServiceLease(lockDir);}
@@ -39,6 +39,8 @@ test('native reporting lease excludes another reporter and releases normally',as
   const incidents=new Incidents(directory);incidents.record('computer_click',{error:{code:'stale_observation'}});let created=0;
   const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:'[]'}:(created++,{status:0});
   assert.equal((await diagnostics(directory,{submit:true,target,run})).next_action,'reporting_in_progress');assert.equal(created,0);assert(incidents.read()[0].pending);
+  const lost=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Lease loss was not observed')),5000);held.once('lost',()=>{clearTimeout(timer);resolve();});});
+  process.kill(held.pid);await lost;assert.throws(()=>held.assertHeld(),e=>e.code==='service_ownership_lost');
   await held.release();held=null;assert.equal((await diagnostics(directory,{submit:true,target,run})).submitted,1);assert.equal(created,1);
  }finally{if(held)await held.release();fs.rmSync(target,{recursive:true,force:true});}
 });
