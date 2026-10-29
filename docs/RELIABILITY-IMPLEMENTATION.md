@@ -36,6 +36,9 @@ now refuse a known disabled accessibility target before sending a click. A pixel
 target has no comparable semantic enabled state and still requires visual
 verification. The Windows host compiled locally; real-control and Mac checks
 are pending on this newer helper.
+An attempted existing native fixture run stopped with `confirmation_required`;
+it is not a pass and no approval was manufactured to make it proceed. The
+failure is retained as local test evidence and the real-app test remains open.
 
 The supported Windows local upgrade to source `0a919f8` produced and installed
 build `4d112e9e4137e1999750430cc3170995bc8cc421a76f998c517c3cd459a66910`.
