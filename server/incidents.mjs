@@ -40,7 +40,9 @@ export class Incidents {
   // Claim the lease before native marker/ACL initialization. Initializing the
   // marker outside the lease lets simultaneous first writers race each other.
   await storageOperationAsync('verify',this.directory);const lockDir=path.join(this.directory,'incident-writer-lease');fs.mkdirSync(lockDir,{recursive:true,mode:0o700});
-  const deadline=Date.now()+5000;let lease;
+  // Reporting is off the action response path. Allow a loaded machine time to
+  // finish another short publication, but retain a bounded failure outcome.
+  const deadline=Date.now()+15000;let lease;
   do{try{lease=await acquireServiceLease(lockDir);break;}catch(error){if(error.code!=='service_already_running'||Date.now()>=deadline)throw error;await new Promise(resolve=>setTimeout(resolve,50));}}while(true);
   try{lease.assertHeld();const prepared=this.prepare(command,result);await lease.publishIncidents(Buffer.from(JSON.stringify(prepared.records)));return prepared.id;}finally{await lease.release();}
  }

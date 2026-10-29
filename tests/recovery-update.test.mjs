@@ -48,9 +48,13 @@ test('ready keeps the visible-desktop handoff explicit across repeated failed ca
  for(let i=0;i<2;i++){
   const result=await Runtime.prototype.ready.call(runtime);
   assert.equal(result.next_action,'human_start_on_visible_desktop');
-  assert.equal(result.guardian_running,false);assert.equal(result.controls_visible,false);assert.equal(result.ready,false);
+  assert.equal(result.guardian_running,false);assert.equal(result.controls_visible,null);assert.equal(result.ready,false);
  }
  assert.equal(calls,1);assert.equal(runtime.state,'stopped');
+});
+test('a controls timeout leaves visibility unknown instead of claiming hidden',async()=>{
+ const runtime={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{}},async showControls(){throw Object.assign(Error('timeout'),{code:'guardian_request_timeout'});}};
+ const result=await Runtime.prototype.ready.call(runtime);assert.equal(result.ready,false);assert.equal(result.controls_visible,null);assert.equal(result.next_action,'inspect_diagnostics');
 });
 test('the actual human launcher can reveal controls after cached ready failure without clearing Stop',async()=>{
  const folder=fs.mkdtempSync(path.join(testDirectory('tmp'),'human-starter-'));

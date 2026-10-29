@@ -31,7 +31,7 @@ test('a native Stop event reports a missing latch while keeping control stopped'
 });
 test('persistence failure does not invite re-arm or launch a guardian from ready',async()=>{
  for(const reason of ['stop_persistence_failed','guard_persistence_failed']){const r=fixture();r.state='stopped';r.lastControlReason=reason;
-  const result=await r.ready();assert.equal(result.ready,false);assert.equal(result.next_action,'inspect_stop_persistence_without_restart');assert.equal(result.controls_visible,false);assert.equal(r.guardian.messages.length,0);
+  const result=await r.ready();assert.equal(result.ready,false);assert.equal(result.next_action,'inspect_stop_persistence_without_restart');assert.equal(result.controls_visible,null);assert.equal(r.guardian.messages.length,0);
   await assert.rejects(r.grant(1),e=>e.code===reason);await assert.rejects(r.launch({app:'anything.exe'}),e=>e.code===reason);assert.equal(r.guardian.messages.length,0);
  }
 });

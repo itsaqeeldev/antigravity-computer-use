@@ -28,6 +28,9 @@ When the in-memory stopped reason is a latch or guard persistence failure,
 `ready`, grant and launch now report the storage problem without opening controls
 or suggesting ordinary re-arm. The explicit human controls command remains
 available to the operator; no model action clears Stop.
+When visibility cannot be verified after a failure, `ready` reports it as unknown
+rather than claiming the controls are hidden. An explicit native `false` remains
+distinguishable from a timeout or an unobserved result.
 On Windows, a failed native guardian state write now also forces stopped state
 and attempts cursor restoration, worker termination, held-input recovery and
 overlay removal independently before emitting `guard_persistence_failed`.
@@ -195,6 +198,11 @@ a full local pass. A subsequent full run also hit the human-launcher fixture's
 10-second timeout; the focused test and a full retry passed, but the reason for
 the timeout remains unproven. Abrupt process death can still interrupt an
 in-flight record.
+Another full run under load hit the incident writer's five-second contention
+deadline and returned `service_already_running`. The background wait is now
+bounded at 15 seconds. A focused retry passed, but this longer limit does not
+prove loss-free reporting during sustained overload. The failed run is retained
+as `visibility-unknown-suite.log` under `.localdata/reliability-current/`.
 Malformed or oversized journal data and malformed acknowledgement files now
 refuse recording and reporting with `diagnostic_journal_invalid`; existing bytes
 are retained for inspection. This prevents a damaged journal from being treated
