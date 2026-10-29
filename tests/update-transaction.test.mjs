@@ -175,6 +175,15 @@ test('a competing controller prevents rollback and retains the recovery journal'
   await assert.rejects(update(f.target,'rollback',f),e=>e.code==='service_already_running');assert.equal(restored,false);assert(fs.existsSync(path.join(f.target,'update-switching.json')));
  }finally{f.cleanup();}
 });
+test('unconfirmed ownership release keeps the recovery journal and never rolls back without a confirmed fence',async()=>{
+ const f=fixture();let restores=0;try{
+  await update(f.target,'check',f);
+  f.adapters.acquireControllerLease=async()=>({async release(){throw Object.assign(Error('helper exit unconfirmed'),{code:'service_lease_cleanup_unconfirmed'});}});
+  f.adapters.rollback=()=>{restores++;};
+  await assert.rejects(update(f.target,'apply',f),e=>e.code==='service_lease_cleanup_unconfirmed');
+  assert.equal(restores,0);assert(fs.existsSync(path.join(f.target,'update-switching.json')));assert(!f.calls.includes('start'));
+ }finally{f.cleanup();}
+});
 test('rollback rejects out-of-tree or duplicate journals before shutdown',async()=>{
  for(const kind of ['outside','duplicate','relative']){const f=fixture();try{
   await update(f.target,'check',f);await update(f.target,'apply',f);const stateFile=path.join(f.target,'update-state.json'),state=JSON.parse(fs.readFileSync(stateFile));

@@ -177,6 +177,11 @@ async function updateLocked(target,command,{fetcher,adapters}){
    save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};
   }catch(error){
    if(error.code==='installation_recovery_failed')throw Error('update_recovery_requires_operator');
+   // A failed lease release means the ownership helper may still be alive or
+   // already gone; neither condition establishes that we still own the fence.
+   // Preserve the switching journal and do not touch files until recovery can
+   // acquire a fresh confirmed lease.
+   if(error.code==='service_lease_cleanup_unconfirmed')throw error;
    if(next)try{shutdownVerified(next);}catch{
     // Startup may have failed before a service existed. The earlier cleanup
     // was confirmed and update-switching blocks new input. Only a positive

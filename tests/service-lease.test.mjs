@@ -16,6 +16,17 @@ test('a helper that cannot be reaped reports unconfirmed cleanup',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.exitCode=null;child.kill=()=>false;
  await assert.rejects(acquireServiceLease(base,{helper:'inert',startupTimeout:10,cleanupTimeout:25,spawnProcess:()=>child}),e=>e.code==='service_lease_cleanup_unconfirmed'&&e.cause?.code==='service_lease_timeout');
 });
+test('lease release waits for a killed helper to exit before reporting success',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;let exited=false;
+ child.kill=()=>{setTimeout(()=>{exited=true;child.exitCode=1;child.emit('exit',1);child.emit('close',1);},30);return true;};
+ const pending=acquireServiceLease(base,{helper:'inert',releaseTimeout:10,cleanupTimeout:100,spawnProcess:()=>child,prepareStorage:async()=>({ok:true})});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true}\n'));
+ const lease=await pending;await lease.release();assert(exited,'release must not finish until the helper exits');
+});
+test('lease release reports unconfirmed cleanup when a helper does not exit',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',releaseTimeout:10,cleanupTimeout:30,spawnProcess:()=>child,prepareStorage:async()=>({ok:true})});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true}\n'));
+ const lease=await pending;await assert.rejects(lease.release(),e=>e.code==='service_lease_cleanup_unconfirmed');
+});
 test('malformed publication acknowledgement fails promptly and retires the helper',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;
  child.kill=()=>{child.exitCode=1;child.emit('exit',1);child.emit('close',1);};

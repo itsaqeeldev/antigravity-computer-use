@@ -2,7 +2,7 @@
 // existing Windows storage helper holds a kernel mutex until this pipe closes.
 import {spawn} from 'node:child_process';import path from 'node:path';import {EventEmitter} from 'node:events';
 import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
-export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),prepareStorage=storageOperationAsync,startupTimeout=5000,cleanupTimeout=2000}={}){
+export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),prepareStorage=storageOperationAsync,startupTimeout=5000,cleanupTimeout=2000,releaseTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
  child.stdout.setEncoding('utf8');
  const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending,publishPending;
@@ -42,7 +42,13 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
    publishPending={resolve,reject,timer};child.stdin.write(JSON.stringify({op:'publish_incidents',data:bytes.toString('base64')})+'\n',error=>{if(error&&publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}});
   });
  };
- lease.release=()=>releasePending??=(async()=>{releasing=true;child.stdin.end();let timer;await Promise.race([exited,new Promise(resolve=>{timer=setTimeout(()=>{child.kill();resolve();},2000);})]);clearTimeout(timer);})();
+ lease.release=()=>releasePending??=(async()=>{
+  releasing=true;child.stdin.end();
+  const waitForExit=async ms=>{let timer;try{return await Promise.race([exited.then(()=>true),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),ms);})]);}finally{clearTimeout(timer);}};
+  if(await waitForExit(releaseTimeout))return;
+  try{child.kill();}catch{}
+  if(!await waitForExit(cleanupTimeout))throw Object.assign(Error('Ownership helper termination could not be confirmed. Do not start another controller.'),{code:'service_lease_cleanup_unconfirmed'});
+ })();
  const held=await startup;
  try{await prepareStorage('data',directory,{helper});held.assertHeld();return held;}
  catch(error){await held.release();throw error;}

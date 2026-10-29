@@ -388,11 +388,11 @@
     },
     {
       "path": "server/service-lease.mjs",
-      "sha256": "81519d2d23c0f22fcec502a18c07b433568a1e930e901791918993093aaf706c"
+      "sha256": "40fc234e8399c81d4a8ce31cad2dea3af8294ea0b9f4d0f33c1e8f7b2f4272ae"
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "42ecc77d7251c055d92e4e7e0fdf57741c3ff6ac10141993fad6b59b7e684eb7"
+      "sha256": "1f8dbb1e842f5ceb9c95837285a1930fd37b2be553a4a12602b9742cbc551cc5"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "887da8a06cf3b60a4e321bd442b21dba1a8f1e8b837c469ca3a9c767740ba549"
+      "sha256": "8e3fedb19024ee9033629e5b0b15ecb8a78e0a55ef3bce97dae7a1ca9e2130a1"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -604,11 +604,11 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "9b2050d52c1ed8597d51109eeb1e8c263d02aacaee2f478b6d1b74db2cb378c9"
+      "sha256": "269e8959692e2975d634efde1d26936fec5201d69df744f936257e36bfef5abb"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "f70eaa3e16bbf1635fbecea4caa167d5e7af6fac07c19d9cc83f6f57c16ef3e5"
+      "sha256": "4caa53cfdb68851975dd1e4c6af545275da89ed40e9c9c3d51516180da81b5d2"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

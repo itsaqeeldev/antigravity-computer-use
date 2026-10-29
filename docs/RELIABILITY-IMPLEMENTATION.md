@@ -118,6 +118,13 @@ Explicit rollback and interrupted-switch recovery also acquire the native
 controller lease before restoring files, and release it before passive restart.
 An isolated test checks ordering and confirms a competing owner leaves the
 recovery journal intact. Real Sidecar/OS race qualification is still pending.
+Lease release now waits for the ownership helper to exit even after requesting
+termination. If the helper does not exit within the bounded cleanup period,
+release reports `service_lease_cleanup_unconfirmed` instead of claiming success.
+Inert helper tests exercise delayed exit and refusal; actual OS failure remains
+separate from this test evidence. The updater retains its recovery journal and
+does not start rollback if the helper's exit is unconfirmed, because it cannot
+assume the old fence is still held. A transaction test covers that boundary.
 Rollback and interrupted recovery now validate that every rollback manifest is
 an absolute, non-duplicate `backups/<entry>/rollback.json` inside this install,
 and verify the private tree before shutdown or restoration. Tests cover external,
