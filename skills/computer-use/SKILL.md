@@ -22,6 +22,7 @@ state, restart the host or interrupt the requested task to investigate it.
 - `inspect_diagnostics`: run `{{DESKTOP_COMMAND}} diagnostics` once, report the incident ID and stop repeating startup. Do not invent an Antigravity Sidecar panel or repeatedly ask the user to rerun the starter.
 - `resolve_version_mismatch` or `client_build_mismatch:true`: the selected skill and running service use different builds. Stop and report the mismatch; do not interrupt another task, overwrite a project pin or restart repeatedly. An operator can reconcile the intended deployment before retrying.
 - `inspect_stop_persistence_without_restart`: control is stopped but the emergency latch could not be saved. Report this and do not restart or send further input; the operator must inspect the controller's private storage.
+- If `control_reason` is `guard_persistence_failed` or `stop_persistence_failed`, report that native control storage failed and do not restart or send further input. The operator must inspect storage before continuing.
 
 Use `ready → apps/launch → snapshot → action/verify → end`. Read only unfamiliar command schemas through one `describe` call. Do not inspect implementation/source files to perform a desktop task. Launch returns the window, frame and screenshot; reuse them. `observe_pending`, `input_completed:true` or a verification failure after launch means discover the existing process, never launch it again blindly.
 

@@ -24,6 +24,11 @@ without a private path, and refuses orderly shutdown until it can persist the
 latch. A stopped event from the native guardian also checks that the latch exists
 and reports a failure if it does not. Focused tests cover missing storage and
 recovery; actual physical Esc under a failing disk remains unqualified.
+On Windows, a failed native guardian state write now also forces stopped state
+and attempts cursor restoration, worker termination, held-input recovery and
+overlay removal independently before emitting `guard_persistence_failed`.
+The native helper compiles and a headless cleanup-order test passes; an actual
+guardian storage failure and physical-input cleanup still need device testing.
 
 The operator authorized reconciling the Upscaly project-local pin. Source
 `36bef78` was built after its Windows and both Mac CI jobs passed. Global and

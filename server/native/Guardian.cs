@@ -388,7 +388,16 @@ namespace Axon {
         void SetState(string next,string reason=null,bool updateVisibility=true) {
             if (state == "stopped" && next == "active") return;
             if(next=="stopped")ControlFence.LatchStop();
-            state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture()); WriteState();
+            state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture());
+            try { WriteState(); }
+            catch {
+                // A failed state transition must never skip cleanup or leave a
+                // newly active session usable on an older native fence.
+                state="stopped";grants.Clear();ControlFence.LatchStop();
+                GuardCleanup.Run(CursorSafety.Restore,StopWorkers,ControlFence.Recover,Overlay.HideAll);
+                try { RefreshHud(); } catch { }
+                Emit(new {ev="state",state="stopped",reason="guard_persistence_failed",custom_cursor=CursorSafety.Applied});return;
+            }
             RefreshHud();
             if (state != "active") { CursorSafety.Restore(); StopWorkers(); ControlFence.Recover(); Overlay.HideAll(); }
             else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
