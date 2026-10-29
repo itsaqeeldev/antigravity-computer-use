@@ -1,23 +1,26 @@
 # Current qualification status — 29 October 2026
 
-**Incomplete; development candidate only.** Runtime checkpoint `f97b748` on
-`codex/macos-and-latency-review` passed Windows CI (212 passed, zero failed,
-seven skips) and Intel/Apple Silicon Mac CI, including native isolated update and
-rollback. Windows native updater acceptance remains skipped under unsafe
-ancestors. See [the current matrix](docs/RELIABILITY-IMPLEMENTATION.md) and
-[handoff](HANDOFF.md); older snapshots below are historical.
+**Incomplete; development candidate only.** The review branch integrates Mac
+PR #5 with additional marker protection. Windows CI passed at `fc2b9ac`; Mac
+checks and exact-head checks for later commits must be inspected independently.
+The published release/bootstrap remain beta.2. See the
+[qualification matrix](docs/RELIABILITY-IMPLEMENTATION.md) and
+[Mac evidence boundaries](docs/MACOS-QUALIFICATION.md).
 
-The installed global `83487f3a...` still verifies against its own 102-file bundle
-and skill. Its service is idle, host-managed, with zero approved apps; it is not
-the latest candidate. The 107-file local Windows candidate `8a128aa5...` is
-prepared but neither installed nor published. Public release/bootstrap remain
-beta.2. No physical desktop control was resumed.
+The installed global Windows build `bc45734396d12837098b4cdcd046fd4d36e7c22da7eeeb6acec33fd023cedc9f`
+verified its 107 files and skill on 29 October. Its passive service reported idle,
+host-managed, with zero approved apps. It predates the current review branch.
+The supported local upgrade preserved configuration and pins; it was not a signed
+automatic-update acceptance run.
 
-Remaining acceptance includes affected-PC recovery, real Flash/Sonnet and fresh
-installation tasks, Unicode provider isolation, physical Stop/re-arm and held
-input, the Intel Mac device report, native Windows update/interruption tests and
-published/downloaded/installed identity verification. Source/CI success does not
-complete these requirements. Issues #2 and #3 remain open.
+Real Sonnet and Flash Notepad tasks saved matching Unicode on this build, and a
+physical Esc during a held drag released input and skipped the queued action.
+See [performance](docs/PERFORMANCE.md) and [validation](VALIDATION.md) for
+measurements and limitations. Remaining acceptance includes affected-PC and fresh
+installation recovery, matched Upscaly performance, held-key and multi-display
+checks, Mac physical/device qualification, native Windows automatic-update tests,
+and published/downloaded/installed identity verification. Source/CI success does
+not complete these requirements. Issues #2 and #3 remain open.
 
 # Historical shared macOS adapter checkpoint — 29 October 2026
 
