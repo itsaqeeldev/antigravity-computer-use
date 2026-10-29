@@ -901,6 +901,10 @@ or the prior ledger is nonempty, then succeeds once all have exited and a
 fixture ledger is empty; the Stop latch remains. The child processes are not
 native desktop controllers, and the fixture deliberately sends no input, so
 physical crash recovery and watchdog behavior remain unqualified.
+Task startup now creates and flushes its own empty native input ledger before
+dispatch, so a pointer-only task can leave verifiable empty evidence. An
+existing nonempty, malformed or linked ledger is refused and never overwritten.
+The tests use inert ledger contents; real pointer-only crash recovery is pending.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real

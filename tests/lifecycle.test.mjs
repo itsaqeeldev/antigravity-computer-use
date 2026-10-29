@@ -32,6 +32,14 @@ test('task reservation write failure remains closed to actions and updates',()=>
  try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('task startup creates an empty ledger and never overwrites held input evidence',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-empty-ledger-')),r=fixture();r.taskFile=path.join(dir,'task-state.json');r.guardFile=path.join(dir,path.basename(r.guardFile));const ledger=r.guardFile+'.inputs';
+ try{
+  r.beginTask();const expected=process.platform==='darwin'?'{"keys":[],"buttons":[]}':'';assert.equal(fs.readFileSync(ledger,'utf8'),expected);await r.finish();
+  const held=process.platform==='darwin'?'{"keys":[42],"buttons":[]}':'k:65:0:0';fs.writeFileSync(ledger,held);
+  assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(fs.readFileSync(ledger,'utf8'),held);assert.equal(r.status().task_open,true);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('recovered End closes only after old Windows ledger and native processes verify',{skip:process.platform!=='win32'},async t=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'verified-prior-')),file=path.join(dir,'task-state.json'),guard='guard-2147483647-12345678-1234-1234-1234-123456789abc.state';
  try{

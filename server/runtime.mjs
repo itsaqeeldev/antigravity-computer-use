@@ -108,7 +108,24 @@ export class Runtime {
   beginTask(){
     if(this.taskOpen&&this.taskDurable)return;
     this.taskOpen=true;this.taskDurable=false;
-    try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted,watchdogs_complete:this.watchdogsComplete});this.taskDurable=true;}
+    try{
+      if(this.taskFile){
+        // An empty native ledger is evidence that a task that only moved the
+        // pointer has no recorded held inputs. Never overwrite an existing one.
+        const ledger=this.guardFile+'.inputs';let fd;
+        try{fd=fs.openSync(ledger,'wx',0o600);fs.writeFileSync(fd,process.platform==='darwin'?'{"keys":[],"buttons":[]}':'');fs.fsyncSync(fd);}
+        catch(error){
+          if(error.code!=='EEXIST')throw error;const info=fs.lstatSync(ledger);if(!info.isFile()||info.isSymbolicLink()||info.size>65536)throw error;
+          const content=fs.readFileSync(ledger,'utf8');
+          if(process.platform==='darwin'){const value=JSON.parse(content);if(!Array.isArray(value?.keys)||!Array.isArray(value?.buttons)||value.keys.length||value.buttons.length)throw error;}
+          else if(content!=='')throw error;
+          const existing=fs.openSync(ledger,'r+');try{fs.fsyncSync(existing);}finally{fs.closeSync(existing);}
+        }
+        finally{if(fd!==undefined)fs.closeSync(fd);}
+        writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted,watchdogs_complete:this.watchdogsComplete});
+      }
+      this.taskDurable=true;
+    }
     catch{throw Object.assign(Error('Cannot preserve task state; no desktop action was started.'),{code:'task_state_write_failed'});}
   }
   recordDispatch(){
