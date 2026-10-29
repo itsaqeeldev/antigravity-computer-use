@@ -40,7 +40,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   const now=Date.now(),last=read();
   if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await updateLocked(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
   if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=86400000)){
-   const result=diagnostics(path.join(target,'data'),{submit:true,target});save({...read(),reporting_at:now,reporting_status:result.next_action||'complete'});
+   const result=await diagnostics(path.join(target,'data'),{submit:true,target});save({...read(),...(result.next_action==='reporting_in_progress'?{}:{reporting_at:now}),reporting_status:result.next_action||'complete'});
   }
   if(settings.mode==='manual')return {skipped:true};
   if(!last.attempt_at||now-last.attempt_at>=86400000){

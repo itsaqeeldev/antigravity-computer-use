@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "085aee44bdaf39dc30c2706cdc3c35be4290b46e6aafe95d3f716bf036f7be99"
+      "sha256": "6695dcdbc9dd4c2dd8a97564bb8d8f4dca6622eb666dba958a28ef2656357636"
     },
     {
       "path": "server/version.mjs",
@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "162c050acc92c69687b957272da3ec236a434c567ab8fb3e531b4c5ff9dee85e"
+      "sha256": "0a1135cc7d24a4ad70a6def3eda16338e5fb8e6b9f0087fba42803b1907bdc8f"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -596,7 +596,7 @@
     },
     {
       "path": "scripts/diagnostics.mjs",
-      "sha256": "926deff5af1b7367482d2b3b58032d58ee2ada30142d197613cea41601db09fc"
+      "sha256": "5eb96a3a1a605363f7e97666dad02badaaef67397b22bebabf972e4c55e636ac"
     },
     {
       "path": "tests/recovery-update.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "3ea9530855369cd3b9e433ef6a0d928c089a70a553e5b8d86e66ff806c997c5b"
+      "sha256": "8590a657453f1c2614a1c160c170e626c7191fea52cfa7d437af1962b831d46f"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -616,7 +616,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "e72c67849472dbb10f486d747f2c45aaab3d776faff3a5141e71d87c750f2d8d"
+      "sha256": "8d64b77b9d188c0fefdbeb8a0d789536e88c67db2f67e47b28d9c30cbb244718"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

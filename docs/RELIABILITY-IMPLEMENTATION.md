@@ -27,9 +27,12 @@ report acknowledgements separately, and the regression verifies that a new
 incident and a newer occurrence of the same incident remain pending. A separate
 process-termination test confirms an interrupted acknowledgement publication
 leaves the incident pending. A deterministic reentrant simulation reproduced two
-issue-create calls when reporters both pass the backoff check before either
-publishes it. No real GitHub issue was created. Cross-process serialization and
-native crash/power-loss behavior still need qualification before release.
+issue-create calls when reporters both passed the backoff check before either
+published it. No real GitHub issue was created. The candidate now acquires a
+separate native reporting lease before reading reports and checking backoff; a
+real Windows helper test confirms exclusion and normal release, and a mocked
+overlap test confirms the second reporter defers. Consent is rechecked before
+submission. Mac native lease, crash and power-loss behavior remain to qualify.
 
 Earlier runtime evidence: Windows 212 passed, zero failed, seven explicit skips;
 [Windows CI](https://github.com/shayann07/antigravity-computer-use/actions/runs/40883552932)

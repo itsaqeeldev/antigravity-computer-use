@@ -90,7 +90,7 @@ export function request(session,command,args={},timeout=100000,expectedPermissio
 
 export async function main(){
   const [rawCommand,...rest]=process.argv.slice(2);const command=rawCommand?.replace(/^computer_/,'');
-  if(command==='diagnostics'){applyDeployment(loadDeployment());if(rest.some(a=>a!=='--submit'))throw Error('Use diagnostics [--submit]');printReply(diagnostics(dataDir(),{submit:rest.includes('--submit')}));return;}
+  if(command==='diagnostics'){applyDeployment(loadDeployment());if(rest.some(a=>a!=='--submit'))throw Error('Use diagnostics [--submit]');printReply(await diagnostics(dataDir(),{submit:rest.includes('--submit')}));return;}
   if(command==='update'){
     const deployment=applyDeployment(loadDeployment());if(!deployment.installed)throw Error('Updates require a supported installation.');
     if(rest.length!==1||!['status','check','apply','rollback'].includes(rest[0]))throw Error('Use update status|check|apply|rollback');
