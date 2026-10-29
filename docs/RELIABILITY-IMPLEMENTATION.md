@@ -429,3 +429,21 @@ The first Intel CI run timed out the 4 MiB oversized-response fixture at its
 artificial 250 ms limit before the size condition arrived. The runtime retained
 unknown delivery correctly. The fixture now separates that test's deadline from
 the dedicated short-deadline cases; the failure is retained in run `40883083236`.
+
+## Real Windows upgrade exposed updater-layout refusal
+
+After the owner resumed Windows testing, the supported installer refused the
+existing dedicated installation with `storage_not_dedicated`: native
+`OwnInstall` omitted this project's own `update-settings.json`, `update-state.json`
+and other updater entries. No configuration switch occurred. Shutdown cleanup
+had succeeded, and the prior build was restarted passively and returned idle.
+
+The Windows guard now recognizes exact updater filenames, its staging directory
+and the narrow UUID temporary-metadata pattern used by atomic publication.
+Unknown/lookalike files are still refused. Ancestor, ownership, ACL and reparse
+checks are unchanged; no parent permissions were changed. A regression calls the
+real compiled layout classifier without entering its ACL-changing entrypoint. It
+failed on `update-settings.json` before the fix, then passed recognition,
+unrelated-data refusal and unchanged-ACL checks. The real supported upgrade must
+be retried with a fresh complete candidate; this classifier check does not itself
+qualify installation or automatic signed updating.

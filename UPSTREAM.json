@@ -348,7 +348,7 @@
     },
     {
       "path": "server/native/StorageGuard.cs",
-      "sha256": "de26e60e6633866291b82da534cdc66b76c86fdb008977c2e2dde496b33dc16f"
+      "sha256": "bc216cd040aa971f7923da91a947447645120e7aedcfbe96ce83939e249f2891"
     },
     {
       "path": "server/storage.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "694a2bd463a494b0b3356f6c02733700e93900949075a581c431ec35a1b89532"
+      "sha256": "7bc2129ca210603e2e379264c2c22109960fb3ef367669e68ce9fa6c45fc7a9e"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -693,6 +693,14 @@
     {
       "path": "tests/transport-failure.test.mjs",
       "sha256": "3f86bb1dcbf5079a2aa128fbdd57fa812ad78caa03f1d5ed4e82afde19eef696"
+    },
+    {
+      "path": "tests/NativeStorageLayoutTests.cs",
+      "sha256": "0d2d4f1d45e792e97a24b9818d7eb9b840f3aca48055f99290a0724358f93893"
+    },
+    {
+      "path": "tests/native-storage-layout.test.mjs",
+      "sha256": "d5c627a707759724047c0f48894e30232af52421aea03ac216198c494f211fd0"
     }
   ]
 }

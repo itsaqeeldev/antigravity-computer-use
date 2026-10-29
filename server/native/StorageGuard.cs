@@ -143,6 +143,10 @@ internal static class StorageGuard {
         if(!Directory.Exists(root)||(!File.Exists(Path.Combine(root,"installation.json"))&&!File.Exists(Path.Combine(root,Marker))))return false;
         foreach(string path in Directory.EnumerateFileSystemEntries(root)){
             string name=Path.GetFileName(path);
+            // Updater-owned metadata is part of this dedicated installation.
+            // Keep this an exact allowlist: a marker never permits unrelated data.
+            if(name=="updates"||name=="update-settings.json"||name=="update-state.json"||name=="update-worker-result.json"||name=="update-switching.json"||name=="update.lock")continue;
+            if(System.Text.RegularExpressions.Regex.IsMatch(name,@"^\.(?:installation|deployments|update-settings|update-state|update-switching|update-worker-result)\.json\.[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.tmp$"))continue;
             if(System.Text.RegularExpressions.Regex.IsMatch(name,@"^Start Computer Use(?:-[a-f0-9]{12})?\.cmd(?:\.agcu\.tmp)?$",System.Text.RegularExpressions.RegexOptions.IgnoreCase))continue;
             if(name=="releases"||name=="data"||name=="backups"||name=="installation.json"||name=="deployments.json"||name=="deployments.json.agcu.tmp"||name==Marker||System.Text.RegularExpressions.Regex.IsMatch(name,@"^cu(?:-[a-f0-9]{12})?(?:-node)?\.(?:mjs|exe|cmd)(?:\.agcu\.tmp)?$"))continue;
             return false;
