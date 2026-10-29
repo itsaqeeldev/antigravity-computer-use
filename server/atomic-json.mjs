@@ -1,6 +1,10 @@
 // Same-directory metadata publication. Flush the complete file before exposing
 // it; never truncate the previous recovery journal in place.
 import fs from 'node:fs';import path from 'node:path';import {randomUUID} from 'node:crypto';
+export function readTaskState(file){
+ try{if(fs.statSync(file).size>1024)throw Error();const value=JSON.parse(fs.readFileSync(file,'utf8'));if(value?.schema!==1||typeof value.open!=='boolean')throw Error();return value.open;}
+ catch(error){if(error.code==='ENOENT')return false;throw Object.assign(Error('task_state_invalid: inspect private storage before continuing.'),{code:'task_state_invalid'});}
+}
 export function writeAtomicJSON(file,value,{exclusive=false,io=fs}={}){
  return writeAtomicText(file,JSON.stringify(value),{exclusive,io});
 }

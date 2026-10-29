@@ -861,6 +861,9 @@ orchestration.
 The installer also checks task state in the destination and previous deployment
 roots before switching files, and checks again after staging. An open marker or
 malformed state refuses the installation without replacing its configuration.
+The standalone rollback entry point also refuses open or malformed state in its
+target installation before restoring files. Cross-installation rollback still
+needs qualification against independent callers and shared-task ownership.
 The older beta had no task marker, so its absence in an older stopped service
 cannot establish that an Antigravity conversation has finished; that bootstrap
 qualification remains outstanding.

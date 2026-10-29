@@ -5,7 +5,7 @@ import {SIDECAR_ID,sidecarDefinition,mergeSidecarConfig} from './sidecar.mjs';
 import {nativePlatform} from '../server/platform.mjs';
 import {rollback} from './rollback.mjs';
 import {randomUUID} from 'node:crypto';
-import {writeAtomicJSON,writeAtomicText,flushPreparedTree,flushPreparedFile} from '../server/atomic-json.mjs';
+import {writeAtomicJSON,writeAtomicText,flushPreparedTree,flushPreparedFile,readTaskState} from '../server/atomic-json.mjs';
 import {deploymentPinned} from '../server/update-core.mjs';
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function mergeConfig(file,entry){
@@ -114,11 +114,10 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  for(const root of previousRoots)if(root!==target)prepareStorage(root,storageHelper,'legacy');
  const preserveControl=()=>{
   const data=path.join(target,'data'),taskFile=path.join(data,'task-state.json');
-  const taskOpen=file=>{if(!fs.existsSync(file))return false;try{if(fs.statSync(file).size>1024)throw Error();const saved=JSON.parse(fs.readFileSync(file,'utf8'));if(saved?.schema!==1||typeof saved.open!=='boolean')throw Error();return saved.open;}catch{throw Error('task_state_invalid');}};
-  let open=taskOpen(taskFile);
+  let open=readTaskState(taskFile);
   for(const root of previousRoots)if(root!==target){
    const previousData=path.join(root,'data');
-   if(taskOpen(path.join(previousData,'task-state.json')))open=true;
+   if(readTaskState(path.join(previousData,'task-state.json')))open=true;
    if(fs.existsSync(path.join(previousData,'emergency.stop'))){fs.mkdirSync(data,{recursive:true});fs.writeFileSync(path.join(data,'emergency.stop'),'stopped');}
    const preferences=path.join(previousData,'control-preferences.json'),destination=path.join(data,'control-preferences.json');
    if(!fs.existsSync(destination)&&fs.existsSync(preferences)){const saved=JSON.parse(fs.readFileSync(preferences,'utf8'));if(['manual','smart'].includes(saved.takeover_mode)){fs.mkdirSync(data,{recursive:true});fs.writeFileSync(destination,JSON.stringify({takeover_mode:saved.takeover_mode},null,2));}}

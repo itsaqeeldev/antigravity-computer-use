@@ -17,7 +17,7 @@ import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs
 import {Incidents} from './incidents.mjs';
 import {updateNotice} from './update-notice.mjs';
 import {recoveryAdvice} from './recovery.mjs';
-import {writeAtomicJSON} from './atomic-json.mjs';
+import {writeAtomicJSON,readTaskState} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -80,8 +80,7 @@ export class Runtime {
     else fs.mkdirSync(dataDir(),{recursive:true}); // inert unit-test dependencies
     this.latchFile=latchFile===undefined?(!driver&&!guardian?path.join(dataDir(),'emergency.stop'):null):latchFile;
     this.taskFile=taskFile===undefined?(!driver&&!guardian?path.join(dataDir(),'task-state.json'):null):taskFile;
-    let priorTask=false;
-    if(this.taskFile&&fs.existsSync(this.taskFile))try{const record=JSON.parse(fs.readFileSync(this.taskFile,'utf8'));if(record?.schema!==1||typeof record.open!=='boolean')throw Error();priorTask=record.open;}catch{throw Object.assign(Error('Task state is invalid; inspect private storage before starting control.'),{code:'task_state_invalid'});}
+    const priorTask=this.taskFile?readTaskState(this.taskFile):false;
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
     fs.writeFileSync(this.guardFile,'idle||0|',{mode:0o600});
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};

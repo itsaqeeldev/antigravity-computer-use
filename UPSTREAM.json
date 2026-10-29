@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "1d593fbb37287ee906efac0f09b4a37176a0bd2bb44b07a638d5e4227f419e92"
+      "sha256": "c86b259624f0d4f087c5c19efd540c641b699b410abb9db7aba93def34f7afc4"
     },
     {
       "path": "server/mcp.mjs",
@@ -312,11 +312,11 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "981b4ddf6b69958d2469a549b6f12b25ccf0591e0ce19bc49f7d07d1dbb4ffa2"
+      "sha256": "f73045cd6d6727aa928a4b099febd04a9e338566739a3a93e7ca98ba5944560b"
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "9f1589d74346d661da13a9c7105e2c68612a8199375701beadecc21a2a284861"
+      "sha256": "5e5d8c9725ca34952347d479cc0e1b91664330e65e11ccad1cbeefb8f1b24bf3"
     },
     {
       "path": "scripts/verify-install.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "e40c3ec1e91aa78636d6e07fa31fbf95068c0fc69ae4ec87a4bf36c833718ee9"
+      "sha256": "2536ac088248a5acb83d1b8384ed1cde3b1170ea4bc22c0c2811c76d9eea87de"
     },
     {
       "path": "tests/core.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "57c87b79831c84bf9e24d2e0f6beb4a4d2773c859d5af662897fd1faa34da006"
+      "sha256": "65fa6faa30a6465ac5f5a865585281100e19f7677aff441232c1e8c09a567857"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -700,7 +700,7 @@
     },
     {
       "path": "server/atomic-json.mjs",
-      "sha256": "db98c55a9cd50b14e4e6b199fa5acfc2eb60bb14df173598df7fffad088f921a"
+      "sha256": "8c7253c886043856b8e2115d0513f2e55e80e462f803e593e9feb21dd79c3bc8"
     },
     {
       "path": "tests/atomic-json.test.mjs",

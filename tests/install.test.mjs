@@ -200,3 +200,15 @@ test('rollback refuses a live service before restoring configuration or launcher
  const before=fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8');const rolled=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(installed.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});
  assert.equal(rolled.status,1);assert.match(rolled.stderr,/still running/);assert.equal(fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8'),before);assert(fs.existsSync(installed.launcher));
 });
+test('rollback refuses a recovered open or malformed task before changing deployment',()=>{
+ const dir=fs.mkdtempSync(path.join(root,'rollback-task-')),bundle=path.join(dir,'bundle'),target=path.join(dir,'installed'),home=path.join(dir,'home');
+ try{
+  fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});writeFixture(bundle);fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'Use {{DESKTOP_COMMAND}}');seal(bundle);
+  const installed=install({bundle,target,home});const marker=path.join(target,'data','task-state.json');fs.mkdirSync(path.dirname(marker),{recursive:true});
+  const before=fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8');
+  for(const state of [JSON.stringify({schema:1,open:true}),'{broken']){
+   fs.writeFileSync(marker,state);const result=spawnSync(process.execPath,['scripts/rollback.mjs',path.join(installed.backup,'rollback.json')],{windowsHide:true,encoding:'utf8'});
+   assert.equal(result.status,1);assert.match(result.stderr,/task_open_finish_before_rollback|task_state_invalid/);assert.equal(fs.readFileSync(path.join(installed.skills[0],'SKILL.md'),'utf8'),before);assert.equal(fs.readFileSync(marker,'utf8'),state);
+  }
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
