@@ -30,6 +30,13 @@ On macOS, launch an existing `.app` bundle such as `/Applications/Example.app`; 
 
 The installed App sidecar keeps a passive listener across tasks. Finish with `end`; use `shutdown` only for updates/removal. The pinned launcher's build must match the listener. Windows Agent Manager terminal jobs can run on an isolated `exebox` desktop, even in Turbo. If the sidecar is unavailable, the human starts **`{{CONTROLLER_START}}`** on the normal desktop or restarts the App's Computer Use sidecar. Do not use WMI, switch desktops, change policy or restart a live unresponsive controller to get around this boundary.
 
+The direct Sidecar currently shares one task state between callers; it does not
+authenticate which conversation owns the session. Individual actions are
+serialized, but a second caller's `end` can clear another caller's grants and
+frames between actions. Coordinate one desktop task at a time; if another task
+may own it, do not start or end its session. A momentarily idle status alone
+does not establish ownership. This limitation is tracked in issue #7.
+
 Passive startup/status never opens the control bar. After Stop, the bar dismisses after eight seconds; `controls` explicitly shows it for human re-arm (30 seconds) without granting permission, sending input or clearing Stop. `end` hides it even while Stop remains latched. Do not leave controls open during unrelated code work.
 
 ## Observe, act, verify

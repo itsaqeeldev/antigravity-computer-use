@@ -5,6 +5,15 @@ shared Mac support” plan. This log records implementation and evidence separat
 Review branch: `codex/review-intel-mac`. All private test output stays
 in `.localdata/`. No release completion is claimed here.
 
+Open coordination gap: [issue #7](https://github.com/shayann07/antigravity-computer-use/issues/7)
+tracks the shared direct Sidecar's lack of authenticated per-task ownership.
+An isolated IPC probe using the actual service dispatch and `Runtime.finish`
+showed that a second connection's `end` clears another connection's frames and
+grants. No real desktop or two live agents were used in that probe. Individual
+actions are serialized, but that does not prove whole-task isolation; coordinate
+one task at a time until a host-compatible ownership design is qualified. The
+skill now states that limit rather than promising safe concurrent tasks.
+
 Agents can now record structured feedback about observed usability, speed or
 missing-capability concerns that did not produce a runtime error. Categories,
 operation and evidence level come from fixed lists; task text, paths, screenshots
