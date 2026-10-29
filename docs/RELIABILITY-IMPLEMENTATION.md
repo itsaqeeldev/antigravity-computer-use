@@ -63,6 +63,13 @@ test passed in the local full suite and the preceding Windows CI, but those pass
 do not establish why this run failed. The original failure remains in Actions run
 `40934910247`; its failed job was rerun for comparison. Treat a successful retry
 as a separate observation, not proof that startup cannot hang.
+Another Windows run (`40937717822`) timed out in the ownership helper and then
+hit `EPERM` while removing its fixture directory. Source review identified a
+possible cleanup race: startup rejected immediately after requesting helper
+termination, before its directory handle was known to be released. The helper
+startup path now waits for termination, and reports unconfirmed cleanup if it
+cannot establish that the child exited. Focused tests cover both outcomes and
+real kernel ownership; they do not establish the cause of the original CI stall.
 
 The incident counter no longer clamps at one million when reading records: that
 clamp could cause a new occurrence to appear already acknowledged. A regression

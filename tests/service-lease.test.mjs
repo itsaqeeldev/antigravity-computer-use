@@ -2,10 +2,20 @@ import {testDirectory} from './paths.mjs';
 // Real Windows kernel ownership, using inert runtimes: no screenshots or input.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {once} from 'node:events';
 import {acquireServiceLease} from '../server/service-lease.mjs';import {serveDesktop} from '../server/desktop-service.mjs';import {request} from '../scripts/desktop.mjs';
-import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';
+import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import {EventEmitter} from 'node:events';import {PassThrough} from 'node:stream';
 import {storageOperation} from '../server/storage.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('timed-out ownership helper is reaped before startup rejects',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.exitCode=null;let closed=false;
+ child.kill=()=>{setTimeout(()=>{closed=true;child.exitCode=1;child.emit('exit',1);child.emit('close',1);},40);};
+ await assert.rejects(acquireServiceLease(base,{helper:'inert',startupTimeout:10,spawnProcess:()=>child}),e=>e.code==='service_lease_timeout');
+ assert(closed,'caller must not recover while the helper still holds handles');
+});
+test('a helper that cannot be reaped reports unconfirmed cleanup',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.exitCode=null;child.kill=()=>false;
+ await assert.rejects(acquireServiceLease(base,{helper:'inert',startupTimeout:10,cleanupTimeout:25,spawnProcess:()=>child}),e=>e.code==='service_lease_cleanup_unconfirmed'&&e.cause?.code==='service_lease_timeout');
+});
 test('one real kernel owner covers path-case aliases and prevents directory replacement until release',{skip:process.platform!=='win32'},async()=>{
  const dir=temporary(),moved=dir+'-moved';const lease=await acquireServiceLease(dir);
  try{
