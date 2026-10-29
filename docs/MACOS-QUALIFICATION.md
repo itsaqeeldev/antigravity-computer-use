@@ -50,6 +50,12 @@ support the next report.
 - The proposed `EEXIST` handling does not serialize initial directory/marker
   creation. A helper can still inspect an unfinished marker. Native concurrency
   qualification must cover this before accepting the repair as complete.
+- PR #5 (`1356308aa30fd2b466ec1d7d2037df4e1c2ac1db`) reports 201 passing
+  tests and 22 skips on Intel hardware and adds directory locking. Its raw logs
+  have not been independently reviewed. The follow-up source could truncate an
+  invalid hard-linked marker in source storage; the integration replaces that
+  open with exclusive creation and adds a regression. The integration itself
+  requires Mac CI and renewed device qualification.
 - Qualification runs now get unique directories under `.localdata/tests/`;
   deleting the prior installation/evidence before each run is not acceptable.
 - Native C#/NTFS checks are Windows-only, but legacy-controller exclusion is a
