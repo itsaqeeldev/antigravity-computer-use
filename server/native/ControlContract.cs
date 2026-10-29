@@ -21,6 +21,14 @@ namespace Axon {
             return data;
         }
         internal static int Number(string key,int fallback) {object value;return Values.TryGetValue(key,out value)?Convert.ToInt32(value):fallback;}
+        internal static double UiNumber(string key,double fallback,double minimum,double maximum) {
+            object ui,value;var fields=Values.TryGetValue("ui",out ui)?ui as Dictionary<string,object>:null;
+            if(fields==null||!fields.TryGetValue(key,out value))return fallback;
+            try {
+                double result=Convert.ToDouble(value,System.Globalization.CultureInfo.InvariantCulture);
+                return Double.IsNaN(result)||Double.IsInfinity(result)||result<minimum||result>maximum?fallback:result;
+            } catch { return fallback; }
+        }
         internal static bool Pattern(string key,string fallback,string text) {object value;return Regex.IsMatch(text??"",Values.TryGetValue(key,out value)?Convert.ToString(value):fallback,RegexOptions.IgnoreCase);}
         internal static bool SensitiveOperation(string op) {
             object value;

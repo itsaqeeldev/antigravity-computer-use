@@ -698,7 +698,9 @@ namespace Axon
             internal float OpacityValue {get {return Alpha;}}
             internal RingForm() : base(true) {
                 Bounds = SystemInformation.VirtualScreen;
-                breath=new System.Windows.Forms.Timer();breath.Interval=100;
+                // Opacity uses the cached bitmap; 50 ms reduces visible stepping
+                // without redrawing the full multi-monitor edge surface.
+                breath=new System.Windows.Forms.Timer();breath.Interval=50;
                 breath.Tick+=delegate {if(Visible&&wanted)Alpha=DesktopVisuals.BreathLevel;};
             }
 

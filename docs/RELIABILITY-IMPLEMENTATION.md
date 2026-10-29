@@ -5,6 +5,17 @@ shared Mac support” plan. This log records implementation and evidence separat
 Review branch: `codex/review-intel-mac`. All private test output stays
 in `.localdata/`. No release completion is claimed here.
 
+The shared visual contract now uses a four-second breathing cycle with a
+0.64–1.00 opacity range. Windows requests opacity updates for its cached edge
+bitmap every 50 ms instead of 100 ms; macOS reads the same cycle and amplitude.
+Both retain a static 0.94 opacity when the operating system requests reduced
+motion. A headless Windows native probe read the contract in the newly compiled
+helper and sampled 0.640–1.000 over one cycle. Its preview render and alpha
+falloff checks passed. This does not measure on-screen frame rate, CPU/GPU cost,
+comfort, or the actual Mac UI. The change is source-only: the existing installed
+controller was not replaced while the Upscaly task was active. The local suite
+passed 259 tests with nine explicit skips.
+
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |

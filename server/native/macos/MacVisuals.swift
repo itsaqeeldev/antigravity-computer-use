@@ -87,8 +87,13 @@ final class MacVisuals: NSObject {
         if captureHidden || state != "active" { return }
         let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let ui = MacContract.value["ui"] as? [String: Any] ?? [:]
-        let seconds = ui["breath_seconds"] as? Double ?? 5.2
-        let alpha = reduce ? 0.94 : 0.86 + 0.14 * sin((ProcessInfo.processInfo.systemUptime - origin) * .pi * 2 / seconds)
+        let configuredSeconds = ui["breath_seconds"] as? Double ?? 4.0
+        let configuredBase = ui["breath_base"] as? Double ?? 0.82
+        let configuredAmplitude = ui["breath_amplitude"] as? Double ?? 0.18
+        let seconds = configuredSeconds.isFinite && (1.0...30.0).contains(configuredSeconds) ? configuredSeconds : 4.0
+        let base = configuredBase.isFinite && (0.0...1.0).contains(configuredBase) ? configuredBase : 0.82
+        let amplitude = configuredAmplitude.isFinite && (0.0...1.0).contains(configuredAmplitude) ? configuredAmplitude : 0.18
+        let alpha = reduce ? 0.94 : max(0, min(1, base + amplitude * sin((ProcessInfo.processInfo.systemUptime - origin) * .pi * 2 / seconds)))
         rings.forEach { $0.alphaValue = alpha; if !$0.isVisible { $0.orderFrontRegardless() } }
         if cursorApplied {
             let point = NSEvent.mouseLocation

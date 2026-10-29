@@ -72,7 +72,7 @@
     {
       "path": "server/native/Overlay.cs",
       "upstream_sha256": "eaadd8bc72befd9f42aa214dbb1a3ba45f2e28d0c40ed3491ece4414280a4551",
-      "local_sha256": "33bd3193a26f9d55657a352acc92e2d736b7f45bec1edc0e998f2a729f92ffd0",
+      "local_sha256": "2487a76236b764512298d9df482a47b2223c588600d4b1fe24d977a6dc8179b9",
       "modified": true
     },
     {
@@ -240,7 +240,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "f36aa687656ff5172af34f68b543e07f0747bb9fb815856bb2356954d83bc4df"
+      "sha256": "19d5158e1f483101ff0b2be222336e1698ffe3ee9ca8e28d89b32473b1a034dd"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -512,7 +512,7 @@
     },
     {
       "path": "server/control-contract.json",
-      "sha256": "5b2288ffadc45331036d8dc467fca113a8c2040d3dbcce3e77225676f7bb5a6e"
+      "sha256": "cac66ca32b992a98d2a1d092c22e3d95e1acf04154daaa816fbae31026b73810"
     },
     {
       "path": "server/macos-build.mjs",
@@ -544,7 +544,7 @@
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
-      "sha256": "0df522ba8020d67690739b755e67a399d87ab0778c0ec5f5ccacd2f13fa82a7f"
+      "sha256": "de45fa41581942533655c29df9159fd181e6646b836bb4bb0a10414424650452"
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
@@ -560,7 +560,7 @@
     },
     {
       "path": "server/native/ControlContract.cs",
-      "sha256": "ee47e2e7f86989c273012a01fc4283a0e1e1d58fe1948ef036a60d5244e18bc7"
+      "sha256": "0cb87095d31963dd4b582b54b1a8c585c0546578dedddc389344789089d8c3ab"
     },
     {
       "path": "scripts/macos-install-check.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "8671ee0a0729baec037c8e674b219593fc483ec8b925cd9d69ce832c41fd339d"
+      "sha256": "23038aa7c053952da55c30681240cafc52cbb54379ab7b8209db3ba27b80b67b"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

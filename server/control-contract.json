@@ -10,7 +10,9 @@
   "ui": {
     "width": 384,
     "height": 44,
-    "breath_seconds": 5.2,
+    "breath_seconds": 4.0,
+    "breath_base": 0.82,
+    "breath_amplitude": 0.18,
     "accent_rgb": [155, 205, 235],
     "blue_rgb": [128, 171, 207],
     "edge_sigma": 27,
