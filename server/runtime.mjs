@@ -15,6 +15,7 @@ import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
 import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs';
 import {Incidents} from './incidents.mjs';
+import {updateNotice} from './update-notice.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -101,7 +102,7 @@ export class Runtime {
       if(controls.error)throw Object.assign(Error(controls.error.message),{code:controls.error.code});
       if(['idle','active','paused','stopped'].includes(controls.state))this.state=controls.state;
       const visible=controls.controls_visible===true;
-      return {...this.status(),ready:visible&&this.state!=='stopped'&&this.state!=='paused',controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
+      return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused',controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
         next_action:!visible?'inspect_diagnostics':this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':'discover_or_launch'};
     }catch(error){this.recoveryFailure={code:error.code||'guardian_unavailable',message:'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return {...this.status(),ready:false,controls_visible:false,guardian_exit:this.guardian.lastExit??null,next_action:'inspect_diagnostics',error:this.recoveryFailure};}
   }

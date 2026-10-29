@@ -55,6 +55,10 @@ async function updateLocked(target,command,{fetcher,adapters}){
  try{
   const state=read();
   const cli=adapters.cli||((record,args)=>{const p=spawnSync(path.join(record.release,nativePlatform().node),[record.launcher,...args],{encoding:'utf8',timeout:20000,windowsHide:true});if(p.status!==0)throw Error('update_controller_check_failed');return JSON.parse(p.stdout);});
+  const passiveRecord=fallback=>{
+   const global=JSON.parse(fs.readFileSync(path.join(target,'deployments.json'))).global;
+   return global?{...fallback,release:global.release,launcher:path.join(target,'cu.mjs'),launcher_node:path.join(target,process.platform==='win32'?'cu-node.exe':'cu-node')}:fallback;
+  };
   if(command==='check'){
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
@@ -71,7 +75,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    try{
    const required=Object.values(m.files).reduce((n,f)=>n+f.size,0)*2+100*1024*1024;const disk=adapters.diskInfo?adapters.diskInfo(stage):fs.statfsSync(stage);if(disk.bavail*disk.bsize<required)throw Error('update_insufficient_space');
    for(const [name,f]of Object.entries(m.files)){const destination=path.join(stage,name);fs.mkdirSync(path.dirname(destination),{recursive:true});await downloadFile(f.url,destination,{size:f.size,hash:f.sha256,fetcher});if(process.platform!=='win32'&&(name==='node'||name.startsWith('bin/')||name.endsWith('.command')))fs.chmodSync(destination,0o700);}
-   verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
+   verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,available_version:m.version,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
    }catch(error){
     // Only this invocation's freshly created stage may be removed. Never touch
     // retained releases, rollback journals, previous stages or user folders.
@@ -96,7 +100,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    switching=true;safeToUnlock=false;
    if(serviceRunning)cli(installed,['shutdown']);
    for(const file of [...interrupted.rollback].reverse())runRollback(file);
-   const prior=interrupted.previous_installation,health=cli(prior,['start']);
+   const prior=passiveRecord(interrupted.previous_installation),health=cli(prior,['start']);
    if(!['idle','stopped'].includes(health.state))throw Error('update_recovery_health_failed');
    save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
   }
@@ -108,7 +112,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
    if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600});
    if(serviceRunning)cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
-   const restored=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));cli(restored,['start']);save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
+   const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));cli(restored,['start']);save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
   const m=verifyRelease(Buffer.from(state.envelope.manifest,'base64'),state.envelope.signature,fs.readFileSync(adapters.keyFile||path.join(root,'release-public-key.pem')),{channel:settings.channel});
@@ -135,11 +139,20 @@ async function updateLocked(target,command,{fetcher,adapters}){
    }
    if(!next)throw Error('update_no_deployment');await controllerLease?.release();controllerLease=null;
    const health=cli(next,['start']);if(health.build_id!==m.build_id||!['idle','stopped'].includes(health.state))throw Error('update_health_failed');
+   // Project installation order must not replace the global Sidecar policy.
+   // A pinned global scope stays the passive owner even after project updates.
+   {
+    const global=passiveRecord(next);
+    if(global.release!==next.release){
+     cli(next,['shutdown']);const expected=JSON.parse(fs.readFileSync(path.join(global.release,'bundle-manifest.json'))).build_id;
+     const passive=cli(global,['start']);if(passive.build_id!==expected||!['idle','stopped'].includes(passive.state))throw Error('update_global_health_failed');
+    }
+   }
    save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};
   }catch(error){
    if(error.code==='installation_recovery_failed')throw Error('update_recovery_requires_operator');
    if(next)try{cli(next,['shutdown']);}catch{throw Error('update_recovery_requires_operator');}
-   for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;cli(installed,['start']);save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
+   for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;cli(passiveRecord(installed),['start']);save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
   finally{await controllerLease?.release();}
  }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);}

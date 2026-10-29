@@ -2,6 +2,8 @@
 // are inert. No live home, installation, network or desktop is touched.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
 import {generateKeyPairSync,sign} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {updateNotice} from '../server/update-notice.mjs';
 import {install} from '../scripts/install.mjs';import {rollback} from '../scripts/rollback.mjs';import {update} from '../scripts/update.mjs';
 import {sha256,newerVersion,updateSettings} from '../server/update-core.mjs';import {nativePlatform} from '../server/platform.mjs';import {testDirectory} from './paths.mjs';
 function fixture(){
@@ -111,4 +113,42 @@ test('when all scopes are pinned apply does not shutdown the current service',as
 });
 test('corrupted update history is refused without resetting sequence or contacting releases',async()=>{
  const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-state.json'),'{broken');await assert.rejects(update(f.target,'check',f),/update_state_invalid/);assert.equal(f.fetches(),0);assert.equal(fs.readFileSync(path.join(f.target,'update-state.json'),'utf8'),'{broken');assert(!fs.existsSync(path.join(f.target,'update.lock')));}finally{f.cleanup();}
+});
+test('actual worker termination during launcher and final pointer switches recovers old deployment',async()=>{
+ for(const crashPoint of ['launcher','installation']){
+  const f=fixture();try{
+   const prior=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json'))),launcher=fs.readFileSync(prior.launcher,'utf8');
+   const config=path.join(f.home,'.gemini/config/config.json'),settings=JSON.parse(fs.readFileSync(config));settings.unrelated='preserve';fs.writeFileSync(config,JSON.stringify(settings));
+   fs.mkdirSync(path.join(f.target,'data'),{recursive:true});fs.writeFileSync(path.join(f.target,'data/emergency.stop'),'stopped');
+   const marker=path.join(f.target,'update-switching.json');
+   const input={target:f.target,home:f.home,bundle:f.fresh.bundle,prior,marker,crashPoint};
+   const script=`import fs from 'node:fs';import path from 'node:path';import {install} from ${JSON.stringify(new URL('../scripts/install.mjs',import.meta.url).href)};
+const input=JSON.parse(fs.readFileSync(0,'utf8'));let recorded=false;const realRename=fs.renameSync;
+fs.renameSync=function(from,to){const result=realRename(from,to);const target=input.crashPoint==='launcher'?input.prior.launcher:path.join(input.target,'installation.json');if(recorded&&to===target){fs.writeFileSync(path.join(input.target,'crash-observed'),input.crashPoint);process.kill(process.pid,'SIGKILL');}return result;};
+install({target:input.target,home:input.home,bundle:input.bundle,prepareStorage(){return {test_fixture:true};},journalCreated(file){fs.writeFileSync(input.marker,JSON.stringify({previous_installation:input.prior,rollback:[file]}));recorded=true;}});throw Error('Expected termination point was missed');`;
+   const child=spawnSync(process.execPath,['--input-type=module','-e',script],{input:JSON.stringify(input),encoding:'utf8',windowsHide:true,timeout:15000});
+   assert.notEqual(child.status,0);assert.equal(fs.readFileSync(path.join(f.target,'crash-observed'),'utf8'),crashPoint,child.stderr);
+   assert(fs.existsSync(marker));assert.equal((await update(f.target,'scheduled',f)).recovered,true);
+   assert.equal(fs.readFileSync(prior.launcher,'utf8'),launcher);assert.equal(JSON.parse(fs.readFileSync(path.join(f.target,'installation.json'))).release,prior.release);
+   assert.equal(JSON.parse(fs.readFileSync(config)).unrelated,'preserve');assert.equal(fs.readFileSync(path.join(f.target,'data/emergency.stop'),'utf8'),'stopped');assert(!fs.existsSync(marker));
+  }finally{f.cleanup();}
+ }
+});
+test('update notices are concise, deduplicated and cannot expose stored private errors',()=>{
+ const f=fixture();try{const data=path.join(f.target,'data');fs.mkdirSync(data,{recursive:true});const state=path.join(f.target,'update-state.json');
+  fs.writeFileSync(state,JSON.stringify({available:true,envelope:'private signed metadata'}));assert.equal(updateNotice(data).kind,'available');assert.equal(updateNotice(data),undefined);
+  fs.writeFileSync(state,JSON.stringify({last_error:'C:/private user data',attempt_at:1}));const warning=updateNotice(data);assert.equal(warning.kind,'action_required');assert(!JSON.stringify(warning).includes('private user'));fs.writeFileSync(state,JSON.stringify({last_error:'C:/private user data',attempt_at:2}));assert.equal(updateNotice(data),undefined);
+  fs.writeFileSync(state,JSON.stringify({applied_version:'1.1.0',sequence:2}));assert.equal(updateNotice(data).version,'1.1.0');assert.equal(updateNotice(data),undefined);
+  fs.writeFileSync(state,JSON.stringify({last_error:'update_rolled_back',sequence:2}));assert.equal(updateNotice(data).kind,'recovered');
+ }finally{f.cleanup();}
+});
+test('global Sidecar policy owns passive startup after differently configured project upgrades',async()=>{
+ const f=fixture();try{
+  f.adapters.install({bundle:f.old.bundle,target:f.target,permissionMode:'host-managed'});
+  f.adapters.install({bundle:f.old.bundle,target:f.target,workspace:path.join(f.directory,'project'),permissionMode:'standalone'});
+  const cli=f.adapters.cli;const starts=[];f.adapters.cli=(record,args)=>{if(args[0]==='start')starts.push({launcher:record.launcher,policy:JSON.parse(fs.readFileSync(path.join(record.release,'desktop-policy.json'))).permission_mode});return cli(record,args);};
+  await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);
+  assert.equal(starts.at(-1).launcher,path.join(f.target,'cu.mjs'));assert.equal(starts.at(-1).policy,'host-managed');
+  assert((await update(f.target,'rollback',f)).rolled_back);assert.equal(starts.at(-1).launcher,path.join(f.target,'cu.mjs'));assert.equal(starts.at(-1).policy,'host-managed');
+ }finally{f.cleanup();}
 });

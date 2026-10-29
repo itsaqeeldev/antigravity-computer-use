@@ -207,3 +207,26 @@ the worker does not reserve, shut down or update the controller. Maintenance
 reservation happens only after update validation. The affected-PC, Sonnet and
 physical/hardware gates remain pending; desktop control has remained stopped
 since the owner's physical Esc.
+
+## Process termination and update notices
+
+Actual child-process termination tests now interrupt the real installer after
+the launcher switch and after the final installation-pointer switch. Scheduled
+journal recovery restores the prior launcher, release pointer, unrelated config
+and Stop. These tests inject only inert native storage/service boundaries and
+do not constitute a physical power-loss or native service interruption test.
+
+`ready` now supplies one concise `update_notice` for an applied update, an
+available verified update, a recovered failure or an actionable error. Raw stored
+messages and payload metadata never enter the notice, and unchanged notices are
+deduplicated even when daily retry timestamps change. The skill relays the short
+message once without derailing the user's task. No desktop UI is opened by the
+notice reader. Native and real-agent notice behavior remain to be exercised.
+
+Multi-scope update and rollback tests now retain the global Sidecar's permission
+policy as the passive startup owner. Previously the last-installed project could
+start the listener under its own policy. Project pins and launchers remain
+independent; shared-desktop control still requires compatible active build/policy.
+The post-change focused updater suite passed 20 tests. A preceding full source
+run passed 191 tests with zero failures and seven explicit skips. The complete
+suite and native architecture matrix must be checked again at the pushed head.

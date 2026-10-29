@@ -13,6 +13,9 @@ Antigravity is the agent; the local native runtime supplies screenshots, accessi
 
 Run `ready` once. Follow `next_action`:
 
+If `update_notice` is returned, mention its short message once. Do not dump update
+state, restart the host or interrupt the requested task to investigate it.
+
 - `discover_or_launch`: choose `apps` for an existing/unknown window or `launch --app 'D:\Apps\Example.exe' --observe --reason 'Open the requested app'` for a known executable.
 - `awaiting_human_rearm` / `awaiting_human_resume`: controls were requested. Tell the human what action is needed, then wait. Never claim a bar is visible unless `controls_visible:true` was returned.
 - `inspect_diagnostics`: run `{{DESKTOP_COMMAND}} diagnostics` once, report the incident ID and stop repeating startup. Do not invent an Antigravity Sidecar panel or repeatedly ask the user to rerun the starter.
