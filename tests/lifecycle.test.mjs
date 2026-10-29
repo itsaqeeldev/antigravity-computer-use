@@ -14,9 +14,14 @@ test('task reservation survives controller replacement until confirmed End',asyn
  const make=()=>{const guardian=new EventEmitter();guardian.send=()=>{};return new Runtime({guardian,driver:{async abort(){}},sessions:{register(){},close(){}},taskFile:file});};
  try{
   const first=make();first.beginTask();assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
-  const restarted=make();assert.equal(restarted.status().task_open,true);
+  const restarted=make();assert.equal(restarted.status().task_open,true);assert.equal(restarted.status().recovered_task,true);
+  await assert.rejects(restarted.grant(1),e=>e.code==='recovered_task_requires_end');
+  await assert.rejects(restarted.action('clipboard',{}),e=>e.code==='recovered_task_requires_end');
+  await assert.rejects(restarted.launch({app:'example'}),e=>e.code==='recovered_task_requires_end');
+  let observed=false;restarted.grant=async(_hwnd,_reason,options)=>{observed=options.observationOnly;throw Error('observation probe');};
+  await assert.rejects(restarted.observe({hwnd:1}),/observation probe/);assert.equal(observed,true);
   await restarted.finish({preserveTask:true});assert.equal(JSON.parse(fs.readFileSync(file)).open,true);
-  await restarted.finish();assert.equal(JSON.parse(fs.readFileSync(file)).open,false);assert.equal(make().status().task_open,false);
+  await restarted.finish();assert.equal(restarted.status().recovered_task,false);assert.equal(JSON.parse(fs.readFileSync(file)).open,false);assert.equal(make().status().task_open,false);
   fs.writeFileSync(file,'{broken');assert.throws(()=>make(),e=>e.code==='task_state_invalid');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -24,6 +29,11 @@ test('task reservation write failure remains closed to actions and updates',()=>
  const r=fixture();const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fail-'));r.taskFile=path.join(dir,'missing','state.json');
  try{for(let i=0;i<2;i++)assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(r.status().task_open,true);assert.equal(r.taskDurable,false);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('ready exposes recovery guidance without clearing a restarted task or Stop',async()=>{
+ const r=fixture();r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>({state:'idle',controls_visible:true});
+ const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_recovered_task');assert.equal(r.taskOpen,true);
+ r.guardian.request=async()=>({state:'stopped',controls_visible:true});const stopped=await r.ready();assert.equal(stopped.next_action,'awaiting_human_rearm');assert.equal(stopped.recovered_task,true);
 });
 test('task reservation remains open after actual controller process termination',{timeout:30000},async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-crash-')),file=path.join(dir,'task-state.json');

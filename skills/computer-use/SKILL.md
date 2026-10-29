@@ -21,6 +21,7 @@ state, restart the host or interrupt the requested task to investigate it.
 - `human_start_on_visible_desktop`: ask the human to open **`{{CONTROLLER_START}}`** once on their normal desktop. Do not switch desktops or repeatedly start helpers. If controls still fail, collect diagnostics and report the incident instead of inventing another launch method.
 - `inspect_diagnostics`: run `{{DESKTOP_COMMAND}} diagnostics` once, report the incident ID and stop repeating startup. Do not invent an Antigravity Sidecar panel or repeatedly ask the user to rerun the starter.
 - `resolve_version_mismatch` or `client_build_mismatch:true`: the selected skill and running service use different builds. Stop and report the mismatch; do not interrupt another task, overwrite a project pin or restart repeatedly. An operator can reconcile the intended deployment before retrying.
+- `inspect_recovered_task` or `recovered_task:true`: the controller restarted with a task still open. Its last input may have happened; inspect existing app state or artifacts without replay. Snapshots of already running apps remain available under the normal permission rules, but target actions and launches are refused. If you can establish that this is your own task and no other conversation owns it, call `end` once after inspection and confirmed cleanup, then begin a new task. If ownership is unclear, stop and report it; do not end another caller's task.
 - `inspect_stop_persistence_without_restart`: control is stopped but the emergency latch could not be saved. Report this and do not restart or send further input; the operator must inspect the controller's private storage.
 - If `control_reason` is `guard_persistence_failed` or `stop_persistence_failed`, report that native control storage failed and do not restart or send further input. The operator must inspect storage before continuing.
 
@@ -50,7 +51,7 @@ These common command shapes are complete; use them directly without schema setup
 | `click` | `--hwnd H --observation-id F --name TEXT --role Button --risk routine --reason TEXT [--physical true] [--image] [--max-nodes 500]`; or `--index N` in place of name/role |
 | `set_value` | `--hwnd H --observation-id F --name TEXT --role Edit --text VALUE --risk routine --reason TEXT`; or `--index N` |
 | `file_dialog` | `--hwnd OWNER --observation-id F --path FILE --action open` (or `save`) `--entry-method clipboard --reason TEXT` |
-| `run` | `--hwnd H --observation-id F --reason TEXT --step COMMAND` followed by that step's flags; repeat at most8times, omitting per-step owner/frame |
+| `run` | `--hwnd H --observation-id F --reason TEXT --step COMMAND` followed by that step's flags; repeat at most 8 times, omitting per-step owner/frame |
 | `wait` | `--hwnd H --until TEXT --timeout-ms 30000 --reason TEXT [--abort-on 'Failed,Cancelled'] [--image]` |
 | `wait_change` | `--hwnd H --observation-id F --timeout-ms 30000 --reason TEXT` |
 | `close_window` | `--hwnd H --reason TEXT` |

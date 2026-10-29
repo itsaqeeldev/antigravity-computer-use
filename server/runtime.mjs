@@ -86,7 +86,7 @@ export class Runtime {
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID()});this.sessions.register();
-    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.taskDurable=true;this.remaining=contract.action_budget;
+    this.grants=new Map();this.frames=new Map();this.generation=0;this.state='idle';this.token='';this.taskOpen=priorTask;this.recoveredTask=priorTask;this.taskDurable=true;this.remaining=contract.action_budget;
     this.lastControlReason='';
     if(this.latchFile&&fs.existsSync(this.latchFile)){this.state='stopped';this.lastControlReason='persisted_emergency_stop';}
     this.guardian.on('state',(s,reason)=>{
@@ -127,8 +127,8 @@ export class Runtime {
       if(['idle','active','paused','stopped'].includes(controls.state))this.state=controls.state;
       const visible=controls.controls_visible===true;
       if(!visible)throw Object.assign(Error('Local controls did not report a visible bar.'),{code:'guardian_controls_not_visible'});
-      return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused',controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
-        next_action:this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':'discover_or_launch'};
+      return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused'&&!this.recoveredTask,controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
+        next_action:this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':this.recoveredTask?'inspect_recovered_task':'discover_or_launch'};
     }catch(error){this.recoveryVisibility=controls?.controls_visible===false?false:null;this.recoveryFailure={code:error.code||'guardian_unavailable',message:error.code==='desktop_context_unavailable'?'Start the installed local launcher on the visible desktop. No desktop was switched and Stop remains latched.':'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return unavailable();}
   }
   check(){if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);}
@@ -147,8 +147,9 @@ export class Runtime {
       fail('protected_app','This is a protected app or the control/host UI.');
     return w;
   }
-  async grant(hwnd,purpose='Operate this app for the requested desktop task'){
+  async grant(hwnd,purpose='Operate this app for the requested desktop task',{observationOnly=false}={}){
     Runtime.prototype.beginTask.call(this);
+    if(this.recoveredTask&&!observationOnly)fail('recovered_task_requires_end','The controller restarted with an unfinished task. Inspect the prior result without replay, then end the owning task before new input.');
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
@@ -165,7 +166,7 @@ export class Runtime {
     this.state='active';this.grants.set(key,{...current,purpose});return current;
   }
   async observe(args){
-    const w=await this.grant(Number(args.hwnd),args.reason);this.check();
+    const w=await this.grant(Number(args.hwnd),args.reason,{observationOnly:true});this.check();
     const generation=this.generation;
     const workerEpoch=this.driver.epoch;
     if(args.settle_ms){
@@ -202,6 +203,7 @@ export class Runtime {
   }
   async action(op,args){
     if(!input.has(op))fail('unsupported_action','Unknown input operation.');
+    if(this.recoveredTask)fail('recovered_task_requires_end','Inspect the prior result without replay, then end the owning task before new input.');
     if('confirmed' in args||'preapprove' in args)fail('model_approval_forbidden','Model-supplied approval flags are not accepted.');
     const w=args.hwnd!=null?await this.grant(Number(args.hwnd),args.reason):null;
     this.check();if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
@@ -313,7 +315,7 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
     }while(true);
   }
-  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
+  async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();if(!preserveTask){try{if(this.taskFile)writeAtomicJSON(this.taskFile,{schema:1,open:false});this.taskOpen=false;this.recoveredTask=false;this.taskDurable=true;}catch{this.taskOpen=true;this.taskDurable=false;throw Object.assign(Error('Input cleanup finished, but task state could not be saved. Updates remain deferred.'),{code:'task_state_write_failed'});}}return {ended:true,state:this.state,restart_required:false};}
   async feedback(args){
     // Revalidate at the persistence boundary too; never store model text,
     // application content, screenshots, paths or arbitrary error messages.
@@ -326,6 +328,7 @@ export class Runtime {
   }
   async launch(args){
     Runtime.prototype.beginTask.call(this);
+    if(this.recoveredTask)fail('recovered_task_requires_end','The controller restarted with an unfinished task. Inspect the prior result without replay, then end the owning task before launching another application.');
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
@@ -385,6 +388,6 @@ export class Runtime {
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
   async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});let persistenceFailed=false;try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch{persistenceFailed=true;this.lastControlReason='stop_persistence_failed';}await this.driver.abort?.();if(persistenceFailed)throw Object.assign(Error('Control is stopped, but the emergency Stop latch could not be saved. Do not restart the controller; inspect its private storage.'),{code:'stop_persistence_failed'});return {stopped:true,human_rearm_required:true};}
-  status(){return {state:this.state,task_open:this.taskOpen===true,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
+  status(){return {state:this.state,task_open:this.taskOpen===true,recovered_task:this.recoveredTask===true,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }

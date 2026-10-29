@@ -857,6 +857,13 @@ flush directory handles is not power-loss qualification. This marker is not
 host-attested task identity: a different caller ending the shared task remains
 subject to issue #7. Fixture and IPC coverage does not qualify real Antigravity
 orchestration.
+After restart with an open marker, status now identifies a recovered task and
+`ready` directs the agent to inspect its prior result without replay. Observing
+existing apps is permitted under the normal permission flow and fresh grants;
+input, clipboard actions and new launches are refused until End confirms
+cleanup. End must only be sent by the owning task; because host-authenticated
+ownership is still unavailable, this is a recovery aid rather than a solution
+to issue #7. Stop and re-arm behavior remain unchanged.
 
 The installer also checks task state in the destination and previous deployment
 roots before switching files, and checks again after staging. An open marker or
