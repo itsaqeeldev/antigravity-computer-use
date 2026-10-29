@@ -24,7 +24,10 @@ for(const r of data.records){
   if(old)c.mcpServers['antigravity-computer-use']=old;else delete c.mcpServers['antigravity-computer-use'];
   fs.mkdirSync(path.dirname(r.file),{recursive:true});fs.writeFileSync(r.file,JSON.stringify(c,null,2)+'\n');
  }
- else if(r.existed)fs.cpSync(r.saved,r.file,{recursive:true});
+ else if(r.existed){
+  if(fs.statSync(r.saved).isDirectory())fs.cpSync(r.saved,r.file,{recursive:true});
+  else {fs.copyFileSync(r.saved,r.file+'.rollback.tmp');fs.chmodSync(r.file+'.rollback.tmp',fs.statSync(r.saved).mode);fs.renameSync(r.file+'.rollback.tmp',r.file);}
+ }
  else if(['installation','launcher','deployment','deployment-registry','sidecar-definition'].includes(r.kind)&&fs.existsSync(r.file))fs.unlinkSync(r.file);
  else if(r.kind==='skill'&&fs.existsSync(path.join(r.file,'SKILL.md')))fs.unlinkSync(path.join(r.file,'SKILL.md'));
 }

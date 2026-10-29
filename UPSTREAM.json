@@ -316,7 +316,7 @@
     },
     {
       "path": "scripts/rollback.mjs",
-      "sha256": "91255e616c4d10df4dc0e3cb8585377ea47cb88e031c96d897bf543a9918acf4"
+      "sha256": "9f1589d74346d661da13a9c7105e2c68612a8199375701beadecc21a2a284861"
     },
     {
       "path": "scripts/verify-install.mjs",
@@ -629,6 +629,14 @@
     {
       "path": "scripts/qualify-signed-update.mjs",
       "sha256": "db7c49579f50c1d4cc72425b0fa0acb7f50528d80445f5f998393d34259e85e4"
+    },
+    {
+      "path": "scripts/windows-install-check.mjs",
+      "sha256": "18fbd7243765bfbf29c571b9966052177610aebc7524f1c27b36c5aaf21ddc95"
+    },
+    {
+      "path": ".github/workflows/windows.yml",
+      "sha256": "768f5d7c5586dd10dc781fabf0c652a3f2be3466dfdd5e8403d2a63d442ffb80"
     }
   ]
 }
