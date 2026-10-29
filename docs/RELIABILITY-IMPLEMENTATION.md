@@ -18,6 +18,12 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+The incident counter no longer clamps at one million when reading records: that
+clamp could cause a new occurrence to appear already acknowledged. A regression
+checks the transition past the former limit. Exhaustion of the safe integer range
+is reported as diagnostic storage failure instead of silently losing occurrences.
+This is source-level evidence, not qualification of automatic GitHub reporting.
+
 ### Open diagnostics concurrency defect
 
 The old recorder and reporting worker both rewrote `incidents.json` through the

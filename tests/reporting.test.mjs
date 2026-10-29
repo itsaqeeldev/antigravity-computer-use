@@ -48,6 +48,13 @@ test('completed acknowledgement clears an intent left by an interrupted cleanup'
   assert.equal(result.submitted,0);assert(!fs.existsSync(intent));assert.equal(f.i.read()[0].pending,false);
  }finally{f.clean();}
 });
+test('new occurrences remain pending after the previous counter limit',()=>{
+ const f=fixture(true);try{
+  const item=f.i.read()[0];item.count=1000000;fs.writeFileSync(f.i.file,JSON.stringify([item]));fs.writeFileSync(f.i.ackFile,JSON.stringify({[item.id]:item.count}));
+  f.i.record('computer_click',{error:{code:'stale_observation'}});
+  const current=f.i.read()[0];assert.equal(current.count,1000001);assert.equal(current.pending,true);
+ }finally{f.clean();}
+});
 test('a similar GitHub search result does not reconcile an uncertain submission',async()=>{
  const f=fixture(true);let creates=0;try{
   const first=(_exe,args)=>args[1]==='list'?{status:0,stdout:'[]'}:(creates++,{status:null});
