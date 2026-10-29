@@ -456,7 +456,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "5833c1750476c683e57c11418dc0486aaf31542646e46a4a2810f46888d49aa1"
+      "sha256": "ecd20870f15d26e4f97b6cf3380b047692f12a2fa40f339bb1dc83f694bfc9d7"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -596,11 +596,11 @@
     },
     {
       "path": "scripts/diagnostics.mjs",
-      "sha256": "c3bd653911b020a467249d9c3de84b8bd92350d7848e9fa5114c9445fc609cf6"
+      "sha256": "0b01070eabe0f22e52ac44c487ed864b27e329aabe565b939c2b03bf70bb4edb"
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "41f8bb31aeb85ff1180cb51d708f5b0e73240b0d0d5be41800d69ccde79f79a8"
+      "sha256": "e35425b67b206547306528a90990974eb01ea936e6381b27da9e4685db7019b7"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,11 +608,15 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "a893c859b733b51075fb4ab7d141c4af7e46ab2cedca960907daf3ccd55b30e8"
+      "sha256": "9a41e852ece4f43e3153e70031b5d1f0f854f7a02d824b1f888c5bd5e28474e5"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
       "sha256": "aa611c3e92b75263a7d7b51ba75df70212d9019c9423e3bf4650d7882fd09c0f"
+    },
+    {
+      "path": "tests/reporting.test.mjs",
+      "sha256": "07935f70856df5200d9f8557c57e87c60eb7633776ae5dbf9c06904ff04cbfde"
     }
   ]
 }

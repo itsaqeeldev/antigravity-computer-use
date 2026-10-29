@@ -333,3 +333,19 @@ main. Antigravity's separate `reduce_orchestration_latency` worktree was not
 modified or merged. Project speed remains unfinished; projected savings are not
 matched real Antigravity benchmark results. No automation or goal was recreated.
 
+# Reliability and automatic-update candidate — 29 October 2026
+
+The active implementation goal is recorded in
+[docs/RELIABILITY-IMPLEMENTATION.md](docs/RELIABILITY-IMPLEMENTATION.md), with
+requirement-by-requirement status and pending release/native gates. The candidate
+repairs human-launcher controls and guardian readiness, adds `ready`, mandatory
+sanitized local incidents and consented reporting, and introduces signed update
+staging/idle apply/rollback and installer preferences. The Mac agent prompt is in
+[docs/MAC-QUALIFICATION-PROMPT.md](docs/MAC-QUALIFICATION-PROMPT.md).
+
+Local regression at `207a844`: 168 passed, zero failed, seven explicit skips.
+Windows CI passed; Mac checks must be inspected at the current head. No production
+signing key or signed updater release is configured. Actual affected-PC/model,
+native update, physical/hardware and Mac desktop acceptance remain pending.
+Do not install over a live task or publish this as a completed updater release.
+

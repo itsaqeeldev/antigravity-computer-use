@@ -8,6 +8,10 @@ test('early guardian exit rejects startup promptly and permits one explicit retr
  let child;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const first=g.start();child.emit('close',3);await assert.rejects(first,e=>e.code==='guardian_exited');const next=g.start();child.stdout.write('{"ev":"ready","pid":123}\n');await next;child.emit('close',0);
 });
+test('guardian readiness timeout terminates the failed helper and clears startup state',async()=>{
+ let killed=0;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{killed++;child.emit('close',null,'SIGTERM');};return child;};
+ const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:5});await assert.rejects(g.start(),e=>e.code==='guardian_start_timeout');assert.equal(killed,1);assert.equal(g.starting,null);assert.equal(g.proc,null);
+});
 test('ready reveals stopped controls without rearming; failure is bounded',async()=>{
  let calls=0;const r={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{}},async showControls(){calls++;return{controls_visible:true};}};
  const ready=await Runtime.prototype.ready.call(r);assert.equal(ready.next_action,'awaiting_human_rearm');assert.equal(r.state,'stopped');
