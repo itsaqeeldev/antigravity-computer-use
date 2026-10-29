@@ -18,6 +18,15 @@ internal static class StorageGuard {
     static readonly SecurityIdentifier AdminSid=new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid,null);
     static readonly SecurityIdentifier TrustedInstallerSid=new SecurityIdentifier("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
     const string Marker=".agcu-private-storage";
+    // Identical to the existing data preparation path, but executed after the
+    // kernel mutex is held so the caller need not start a second helper.
+    static void PrepareLeaseData(string root) {
+        Owner(root);if(!OwnData(root))Refuse("storage_not_dedicated",root,"Refusing to change permissions of an unrelated nonempty directory.");
+        var paths=Tree(root);
+        foreach(string path in paths)try{Protect(path);}catch(Exception error){Refuse("storage_permissions_failed",path,error.Message);}
+        string marker=Path.Combine(root,Marker);File.WriteAllText(marker,"antigravity-computer-use-private-storage-v1\n",new UTF8Encoding(false));Protect(marker);
+        foreach(string path in paths)Verify(path,path==root);
+    }
     [StructLayout(LayoutKind.Sequential)]struct FileIdentity {internal uint Attributes,CreateLow,CreateHigh,AccessLow,AccessHigh,WriteLow,WriteHigh,Volume,SizeHigh,SizeLow,Links,IndexHigh,IndexLow;}
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern IntPtr CreateFileW(string path,uint access,uint share,IntPtr security,uint disposition,uint flags,IntPtr template);
     [DllImport("kernel32.dll",SetLastError=true)]static extern bool GetFileInformationByHandle(IntPtr file,out FileIdentity info);
@@ -46,7 +55,8 @@ internal static class StorageGuard {
                     if(!Trusted(mutex.GetAccessControl().GetOwner(typeof(SecurityIdentifier))))Refuse("service_ownership_untrusted",root,"The controller ownership object has an unrelated owner.");
                     try{owned=mutex.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
                     if(!owned)Refuse("service_already_running",root,"Another controller owns this private data directory. Reconnect to it; no competing runtime was started.");
-                    Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,lease_acquired=true,pid=System.Diagnostics.Process.GetCurrentProcess().Id}));Console.Out.Flush();
+                    PrepareLeaseData(root);
+                    Console.WriteLine(new JavaScriptSerializer().Serialize(new {ok=true,lease_acquired=true,private_storage_verified=true,pid=System.Diagnostics.Process.GetCurrentProcess().Id}));Console.Out.Flush();
                     string line;while((line=Console.In.ReadLine())!=null){
                         var request=new JavaScriptSerializer().DeserializeObject(line) as Dictionary<string,object>;
                         if(request==null||!request.ContainsKey("op")||Convert.ToString(request["op"])!="publish_incidents"||Path.GetFileName(root)!="incident-writer-lease")throw new InvalidOperationException("Invalid lease operation.");

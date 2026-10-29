@@ -50,7 +50,13 @@ func storageReply(_ value: [String: Any]) {
             try MacPrivateStorage.reject("service_already_running", root, "Another controller owns this directory.")
         }
         defer { flock(fd, LOCK_UN) }
-        storageReply(["ok": true, "lease_acquired": true, "pid": getpid()])
+        let current = try MacPrivateStorage.info(root), currentLock = try MacPrivateStorage.info(lockPath)
+        guard current.st_dev == identity.st_dev, current.st_ino == identity.st_ino,
+              currentLock.st_dev == lockIdentity.st_dev, currentLock.st_ino == lockIdentity.st_ino else {
+            try MacPrivateStorage.reject("service_ownership_lost", root, "The held directory or lease was replaced.")
+        }
+        try MacPrivateStorage.verify(root)
+        storageReply(["ok": true, "lease_acquired": true, "private_storage_verified": true, "pid": getpid()])
         let closed = DispatchSemaphore(value: 0)
         DispatchQueue.global().async {
             while let line = readLine() {

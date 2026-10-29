@@ -352,7 +352,7 @@
     },
     {
       "path": "server/native/StorageGuard.cs",
-      "sha256": "66c7c709fa1e911735d2e05c0aa9316c2fb04e6f4e3f3004bab0b12f0485c3c5"
+      "sha256": "5624cc2fe60013b8da3351deb94b6563288363247fdd603c85411e25d0f22704"
     },
     {
       "path": "server/storage.mjs",
@@ -392,11 +392,11 @@
     },
     {
       "path": "server/service-lease.mjs",
-      "sha256": "8ca3f368e64c872fa2c8ee59e266799c90c47afc3c441a02141d1e6d9c6605d2"
+      "sha256": "584b737ff03605f8a17401d9e65d6450338965d3f2e08f5adedd8932cb49fb0e"
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "f1fd57fd0889dc5ea80756190b71109dc582dfcd71f5714da203ac6b001e44ce"
+      "sha256": "23c917c70dd1652b01b0c223a8e5ff37870772f330f473e1ae5080659b54aad3"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -556,7 +556,7 @@
     },
     {
       "path": "server/native/macos/StorageMain.swift",
-      "sha256": "4aeaa9081bce8d5012dae3650f1ddcc9434bd033e317492df61dfedd9d5fe459"
+      "sha256": "0865390ce3f2ae83ad98429f65a5c8b20aba9310be87317002f103fe761e6014"
     },
     {
       "path": "tests/macos-storage.test.mjs",
@@ -612,7 +612,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e5094adfb1b1f9e11dfb80de720e307be96a55bfafdb0a76aee5122a7eee1cfd"
+      "sha256": "116b773baa944b687760587e4ddd5d3941b54f5dbb037d305a056f7bcc15129e"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

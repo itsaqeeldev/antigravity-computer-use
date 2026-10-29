@@ -7,6 +7,20 @@ import {storageOperation} from '../server/storage.mjs';
 import {rollbackGuarded} from '../scripts/rollback.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('native lease preparation refuses unrelated nonempty storage',async t=>{
+ const dir=temporary(),file=path.join(dir,'unrelated.txt');fs.writeFileSync(file,'preserve');
+ try{
+  let error,unexpected;try{unexpected=await acquireServiceLease(dir);}catch(e){error=e;}if(unexpected){await unexpected.release();assert.fail('unrelated data was adopted');}
+  if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error?.code)){t.skip('native private storage qualification refused: '+error.code);return;}assert.equal(error?.code,'storage_not_dedicated');
+  assert.equal(fs.readFileSync(file,'utf8'),'preserve');assert.equal(fs.readdirSync(dir).length,1);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('injected storage verification is not skipped by a helper acknowledgement',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;let checks=0;
+ child.stdin.on('finish',()=>{child.exitCode=0;child.emit('exit',0);child.emit('close',0);});child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child,prepareStorage:async()=>{checks++;}});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true,"private_storage_verified":true}\n'));
+ const lease=await pending;assert.equal(checks,1);await lease.release();
+});
 test('measure macOS native lease verification overhead',{skip:process.platform!=='darwin',timeout:30000},async t=>{
  const dir=temporary();let lease;
  try{

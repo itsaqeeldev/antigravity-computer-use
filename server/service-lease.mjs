@@ -5,7 +5,7 @@ import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
 export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),prepareStorage=storageOperationAsync,startupTimeout=5000,cleanupTimeout=2000,releaseTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
  child.stdout.setEncoding('utf8');
- const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending,publishPending;
+ const lease=new EventEmitter();let ready=false,releasing=false,settled=false,buffer='',releasePending,publishPending,nativePrepared=false;
  let resolveExit;const exited=new Promise(resolve=>resolveExit=resolve);
  child.once('close',resolveExit);
  lease.pid=child.pid;lease.lost=false;
@@ -28,7 +28,7 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   child.stdout.on('data',chunk=>{
    buffer+=chunk;if(buffer.length>8192){if(!ready)fail(Error('Invalid ownership-helper reply.'));else {markLost();try{child.kill();}catch{}}return;}
    while(buffer.includes('\n')){const index=buffer.indexOf('\n'),line=buffer.slice(0,index);buffer=buffer.slice(index+1);
-    try{const result=JSON.parse(line);if(!ready){if(!result.ok)throw Object.assign(Error(result.error?.message||'Controller ownership refused.'),{code:result.error?.code||'service_lease_refused'});if(!result.lease_acquired)throw Error('Missing controller ownership acknowledgement.');clearTimeout(timer);settled=true;ready=true;resolve(lease);}
+    try{const result=JSON.parse(line);if(!ready){if(!result.ok)throw Object.assign(Error(result.error?.message||'Controller ownership refused.'),{code:result.error?.code||'service_lease_refused'});if(!result.lease_acquired)throw Error('Missing controller ownership acknowledgement.');nativePrepared=result.private_storage_verified===true;clearTimeout(timer);settled=true;ready=true;resolve(lease);}
      else if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);if(result.ok&&result.published)pending.resolve();else pending.reject(Object.assign(Error('Incident publication was not confirmed.'),{code:'incident_publish_outcome_unknown'}));}
     }catch(error){if(!ready)fail(error);else {markLost();try{child.kill();}catch{}}}
    }
@@ -59,6 +59,6 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   if(!await waitForExit(cleanupTimeout))throw Object.assign(Error('Ownership helper termination could not be confirmed. Do not start another controller.'),{code:'service_lease_cleanup_unconfirmed'});
  })();
  const held=await startup;
- try{await prepareStorage('data',directory,{helper});held.assertHeld();return held;}
+ try{if(!nativePrepared||prepareStorage!==storageOperationAsync)await prepareStorage('data',directory,{helper});held.assertHeld();return held;}
  catch(error){await held.release();throw error;}
 }

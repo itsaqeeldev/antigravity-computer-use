@@ -849,6 +849,13 @@ Inert tests exercise independent processes, a lost fence, partial metadata and
 slow live holders. A local six-sample Windows microbenchmark measured a 191 ms
 median for acquire plus release (176–209 ms); this is not an Antigravity task
 benchmark and is a deliberate per-action cost pending real performance work.
+After moving the same private-storage preparation into the mutex-holding native
+helper, a second six-sample local run measured 98.9 ms median (88.8–102.4 ms).
+Both are small uncontrolled microbenchmarks on one Windows machine, not an
+end-to-end speed claim. Updated helpers explicitly acknowledge completed storage
+preparation; older helpers retain the existing separate verification fallback.
+Injected test verification is never skipped, and unrelated nonempty storage
+is refused. Mac CI and interactive task timing remain pending.
 An additional real process-death fixture confirms that the next session refuses
 the dead owner's metadata, and can proceed only after its internal verified
 cleanup path clears the matching record under the native fence. The fixture's
