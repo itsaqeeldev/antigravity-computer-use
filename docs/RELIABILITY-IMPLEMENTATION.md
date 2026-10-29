@@ -18,6 +18,14 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+The owner observed stationary cursor clicks in the direct Upscaly test. Named
+clicks had defaulted to accessibility invocation; the shared runtime now requests
+physical pointer movement by default, including batch steps. Explicit
+`physical:false` retains semantic clicks when needed, while pixel targets always
+remain physical. Native identity, target, occlusion, Stop and cancellation checks
+remain in place. Runtime tests cover default and explicit selector behavior; the
+new default still requires real Windows and Mac app qualification.
+
 The supported Windows local upgrade to source `0a919f8` produced and installed
 build `4d112e9e4137e1999750430cc3170995bc8cc421a76f998c517c3cd459a66910`.
 All 108 payload files and the global skill verified; cleanup was confirmed and

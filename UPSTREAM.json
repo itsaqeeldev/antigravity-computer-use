@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "d602fc627ea38d9548f4e7f653c6fc735460b79d2e79de583bdc7fb916264ba9"
+      "sha256": "5c2ad5be3c89c057a495da98a4f6648b2e757f8d6512aff67029270659d66951"
     },
     {
       "path": "server/mcp.mjs",
@@ -260,7 +260,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "84a869abfa14df321f96d6034b54aea2a6be07abfb0167abc6e9a4eaeb1b9010"
+      "sha256": "922ab0d9d7bd360e25b56ea3d31c38e302f5078d87e57334fd4ea971120a17a7"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -416,7 +416,7 @@
     },
     {
       "path": "tests/observed-selectors.test.mjs",
-      "sha256": "cd557a809651e8b0e71795a4abc781106cfad69ee8b8728df0f7319820e32a58"
+      "sha256": "2035ce8676955fe474eaf36f89c4a39e27fdc1a8f7b657da576391bc38fa8e82"
     },
     {
       "path": "tests/observed-selectors-integration.mjs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "b6c74fe1137f2a9ff8065e4e4742024ed10d8a53610e10ee5fc5f7f412c6fe19"
+      "sha256": "1ed5318c0dc530de79c468b0abd7cfe46bfe17e61f581d1687046b06b9c8f99a"
     },
     {
       "path": "docs/MACOS.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "033e61191057392c9fc778bbe1518864e5d23c4cb980060bf91c2108027c921e"
+      "sha256": "8a87bdb6890c9470787667335608a50e61f16c8f8df537fd359b7846126bd8a0"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

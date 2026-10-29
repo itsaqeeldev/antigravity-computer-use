@@ -202,7 +202,10 @@ export class Runtime {
         }
       }
     }
-    if(op==='click'&&payload.point)payload.physical=true;
+    // Visible real-pointer clicks are the default for both semantic selectors
+    // and pixels. An explicit semantic-only click remains available for controls
+    // that cannot be physically reached; pixels always require physical input.
+    if(op==='click'&&(payload.point||payload.physical==null))payload.physical=true;
     if(typeof payload.text==='string'&&payload.text.length>20000)fail('text_limit','Text limit is 20,000 characters per action.');
     if(op==='type'&&payload.text?.length>400)fail('text_limit','Native typing is limited to 400 UTF-16 units. Use explicit clipboard access and a verified paste for larger text.');
     await this.driver.start?.();

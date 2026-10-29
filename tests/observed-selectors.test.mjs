@@ -22,8 +22,11 @@ test('runtime translates a name to the same observation-scoped native index and 
  const w={hwnd:1,pid:5,started:'one',path:'app.exe',rect:[0,0,100,100]},sent=[];
  const r={frames:new Map([['f',{at:Date.now(),hwnd:1,key:appKey(w),snapshot:'native-frame',workerEpoch:1,elements:[{i:7,name:'JPEG',role:'Button'}]}]]),deadline:Date.now()+10000,remaining:10,generation:1,async grant(){return w;},check(){},stamp(){return{};},async app(){return w;},guardian:{send(){}},driver:{epoch:1,info:{pid:10},async start(){},async call(op,args){sent.push({op,args});return{result:op==='authorize'?{sensitive:false}:{method:'invoke_pattern'}};}},sessions:{async withInput(_op,_meta,fn){return fn();}},async observe(){return{metadata:{observation_id:'fresh'}};}};
  await Runtime.prototype.action.call(r,'click',{hwnd:1,observation_id:'f',name:'JPEG',role:'Button',risk:'routine',reason:'Observed choice'});
- const native=sent.find(x=>x.op==='click').args;assert.equal(native.index,7);assert.equal(native.snapshot_id,'native-frame');assert(!Object.hasOwn(native,'name'));assert(!Object.hasOwn(native,'role'));assert(!r.frames.has('f'));
+ const native=sent.find(x=>x.op==='click').args;assert.equal(native.index,7);assert.equal(native.snapshot_id,'native-frame');assert.equal(native.physical,true);assert(!Object.hasOwn(native,'name'));assert(!Object.hasOwn(native,'role'));assert(!r.frames.has('f'));
  await assert.rejects(Runtime.prototype.action.call(r,'click',{hwnd:1,observation_id:'f',name:'JPEG',reason:'Consumed'}),e=>e.code==='stale_observation');
+ r.frames.set('semantic',{at:Date.now(),hwnd:1,key:appKey(w),snapshot:'native-frame-2',workerEpoch:1,elements:[{i:7,name:'JPEG',role:'Button'}]});
+ await Runtime.prototype.action.call(r,'click',{hwnd:1,observation_id:'semantic',name:'JPEG',physical:false,reason:'Explicit semantic action'});
+ assert.equal(sent.filter(x=>x.op==='click').at(-1).args.physical,false);
 });
 test('later named batch steps resolve against fresh internal observations',async()=>{
  const seen=[];const r={async action(op,args){seen.push({op,args});return{metadata:{observation_id:'frame'+seen.length}};}};
