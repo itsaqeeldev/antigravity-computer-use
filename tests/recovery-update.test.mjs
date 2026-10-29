@@ -56,7 +56,7 @@ test('a controls timeout leaves visibility unknown instead of claiming hidden',a
  const runtime={state:'stopped',status:()=>({state:'stopped'}),guardian:{proc:{}},async showControls(){throw Object.assign(Error('timeout'),{code:'guardian_request_timeout'});}};
  const result=await Runtime.prototype.ready.call(runtime);assert.equal(result.ready,false);assert.equal(result.controls_visible,null);assert.equal(result.next_action,'inspect_diagnostics');
 });
-test('the actual human launcher can reveal controls after cached ready failure without clearing Stop',async()=>{
+test('the actual human launcher can reveal controls after cached ready failure without clearing Stop',async t=>{
  const folder=fs.mkdtempSync(path.join(testDirectory('tmp'),'human-starter-'));
  const directory=path.join(folder,'data');let shows=0;
  const runtime={state:'stopped',permissionMode:'standalone',recoveryFailure:{code:'guardian_exited'},
@@ -71,14 +71,15 @@ test('the actual human launcher can reveal controls after cached ready failure w
   if(process.platform!=='win32')fs.chmodSync(path.join(folder,'cu-node'),0o700);
   fs.writeFileSync(path.join(folder,'cu.mjs'),`import {main} from ${JSON.stringify(new URL('../scripts/desktop.mjs',import.meta.url).href)}; await main();\n`);
   fs.writeFileSync(starter,controllerStartSource(null));
-  const output=await new Promise((resolve,reject)=>{
+  const started=Date.now();const output=await new Promise((resolve,reject)=>{
    const child=process.platform==='win32'?spawn(process.env.ComSpec||'C:/Windows/System32/cmd.exe',['/d','/s','/c',`""${starter}""`],{windowsVerbatimArguments:true,windowsHide:true,env:{...process.env,AGCU_DATA_DIR:directory,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']}):spawn('/bin/sh',[starter],{env:{...process.env,AGCU_DATA_DIR:directory,AGCU_PERMISSION_MODE:'standalone'},stdio:['ignore','pipe','pipe']});
    let stdout='',stderr='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;
     if(process.platform==='win32'&&child.pid)spawnSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,timeout:5000});else child.kill();
-   },10000);
+   },30000);
    child.stdout.on('data',data=>stdout+=data);child.stderr.on('data',data=>stderr+=data);
    child.once('error',error=>{clearTimeout(timer);reject(error);});child.once('close',code=>{clearTimeout(timer);timedOut?reject(Error('Human launcher fixture timed out: '+stderr)):code===0?resolve(stdout):reject(Error(stderr||stdout));});
   });
+  if(Date.now()-started>10000)t.diagnostic('Human launcher fixture exceeded the previous 10-second bound: '+(Date.now()-started)+' ms');
   assert.equal(shows,1);assert.equal(runtime.recoveryFailure,null);assert.equal(runtime.state,'stopped');
   assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.match(output,/"controls_visible":true/);
  }finally{await service.shutdown();fs.rmSync(folder,{recursive:true,force:true});}

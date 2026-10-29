@@ -516,7 +516,7 @@
     },
     {
       "path": "server/macos-build.mjs",
-      "sha256": "31225ccb6a88008d034dcbd923ff85ef382162209b5e23d8c3dee2df55fe65ae"
+      "sha256": "ff438d544412758954ef9af81ab17e5acddea98337ca5ad73ce09436b7887f15"
     },
     {
       "path": "tests/platform-contract.test.mjs",
@@ -600,7 +600,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "9e2a4c95c1f2d5a6362a462dd5e6cf97eb02fa50cfb160b6085e48163a670b6f"
+      "sha256": "02e274f289f335ecd4685a5c6aaacefa7adcc1060f1cf83b685123b07bcc7816"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "911919f7bf00743971cde0a85e4b6a96aeee672ba5e29f85df4b3ae90b18966e"
+      "sha256": "be6b0c342f98a909f0b9c83525fdd1ebd64b8135d8a98693f058d1d56072a4e7"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -637,6 +637,10 @@
     {
       "path": "tests/guard-cleanup.test.mjs",
       "sha256": "930dba894cb8fed4449fd9ef81b1332baac30d1f9b3a9069aa44cc225155d710"
+    },
+    {
+      "path": "tests/macos-tool-probe.test.mjs",
+      "sha256": "f4b22350b3f3e73f21f261b9e8d614e7ceb459ba79a6029c74ed250aa7013332"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

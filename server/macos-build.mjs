@@ -5,17 +5,21 @@ import {fileURLToPath} from 'node:url';
 import {createHash, randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 const root=fileURLToPath(new URL('../',import.meta.url));
+export function macToolProbe(result,label){
+  if(result.error?.code==='ETIMEDOUT')throw Object.assign(Error(`macOS ${label} lookup timed out. The tools may still be installed; inspect the runner before retrying.`),{code:'macos_toolchain_probe_timeout'});
+  if(result.error)throw Object.assign(Error(`macOS ${label} lookup could not run.`),{code:'macos_toolchain_probe_failed'});
+  if(result.status!==0||typeof result.stdout!=='string'||!result.stdout.trim())throw Object.assign(Error(`macOS ${label} lookup failed. Check the Xcode Command Line Tools and selected SDK.`),{code:'macos_toolchain_unavailable'});
+  return result.stdout.trim();
+}
 export function buildMacStorage({force=false}={}) {
   if(process.platform!=='darwin')throw Object.assign(Error('The macOS storage adapter must be built on macOS.'),{code:'unsupported_platform'});
   const prebuilt=path.join(root,'bin','StorageGuard');
   const sources=['PrivateStorage.swift','StorageMain.swift'].map(name=>path.join(root,'server/native/macos',name));
   if(!force&&fs.existsSync(prebuilt)&&sources.every(file=>!fs.existsSync(file)))return prebuilt;
-  const found=spawnSync('/usr/bin/xcrun',['--find','swiftc'],{encoding:'utf8',timeout:10000});
-  if(found.status!==0)throw Error('Building from source requires Xcode Command Line Tools. Prebuilt bundles do not.');
-  const compiler=found.stdout.trim();const digest=createHash('sha256');
-  const sdkResult=spawnSync('/usr/bin/xcrun',['--sdk','macosx','--show-sdk-path'],{encoding:'utf8',timeout:10000});
-  if(sdkResult.status!==0)throw Error('Cannot locate the macOS SDK: '+sdkResult.stderr);
-  const sdk=sdkResult.stdout.trim(),target=process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0';
+  const found=spawnSync('/usr/bin/xcrun',['--find','swiftc'],{encoding:'utf8',timeout:30000});
+  const compiler=macToolProbe(found,'compiler');const digest=createHash('sha256');
+  const sdkResult=spawnSync('/usr/bin/xcrun',['--sdk','macosx','--show-sdk-path'],{encoding:'utf8',timeout:30000});
+  const sdk=macToolProbe(sdkResult,'SDK'),target=process.arch==='arm64'?'arm64-apple-macos14.0':'x86_64-apple-macos14.0';
   for(const file of sources)digest.update(fs.readFileSync(file));
   digest.update(compiler+'\0'+sdk+'\0'+target);const dir=path.join(root,'.localdata','mac-storage-bin');
   const output=path.join(dir,'StorageGuard-'+digest.digest('hex').slice(0,16));

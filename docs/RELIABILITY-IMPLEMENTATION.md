@@ -18,6 +18,13 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+Mac Intel CI run `40946383380` failed during the compiler lookup after roughly
+ten seconds and reported missing Xcode tools. The previous code discarded the
+underlying spawn error, so the log cannot prove whether tools were absent or the
+probe timed out. The storage-builder probe now distinguishes timeout, spawn failure
+and unavailable tools, and allows a 30-second bounded lookup. A focused synthetic
+test covers those distinctions; actual Intel CI and device checks remain required.
+
 Stop persistence errors are no longer reported as successful durable Stop. The
 runtime invalidates control and cleans up input, reports `stop_persistence_failed`
 without a private path, and refuses orderly shutdown until it can persist the
@@ -137,6 +144,11 @@ cleanup masked the timeout with `EPERM`. The harness now terminates its own
 Windows child process tree on timeout and waits for process closure before
 cleanup, retaining the original timeout message. The focused test and a full
 retry passed; this does not establish the underlying timeout cause.
+A later full suite hit the same 10-second fixture deadline again. That harness
+runs two separate launcher commands and native storage checks, whose own bounded
+operations can exceed the test's shorter deadline. Its outer limit is now 30
+seconds and it explicitly logs runs over 10 seconds. This changes the fixture
+deadline only; it is not evidence that actual startup latency is acceptable.
 Another Windows run (`40937717822`) timed out in the ownership helper and then
 hit `EPERM` while removing its fixture directory. Source review identified a
 possible cleanup race: startup rejected immediately after requesting helper
