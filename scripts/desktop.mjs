@@ -12,6 +12,7 @@ import {storageOperation} from '../server/storage.mjs';
 import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 import {diagnostics} from './diagnostics.mjs';
 import {scheduleUpdates} from '../server/auto-update.mjs';
+import {Incidents} from '../server/incidents.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
@@ -41,6 +42,14 @@ export function briefReply(value){
 }
 let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
+export function failureReply(error,{directory,record=true}={}){
+ const result={ok:false,error:{code:error.code||'refused',message:error.message},next_action:'inspect_diagnostics'};
+ if(record)try{
+  applyDeployment(loadDeployment());const folder=directory||dataDir();storageOperation('verify',folder);
+  result.incident_id=new Incidents(folder).record('computer_startup',result);
+ }catch{result.diagnostic_error='private_diagnostic_storage_unavailable';}
+ return result;
+}
 
 export function request(session,command,args={},timeout=100000,expectedPermissionMode){
   return new Promise((resolve,reject)=>{
@@ -129,4 +138,4 @@ export async function main(){
   }
   const result=await request(session,command,args,100000,policy.permission_mode);printReply(result);if(!result.ok)process.exitCode=1;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{printReply({ok:false,error:{code:error.code||'refused',message:error.message}});process.exitCode=1;});
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{printReply(failureReply(error));process.exitCode=1;});

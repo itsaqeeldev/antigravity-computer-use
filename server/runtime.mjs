@@ -14,6 +14,7 @@ import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
 import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs';
+import {Incidents} from './incidents.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -79,6 +80,7 @@ export class Runtime {
       if(reason||s!==this.state)this.lastControlReason=reason||s;
       this.state=s;
       if(reason==='guardian_exited'&&previousState!=='idle'&&this.latchFile)try{fs.writeFileSync(this.latchFile,'stopped');}catch{}
+      if(reason==='guardian_exited'&&this.privateDataStorage===true)try{new Incidents(dataDir()).record('computer_guardian',{state:s,error:{code:'guardian_exited'},guardian_exit:this.guardian.lastExit});}catch{this.diagnosticError='private_diagnostic_storage_unavailable';}
       if(s!=='active'){
         this.generation++;this.frames.clear();
         if(s==='stopped'||s==='idle'){this.grants.clear();this.token='';}
@@ -91,7 +93,7 @@ export class Runtime {
   // A passive App sidecar must not open a HUD, install input hooks or acquire
   // cursor ownership just because a previous task left an emergency latch.
   async prepare(){}
-  async showControls(){return this.guardian.request({op:'show_controls'});}
+  async showControls(){const result=await this.guardian.request({op:'show_controls'});if(result.controls_visible===true)this.recoveryFailure=null;return result;}
   async ready(){
     if(this.recoveryFailure)return {...this.status(),ready:false,next_action:'inspect_diagnostics',error:this.recoveryFailure};
     try{
@@ -100,7 +102,7 @@ export class Runtime {
       const visible=controls.controls_visible===true;
       return {...this.status(),ready:visible&&this.state!=='stopped'&&this.state!=='paused',controls_visible:visible,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
         next_action:!visible?'inspect_diagnostics':this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':'discover_or_launch'};
-    }catch(error){this.recoveryFailure={code:error.code||'guardian_unavailable',message:'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return {...this.status(),ready:false,controls_visible:false,next_action:'inspect_diagnostics',error:this.recoveryFailure};}
+    }catch(error){this.recoveryFailure={code:error.code||'guardian_unavailable',message:'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return {...this.status(),ready:false,controls_visible:false,guardian_exit:this.guardian.lastExit??null,next_action:'inspect_diagnostics',error:this.recoveryFailure};}
   }
   check(){if(this.state!=='active')fail('control_inactive',`Control is ${this.state}. Use the local Resume/Re-arm control or request a new grant.`);}
   async identity(hwnd){

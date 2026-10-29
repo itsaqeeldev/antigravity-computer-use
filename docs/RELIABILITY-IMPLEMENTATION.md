@@ -108,4 +108,25 @@ backup before publishing the trust root. The envelope is tied to that user.
 `scripts/sign-update-windows.ps1` decrypts into process memory and pipes the key
 to `sign-update.mjs`; no plaintext private-key file is needed. Generic signing
 also accepts `-` for standard input. These tools are not invoked by desktop tasks
-or normal installations. They have not configured a production key.
+or normal installations.
+
+The release trust root has now been generated. Its public-key file SHA-256 is
+`83db2823088968a42ad19ca2e65a7f89187455e86d139d757a4a6b10ceee9443`.
+The private key is stored as a user-bound DPAPI envelope and the repository
+Actions secret `AGCU_RELEASE_SIGNING_KEY`. No plaintext private key was written
+or included in source. Signed release preparation and production transport still
+need qualification; this setup did not publish or update any installation.
+The source candidate is `0.3.0-beta.3`; the public bootstrap remains beta.2.
+
+Local beta.3 release preparation passed signature verification and independent
+verification of 102 payload files, using the configured protected signing key.
+The signed metadata identifies build
+`3ee48577631beee75b8e60619900f59d18f423d6f2ebc0094ef7cc5968b1dd2a`.
+It was retained only under `.localdata`, not published or installed. Subsequent
+source changes require fresh packaging; this is a signing-path witness only.
+
+The manual `prepare-signed-release.yml` workflow prepares Windows x64, Mac ARM
+and Mac Intel signed assets with the repository secret. It has read-only GitHub
+permissions and does not publish, tag, merge or alter installer pins. The
+workflow must exist on the default branch before GitHub permits dispatch; its
+first actual run and production release-transport qualification remain pending.

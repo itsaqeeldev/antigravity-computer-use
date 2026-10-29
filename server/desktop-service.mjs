@@ -120,10 +120,10 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
           const result=compact(name==='computer_status'?{...raw,listener_idle_policy:idlePolicy,controller_ownership_lost:ownershipLost}:raw,directory);
           if(result.observation_valid===false)runtime.frames?.delete(result.metadata?.observation_id);
           const reply={ok:true,...result};reply.receipt=receipts.finish(ticket,reply);
-          try{const id=incidents.record(name,reply);if(id)reply.incident_id=id;}catch{}
+          try{const id=incidents.record(name,reply);if(id)reply.incident_id=id;}catch{reply.diagnostic_error='private_diagnostic_storage_unavailable';}
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};try{result.incident_id=incidents.record(ticket?.command,result);}catch{}if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};try{result.incident_id=incidents.record(ticket?.command,result);}catch{result.diagnostic_error='private_diagnostic_storage_unavailable';}if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

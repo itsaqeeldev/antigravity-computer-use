@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "6f958b694981890f3810367055a4bfc465e81c8a5e15af67960cea68a93d456e"
+      "sha256": "acab6a9109e1868a17c70239d8bef50edaa55bbb440c84d74ca0a173f3fcc289"
     },
     {
       "path": "server/mcp.mjs",
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "70bd00ab606810938dc7fa075421991f9ed086ace2a991dcea90952e7c6284f4"
+      "sha256": "4e72d935b1003be6e54f2cbe1551f667af2e5a0592a9171bfbe525b8a69d7959"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "5a525fea3a7f0d14d0a709afb92bcfa7baf5622471cb4f47004e1308bd6bb302"
+      "sha256": "220701011cb903dab77aa79f8a6ba2b5e4789e298815803ed88798947cebfda7"
     },
     {
       "path": "server/version.mjs",
@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "97787cbee8b9c318cf21cb6c18db090762f41efa9ab4ab288ede0b9ad8349c2d"
+      "sha256": "d52f1e2822ec11cf68755727f8bcf4649874860024055be36dffab799adc9371"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "e154f91c9a20f880d97072e4bd4ac4e63fa99381fc525d4324dfdf72a26fa93e"
+      "sha256": "2725df98604749bb1405209a20ab7e6fcefb1a694c3b01a7f5312f9823877205"
     },
     {
       "path": "tests/core.test.mjs",
@@ -564,7 +564,7 @@
     },
     {
       "path": "scripts/macos-install-check.mjs",
-      "sha256": "b6d3061857008fde5edd914a039ec11d340271fd77edf4ce34af37478c53e9be"
+      "sha256": "b4ac2787f6df2f7a1ca0b42e4de2375446453f1b3c71515ba1a0ad0549760a27"
     },
     {
       "path": "skills/computer-use/SKILL.md",
@@ -584,7 +584,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "d1f2675f939f6d25783703c30de5fec3d9e9b8b124a226b94a7d12dd54d65c61"
+      "sha256": "f5d103951852935ad6126b4b2090aa13d89619de3aee2589446ca4bd6fc0ab4e"
     },
     {
       "path": "scripts/update.mjs",
@@ -600,7 +600,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "2462a8e201a57ba58ef70995f23217957f5dfa7e56fede1dda217ed020acf632"
+      "sha256": "1a85bf7a8d40256c203267b743abf082a6101a213f44b76ebc093e54043de8e4"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "fdc1c78c86348f5cc1414a60f4ac2e16c272356bdb0a471aba8adad4a6a1a8b0"
+      "sha256": "2fe5e0a240a43e4384cd1319223e6665eeeed7183be4f6648714fd05560377eb"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -632,11 +632,23 @@
     },
     {
       "path": "scripts/windows-install-check.mjs",
-      "sha256": "18fbd7243765bfbf29c571b9966052177610aebc7524f1c27b36c5aaf21ddc95"
+      "sha256": "9d4a2536ad99f059e197a1679b443b1a1d03c66143bcce4910dc057f643603e8"
     },
     {
       "path": ".github/workflows/windows.yml",
       "sha256": "768f5d7c5586dd10dc781fabf0c652a3f2be3466dfdd5e8403d2a63d442ffb80"
+    },
+    {
+      "path": "release-public-key.pem",
+      "sha256": "83db2823088968a42ad19ca2e65a7f89187455e86d139d757a4a6b10ceee9443"
+    },
+    {
+      "path": "scripts/sign-update-ci.mjs",
+      "sha256": "4bd2f54d28510963bc9e4ec4c6c13a94c58b9a895cf10ae75e58e5c8265c7d49"
+    },
+    {
+      "path": ".github/workflows/prepare-signed-release.yml",
+      "sha256": "a6ecca510d406f45a26f807a69aa69490e5cbb0d81ae3450797419dc8a64e28e"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
   "name": "antigravity-native-computer-use",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0-beta.3",
   "private": true,
   "type": "module",
-  "description": "Native Windows desktop tools and /computer-use for Antigravity",
+  "description": "Shared native Windows and macOS desktop tools and /computer-use for Antigravity",
   "license": "MIT",
   "engines": {
     "node": ">=22"

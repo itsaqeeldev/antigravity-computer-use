@@ -101,7 +101,7 @@ test('short launcher forwards literal argv without a command shell or character 
  fs.mkdirSync(path.join(bundle,'bin'),{recursive:true});fs.mkdirSync(path.join(bundle,'skills/computer-use'),{recursive:true});fs.mkdirSync(path.join(bundle,'scripts'),{recursive:true});
  fs.copyFileSync(process.execPath,path.join(bundle,'node.exe'));fs.writeFileSync(path.join(bundle,'bin/AxonHost.exe'),'fixture');fs.writeFileSync(path.join(bundle,'skills/computer-use/SKILL.md'),'{{DESKTOP_COMMAND}}');
  // This module is only an argv oracle: it has no desktop/native dependencies.
- fs.writeFileSync(path.join(bundle,'scripts/desktop.mjs'),'export const encodeReply=JSON.stringify;export async function main(){console.log(JSON.stringify(process.argv.slice(2)));}');seal(bundle);
+ fs.writeFileSync(path.join(bundle,'scripts/desktop.mjs'),'export const encodeReply=JSON.stringify;export const failureReply=e=>({ok:false,error:{message:e.message}});export async function main(){console.log(JSON.stringify(process.argv.slice(2)));}');seal(bundle);
  const result=install({bundle,target,home:path.join(dir,'home')});
  const words=['paste','--text','اردو 😀 %PATH% & x|y > z ^ !', '--reason','literal "quotes" and \\slashes'];
  const run=spawnSync(result.launcher_node,[result.launcher,...words],{windowsHide:true,encoding:'utf8'});assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),words);

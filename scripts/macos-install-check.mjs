@@ -11,7 +11,9 @@ const home=path.join(directory,'home');fs.mkdirSync(home,{mode:0o700});
 const target=path.join(directory,'installed');const bundle=path.join(root,'.localdata/macos-bundle');
 const config=path.join(home,'.gemini/config/config.json');fs.mkdirSync(path.dirname(config),{recursive:true});
 fs.writeFileSync(config,JSON.stringify({permissions:{preset:'preserve'},sidecars:{unrelated:{enabled:true}}}));
-const first=install({bundle,target,home,sidecar:true});
+// Explicit update calls below own qualification; prevent scheduled production
+// network checks from racing the isolated signing fixture.
+const first=install({bundle,target,home,sidecar:true,updateMode:'manual'});
 const node=first.launcher_node;
 function command(args){const p=spawnSync(node,args,{encoding:'utf8',timeout:20000});assert.equal(p.status,0,p.stderr||p.stdout);return p.stdout;}
 function desktop(name){return JSON.parse(command([first.launcher,name]));}

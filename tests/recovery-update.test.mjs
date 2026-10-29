@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {PassThrough} from 'node:stream';import {EventEmitter} from 'node:events';import {generateKeyPairSync,sign} from 'node:crypto';
 import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server/runtime.mjs';import {Incidents} from '../server/incidents.mjs';import {verifyRelease,verifyStaged,sha256,acquireUpdateLock,downloadFile} from '../server/update-core.mjs';import {testDirectory} from './paths.mjs';import {controllerStartSource} from '../scripts/install.mjs';
+import {failureReply} from '../scripts/desktop.mjs';
 test('concurrent guardian requests wait for one ready process',async()=>{
  let starts=0,child;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const a=g.start(),b=g.start();assert.equal(starts,1);child.stdout.write('{"ev":"ready","pid":123}\n');await Promise.all([a,b]);assert(g.initialized);child.emit('close',2);assert.equal(g.proc,null);assert.equal(g.state,'stopped');
@@ -29,4 +30,11 @@ test('signed update metadata refuses tampering, wrong platform, expired releases
 });
 test('interrupted or oversized downloads never publish a partial payload',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'download-'));try{const destination=path.join(dir,'payload');await assert.rejects(downloadFile('fixture',destination,{size:3,hash:sha256('abc'),fetcher:async()=>({ok:true,body:(async function*(){yield Buffer.from('oversized');})()})}));assert(!fs.existsSync(destination));assert(!fs.existsSync(destination+'.part'));}finally{fs.rmSync(dir,{recursive:true});}
+});
+test('explicit controls can recover a failed episode without clearing emergency Stop',async()=>{
+ const r={state:'stopped',recoveryFailure:{code:'guardian_unavailable'},guardian:{async request(){return {state:'stopped',controls_visible:true};}}};
+ const response=await Runtime.prototype.showControls.call(r);assert(response.controls_visible);assert.equal(r.recoveryFailure,null);assert.equal(r.state,'stopped');
+});
+test('launcher failures have a structured recovery action without exposing synthetic approval',()=>{
+ const result=failureReply(Object.assign(Error('Local setup failed'),{code:'guardian_spawn_failed'}),{record:false});assert.equal(result.ok,false);assert.equal(result.next_action,'inspect_diagnostics');assert.equal(result.error.code,'guardian_spawn_failed');assert(!Object.hasOwn(result,'approved'));
 });
