@@ -48,7 +48,7 @@ test('daily scheduler throttles checks and manual mode performs no network work'
 });
 test('version ordering blocks downgrade and respects numeric prerelease segments',()=>{assert(!newerVersion('1.0.0','2.0.0'));assert(newerVersion('1.0.0-beta.10','1.0.0-beta.2'));assert(newerVersion('1.0.0','1.0.0-beta.10'));assert(!newerVersion('1.0.0-beta.2','1.0.0'));});
 test('corrupted staged bundle is refused before any service shutdown',async()=>{
- const f=fixture();try{await update(f.target,'check',f);const state=await update(f.target,'status',f);fs.appendFileSync(path.join(state.staged,'scripts/desktop.mjs'),'tamper');await assert.rejects(update(f.target,'apply',f),/release_payload_mismatch/);assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}
+ const f=fixture();try{await update(f.target,'check',f);const state=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));fs.appendFileSync(path.join(state.staged,'scripts/desktop.mjs'),'tamper');await assert.rejects(update(f.target,'apply',f),/release_payload_mismatch/);assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}
 });
 test('offline checks retain the working installation and throttle scheduled retries',async()=>{
  const f=fixture();try{let attempts=0;const offline={...f,fetcher:async()=>{attempts++;throw Error('network_failure');}};await update(f.target,'scheduled',offline);await update(f.target,'scheduled',offline);assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).last_error,'network_failure');}finally{f.cleanup();}
@@ -151,4 +151,10 @@ test('global Sidecar policy owns passive startup after differently configured pr
   assert.equal(starts.at(-1).launcher,path.join(f.target,'cu.mjs'));assert.equal(starts.at(-1).policy,'host-managed');
   assert((await update(f.target,'rollback',f)).rolled_back);assert.equal(starts.at(-1).launcher,path.join(f.target,'cu.mjs'));assert.equal(starts.at(-1).policy,'host-managed');
  }finally{f.cleanup();}
+});
+test('update status omits private staging paths, signing envelopes and untrusted worker fields',async()=>{
+ const f=fixture();try{await update(f.target,'check',f);fs.writeFileSync(path.join(f.target,'update-worker-result.json'),JSON.stringify({applied:true,version:'1.1.0',private_path:'C:/private-data',error:{code:'unsafe message C:/private-data'}}));const status=await update(f.target,'status',f),text=JSON.stringify(status);assert.equal(status.staged,true);assert.equal(status.next_action,'apply_when_idle');assert(!text.includes('private-data'));assert(!text.includes(f.directory));assert(!Object.hasOwn(status,'envelope'));assert(text.length<1200);}finally{f.cleanup();}
+});
+test('notify-only status asks to review the update and drops unknown settings fields',async()=>{
+ const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false,private:'secret-setting'}));await update(f.target,'check',f);const result=await update(f.target,'status',f);assert.equal(result.next_action,'update_available');assert(!JSON.stringify(result).includes('secret-setting'));}finally{f.cleanup();}
 });

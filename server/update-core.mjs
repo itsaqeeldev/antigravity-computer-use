@@ -20,7 +20,7 @@ export function verifyRelease(bytes,signature,publicKey,{platform=process.platfo
 }
 export function updateSettings(target,version='0.0.0'){
  const file=path.join(target,'update-settings.json');if(!fs.existsSync(file))return {mode:'automatic',channel:version.includes('-')?'beta':'stable',reporting:false};
- const v=JSON.parse(fs.readFileSync(file));if(!['automatic','notify','manual'].includes(v.mode)||!['stable','beta'].includes(v.channel)||typeof v.reporting!=='boolean')throw Error('invalid_update_settings');return v;
+ const v=JSON.parse(fs.readFileSync(file));if(!['automatic','notify','manual'].includes(v.mode)||!['stable','beta'].includes(v.channel)||typeof v.reporting!=='boolean')throw Error('invalid_update_settings');return {mode:v.mode,channel:v.channel,reporting:v.reporting};
 }
 export function acquireUpdateLock(target){const file=path.join(target,'update.lock');const fd=fs.openSync(file,'wx',0o600);fs.writeFileSync(fd,JSON.stringify({pid:process.pid,at:new Date().toISOString()}));return ()=>{fs.closeSync(fd);fs.unlinkSync(file);};}
 export function verifyStaged(directory,m){

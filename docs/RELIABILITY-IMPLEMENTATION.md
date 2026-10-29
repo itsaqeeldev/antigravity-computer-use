@@ -230,3 +230,10 @@ independent; shared-desktop control still requires compatible active build/polic
 The post-change focused updater suite passed 20 tests. A preceding full source
 run passed 191 tests with zero failures and seven explicit skips. The complete
 suite and native architecture matrix must be checked again at the pushed head.
+
+`update status` now emits a compact allowlisted result instead of the private
+signed-manifest envelope and staging/rollback paths. It includes settings,
+availability/version, whether staging/rollback exists, sanitized worker result,
+an error code and one next action. Unknown settings/worker fields are dropped.
+Notify-only installations receive `update_available`, not an automatic-apply
+instruction. The complete signed material stays private for runtime verification.

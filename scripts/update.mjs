@@ -49,7 +49,14 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(settings.mode==='automatic'&&read().available){try{return await updateLocked(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
   return {checked:true};
  }
- if(command==='status'){let worker;try{worker=JSON.parse(fs.readFileSync(path.join(target,'update-worker-result.json')));}catch{}return {settings,...read(),worker,interrupted_switch:fs.existsSync(path.join(target,'update-switching.json'))};}
+ if(command==='status'){
+  const state=read(),interrupted=fs.existsSync(path.join(target,'update-switching.json'));let rawWorker,worker;
+  try{const file=path.join(target,'update-worker-result.json');if(fs.statSync(file).size<8192)rawWorker=JSON.parse(fs.readFileSync(file));}catch{}
+  const safeCode=value=>typeof value==='string'&&/^[a-z_]{1,80}$/.test(value)?value:undefined;
+  const safeVersion=value=>typeof value==='string'&&/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(value)?value:undefined;
+  if(rawWorker&&typeof rawWorker==='object')worker={applied:rawWorker.applied===true,rolled_back:rawWorker.rolled_back===true,deferred:rawWorker.deferred===true,version:safeVersion(rawWorker.version),next_action:safeCode(rawWorker.next_action),error_code:safeCode(rawWorker.error?.code)};
+  return {settings,sequence:state.sequence,available:state.available==null?undefined:state.available===true,available_version:safeVersion(state.available_version),applied_version:safeVersion(state.applied_version),staged:typeof state.staged==='string',rollback_available:Array.isArray(state.rollback)&&state.rollback.length>0,last_error:safeCode(state.last_error),checked_at:Number.isFinite(state.checked_at)?state.checked_at:undefined,worker,interrupted_switch:interrupted,next_action:interrupted?'inspect_interrupted_update':state.last_error?'inspect_update_result':state.available===true?(settings.mode==='automatic'?'apply_when_idle':'update_available'):'continue_task'};
+ }
  if(!['check','apply','rollback','recover'].includes(command))throw Error('Use update status|check|apply|rollback');
  const switchingFile=path.join(target,'update-switching.json');let switching=false,safeToUnlock=true;
  try{
