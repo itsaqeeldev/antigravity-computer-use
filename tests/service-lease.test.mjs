@@ -15,11 +15,24 @@ test('native lease preparation refuses unrelated nonempty storage',async t=>{
   assert.equal(fs.readFileSync(file,'utf8'),'preserve');assert.equal(fs.readdirSync(dir).length,1);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('native lease acknowledgement leaves a verifiably private data tree',async t=>{
+ const dir=temporary();let lease;
+ try{
+  try{lease=await acquireServiceLease(dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  const checked=storageOperation('verify-data-tree',dir);assert.equal(checked.ok,true);assert.equal(checked.private_storage,true);lease.assertHeld();
+ }finally{if(lease)await lease.release();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('injected storage verification is not skipped by a helper acknowledgement',async()=>{
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;let checks=0;
  child.stdin.on('finish',()=>{child.exitCode=0;child.emit('exit',0);child.emit('close',0);});child.kill=()=>false;
  const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child,prepareStorage:async()=>{checks++;}});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true,"private_storage_verified":true}\n'));
  const lease=await pending;assert.equal(checks,1);await lease.release();
+});
+test('a storage verifier refusal releases the acknowledged native lease',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;let closed=false;
+ child.stdin.on('finish',()=>{closed=true;child.exitCode=0;child.emit('exit',0);child.emit('close',0);});child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child,prepareStorage:async()=>{throw Object.assign(Error('fixture refusal'),{code:'storage_not_private'});}});process.nextTick(()=>child.stdout.write('{"ok":true,"lease_acquired":true,"private_storage_verified":true}\n'));
+ await assert.rejects(pending,e=>e.code==='storage_not_private');assert(closed);
 });
 test('measure macOS native lease verification overhead',{skip:process.platform!=='darwin',timeout:30000},async t=>{
  const dir=temporary();let lease;

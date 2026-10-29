@@ -855,7 +855,10 @@ Both are small uncontrolled microbenchmarks on one Windows machine, not an
 end-to-end speed claim. Updated helpers explicitly acknowledge completed storage
 preparation; older helpers retain the existing separate verification fallback.
 Injected test verification is never skipped, and unrelated nonempty storage
-is refused. Mac CI and interactive task timing remain pending.
+is refused. A real native test verifies the prepared private data tree; a
+separate injected refusal test confirms the acquired lease is released rather
+than accepting a claimed acknowledgement. Mac CI and interactive task timing
+remain pending.
 An additional real process-death fixture confirms that the next session refuses
 the dead owner's metadata, and can proceed only after its internal verified
 cleanup path clears the matching record under the native fence. The fixture's

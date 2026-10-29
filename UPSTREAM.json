@@ -396,7 +396,7 @@
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "23c917c70dd1652b01b0c223a8e5ff37870772f330f473e1ae5080659b54aad3"
+      "sha256": "a929ab17f238a7f0d7f1528b61cd13b91a25ff96a2823dedc11a6def9e2c0fcd"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -612,7 +612,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "116b773baa944b687760587e4ddd5d3941b54f5dbb037d305a056f7bcc15129e"
+      "sha256": "024650d9a15e1cb3c09450e88a1d832c06c04d423cfaff1debff4073dd3fd297"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
