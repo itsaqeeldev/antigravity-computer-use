@@ -43,6 +43,12 @@ application cannot change afterward.
 If a failure first appears in the final timeout observation, the wait now
 reports that failure instead of masking it as a generic timeout; an inert
 regression covers this boundary.
+Intermediate text waits in batches now omit the final screenshot when followed
+by an accessible-target action, avoiding a redundant capture. Final waits keep
+their image default unless explicitly or query-selected otherwise. A pixel action
+immediately after either wait is rejected before any batch input because its
+intermediate screenshot was not available for the agent to inspect. Focused
+tests cover these defaults and refusal. Real-app latency is still unmeasured.
 
 The separate `wait_change` command waits for a change in the exact accessible
 tree shown by a fresh observation. It preserves that observation's query and

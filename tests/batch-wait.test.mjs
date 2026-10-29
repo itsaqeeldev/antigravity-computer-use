@@ -15,6 +15,29 @@ test('a batch waits then uses the freshly verified frame for its next action',as
  assert.equal(result.batch.completed.length,3);
 });
 
+test('batch waits skip intermediate images and reject unseen pixel targets before input',async()=>{
+ let inputs=0;const imageFlags=[];
+ const runtime={async action(){inputs++;return{metadata:{observation_id:'next'}};},async wait(a){imageFlags.push(a.with_image);return{matched:true,metadata:{observation_id:'wait-frame'}};}};
+ await call(runtime,'computer_run',args([{kind:'wait',until:'Ready'},{kind:'click',name:'Details'}]));
+ await call(runtime,'computer_run',args([{kind:'wait',until:'Ready'}]));
+ await call(runtime,'computer_run',args([{kind:'wait',until:'Ready',with_image:true},{kind:'click',name:'Details'}]));
+ assert.deepEqual(imageFlags,[false,true,true]);
+ const before=inputs;
+ await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',with_image:true},{kind:'click',x:2,y:3}])),/unseen batch observation/);
+ assert.equal(inputs,before,'invalid batch must refuse before any input');
+ await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait_change'},{kind:'click',x:2,y:3}])),/unseen batch observation/);
+ assert.equal(inputs,before,'text-only change wait cannot feed a pixel action');
+ const parsed=parseRunArguments(describe('run').inputSchema,['--hwnd','7','--observation-id','initial','--reason','Wait','--step','wait','--until','Ready','--image','--step','click','--x','2','--y','3'],describe);
+ assert.equal(parsed.steps[0].with_image,true);
+});
+
+test('a text-only wait confirms the final tree without capturing a screenshot',async()=>{
+ const flags=[],frames=new Map();let count=0;
+ const runtime={frames,check(){},async observe(a){flags.push(a.with_image);const id='s'+(++count);frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',with_image:false});
+ assert.equal(result.matched,true);assert.deepEqual(flags,[false,false]);assert(!frames.has('s1'));assert(frames.has('s2'));
+});
+
 test('an unmet wait retains completed actions and never sends following input',async()=>{
  let inputs=0;
  const runtime={async action(){inputs++;return{metadata:{observation_id:'after'}};},async wait(){return{matched:false,timed_out:true,metadata:{observation_id:'inspect-this'}};}};
