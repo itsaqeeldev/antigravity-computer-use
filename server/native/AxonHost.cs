@@ -3232,6 +3232,32 @@ namespace Axon
             return name != null ? role + " \"" + (name.Length > 60 ? name.Substring(0, 60) + "..." : name) + "\"" : role;
         }
 
+        // Once a provider has received SetValue, even an exception or stale
+        // read-back cannot prove that it did not act. Never repeat it through
+        // keyboard input; report uncertainty and require a fresh observation.
+        static Dictionary<string, object> WriteValuePattern(Action write, Func<string> read, Action guard, Action delay, string text)
+        {
+            string before = null;
+            try { before = read(); } catch { }
+            guard();
+            try { write(); }
+            catch { throw new AxonError("input_outcome_unknown", "The field provider failed after value dispatch; the value may have changed.", "Observe the field before continuing. Do not automatically repeat the write or type a fallback."); }
+            string after = null;
+            for (int tries = 0; tries < 12; tries++)
+            {
+                guard();
+                try { after = read(); } catch { after = null; }
+                if (after == text || (before != null && after != null && after != before))
+                {
+                    var result = new Dictionary<string, object> { { "method", "value_pattern" }, { "value", after } };
+                    if (after != text) result["normalised_by_app"] = true;
+                    return result;
+                }
+                delay();
+            }
+            throw new AxonError("input_outcome_unknown", "The field provider did not confirm the value after dispatch.", "Observe the field before continuing. Do not automatically repeat the write or type a fallback.");
+        }
+
         static object OpSetValue(Dictionary<string, object> a)
         {
             GuardSameWindow(a, HwndArg(a));
@@ -3256,10 +3282,15 @@ namespace Axon
                 if (Double.IsNaN(value) || Double.IsInfinity(value) || value < range.Current.Minimum || value > range.Current.Maximum)
                     throw new AxonError("bad_value", "Numeric value is outside the accessible range.", null);
                 ControlFence.Check();
-                range.SetValue(value);
-                double actual = range.Current.Value;
+                try { range.SetValue(value); }
+                catch { throw new AxonError("input_outcome_unknown", "The range provider failed after value dispatch; the value may have changed.", "Observe the control before continuing. Do not automatically repeat the write."); }
+                double actual;
+                try { actual = range.Current.Value; }
+                catch { throw new AxonError("input_outcome_unknown", "The range provider did not confirm the value after dispatch.", "Observe the control before continuing. Do not automatically repeat the write."); }
                 for (int tries=0; tries<12 && Math.Abs(actual-value)>0.000001; tries++) {
-                    System.Threading.Thread.Sleep(50); ControlFence.Check(); actual=range.Current.Value;
+                    System.Threading.Thread.Sleep(50); ControlFence.Check();
+                    try { actual=range.Current.Value; }
+                    catch { throw new AxonError("input_outcome_unknown", "The range provider did not confirm the value after dispatch.", "Observe the control before continuing. Do not automatically repeat the write."); }
                 }
                 res["method"]="range_value_pattern"; res["value"]=actual; res["matched"]=Math.Abs(actual-value)<=0.000001;
                 AddNowState(res, el);return res;
@@ -3274,51 +3305,11 @@ namespace Axon
                 {
                     if (vp.Current.IsReadOnly)
                         throw new AxonError("readonly", "That field is read-only.", null);
-                    try
-                    {
-                        // A contenteditable - a web composer, a rich text box -
-                        // can expose the value pattern and then quietly ignore
-                        // the setter: no exception, no change. Reporting that as
-                        // "set field via value_pattern" is the worst kind of
-                        // wrong, because the caller goes on believing the text
-                        // is there. So the write is read back and checked.
-                        string before = null;
-                        try { before = vp.Current.Value; } catch { }
-                        Trace(el, "type", HwndArg(a));
-                        vp.SetValue(text);
-                        // A browser's accessibility tree updates a beat after
-                        // the page does, so a read-back straight after the
-                        // write can still show the old value. Poll briefly
-                        // before concluding the setter was ignored - otherwise
-                        // a write that worked is followed by keystrokes into a
-                        // window the user may be looking at.
-                        string after = null;
-                        for (int tries = 0; tries < 12; tries++)
-                        {
-                            try { after = vp.Current.Value; } catch { }
-                            if (after == text || after != before) break;
-                            System.Threading.Thread.Sleep(50);
-                        }
-
-                        bool exact = after == text;
-                        // Some providers normalise what they store - a date, a
-                        // phone mask, a trimmed string - so a changed value that
-                        // is not character-for-character what we asked for still
-                        // counts as taken. Only a value that did not move at all
-                        // means the setter was ignored.
-                        bool moved = before != null && after != before;
-                        if (exact || moved)
-                        {
-                            res["method"] = "value_pattern";
-                            res["value"] = after;
-                            if (!exact) res["normalised_by_app"] = true;
-                            AddNowState(res, el);
-                            return res;
-                        }
-                        // Ignored. Fall through and type it for real.
-                        res["value_pattern_ignored"] = true;
-                    }
-                    catch { /* fall through to typing */ }
+                    Trace(el, "type", HwndArg(a));
+                    res = WriteValuePattern(delegate { vp.SetValue(text); }, delegate { return vp.Current.Value; },
+                        delegate { ControlFence.Check(); }, delegate { System.Threading.Thread.Sleep(50); }, text);
+                    AddNowState(res, el);
+                    return res;
                 }
             }
 

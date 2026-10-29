@@ -99,6 +99,14 @@ func macSetup() {
 
 func macContractTest() throws {
     try MacContract.load()
+    let oldText = "old" as CFString, newText = "new" as CFString
+    let zero = NSNumber(value: 0), one = NSNumber(value: 1)
+    guard axValueDisposition(oldText, newText, newText) == "exact",
+          axValueDisposition(oldText, oldText, newText) == nil,
+          axValueDisposition(oldText, nil, newText) == nil,
+          axValueDisposition(zero, one, one) == "exact" else {
+        throw AxonError("contract_test_failed", "Value read-back classification differs.")
+    }
     let token = "native-contract-test", grant = "123:birth:/app"
     let text = "active|\(token)|\(MacFenceState.now + 10_000_000)|\(Data(grant.utf8).base64EncodedString())"
     let state = try MacFenceState(text)

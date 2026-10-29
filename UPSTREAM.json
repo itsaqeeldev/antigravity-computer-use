@@ -60,13 +60,13 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "04e06d84fbb06cc18e1e81c7a20075e04a1cae6e7ce0cf3a7e406639594313ac",
+      "local_sha256": "778ec0c21383d26c2c5779ec05de285d059c70c88efdd19bc2743772db3026c3",
       "modified": true
     },
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "8fe415b2a3d03629090a400cb9ddca449b106ea11741d0d2ca90bd6c7e534be7",
+      "local_sha256": "81e5ad02e03dc1aced50a3a0f5784d63c36eff2ff73fdec626e04bc11c997e72",
       "modified": true
     },
     {
@@ -540,7 +540,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "926eea2569ddb0b3011d5768a102924cfb73592a831fd0345b461bafebe15a93"
+      "sha256": "bcaac5ff13e80d30ca632ad6b9a79500fabfa39a7b14559f0877e5bb48e2e195"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "01615a2543c0565b3cf8390b92f222630176ea8ed6d4d660bbdea03b23f36757"
+      "sha256": "bc6dcc957b420c83783334adb795fe1572c76d365145cde77ca6b6fb5eb5d2a0"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -733,6 +733,14 @@
     {
       "path": "tests/MacStorageMarkerWriter.swift",
       "sha256": "db4c4090e7b569b97285e4bac4752858bb089501e0891eb8cc5763181911f7a2"
+    },
+    {
+      "path": "tests/NativeValueWriteTests.cs",
+      "sha256": "69d6d02c8bfd2ec23e829f835e340d892b71ccc58176a6a49bf4be1c0e7b97d2"
+    },
+    {
+      "path": "tests/native-value-write.test.mjs",
+      "sha256": "ff95226c51fc11d36df81a7e2ba31383537a2083425e1c6a519be3a240188c6e"
     }
   ]
 }

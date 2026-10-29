@@ -24,6 +24,17 @@ bounds and skipped input. Labels are literal substrings, so callers must choose
 specific observed text and avoid queries that hide errors. This is source/test
 evidence only; a real Antigravity app workflow and its latency remain unmeasured.
 
+Review found that Windows `set_value` could dispatch an accessibility write and
+then silently repeat it as keyboard input if the provider threw or returned
+stale/unreadable data. It now reports `input_outcome_unknown` after an uncertain
+dispatch and requires a fresh observation; range writes also report uncertainty
+on post-dispatch failures. A headless test invokes the real compiled policy with
+fake providers and checks a single dispatch across ignored, throwing and
+unreadable cases. The Mac adapter also previously ignored numeric input and
+reported success without read-back; it now sends the supplied number and checks
+the observed value before reporting success. Mac contract checks and real
+provider/app acceptance must still run for this change.
+
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |

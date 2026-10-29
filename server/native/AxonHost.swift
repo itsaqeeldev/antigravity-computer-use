@@ -810,18 +810,40 @@ func opDrag(_ a: [String: Any]) throws -> [String: Any] {
     return res
 }
 
+// A successful AX return is not proof that the provider applied a value.
+// Use read-back evidence and never repeat an uncertain write via keyboard.
+func axValueDisposition(_ before: CFTypeRef?, _ after: CFTypeRef?, _ expected: CFTypeRef) -> String? {
+    guard let after = after else { return nil }
+    if CFEqual(after, expected) { return "exact" }
+    if let before = before, !CFEqual(after, before) { return "changed" }
+    return nil
+}
+
 func opSetValue(_ a: [String: Any]) throws -> [String: Any] {
     let (el, pid) = try resolveTarget(a)
     try guardSameWindow(a, pid)
     try checkStop()
-    let text = str(a["text"]) ?? ""
+    let expected: CFTypeRef
+    if let text = a["text"] as? String { expected = text as CFString }
+    else if let value = a["value"] as? NSNumber { expected = value as CFTypeRef }
+    else { throw AxonError("bad_value", "Set value requires text or a numeric value.") }
+    let before = axAttr(el, kAXValueAttribute as String)
     try MacFence.dispatched()
-    if AXUIElementSetAttributeValue(el, kAXValueAttribute as CFString, text as CFTypeRef) == .success {
-        var res: [String: Any] = ["method": "ax_value", "value": text]
-        if let now = nowState(el) { res["now"] = now }
-        return res
+    guard AXUIElementSetAttributeValue(el, kAXValueAttribute as CFString, expected) == .success else {
+        throw AxonError("input_outcome_unknown", "The provider did not confirm the value. Observe before continuing; do not automatically type a fallback.")
     }
-    throw AxonError("input_outcome_unknown", "The provider did not confirm the value. Observe before continuing; do not automatically type a fallback.")
+    for _ in 0..<12 {
+        try checkStop()
+        let after = axAttr(el, kAXValueAttribute as String)
+        if let disposition = axValueDisposition(before, after, expected), let after = after {
+            var res: [String: Any] = ["method": "ax_value", "value": after]
+            if disposition == "changed" { res["normalised_by_app"] = true }
+            if let now = nowState(el) { res["now"] = now }
+            return res
+        }
+        Thread.sleep(forTimeInterval: 0.05)
+    }
+    throw AxonError("input_outcome_unknown", "The provider did not confirm the value after dispatch. Observe before continuing; do not automatically type a fallback.")
 }
 
 func opType(_ a: [String: Any]) throws -> [String: Any] {
