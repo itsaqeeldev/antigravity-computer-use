@@ -7,8 +7,8 @@ The published release/bootstrap remain beta.2. See the
 [qualification matrix](docs/RELIABILITY-IMPLEMENTATION.md) and
 [Mac evidence boundaries](docs/MACOS-QUALIFICATION.md).
 
-The installed global Windows build `6b4d9d967478f383c5cb620bee7f6d2a898510040b10926e08b534fd7a059c7b`
-was built from `f6bfa1fcaadc3ebfae3b5747489c20185485437b` and verified its
+The installed global Windows build `50426a656d2374fca25706235407cafb80cb9c0719a19c3cf65760c49cc32474`
+was built from `a4e72341fe60da31b086788c72c4f348a974eb09` and verified its
 108 files and skill on 29 October. Its passive service reported idle,
 host-managed, with zero approved apps. The supported local upgrade confirmed
 cleanup and preserved settings and project pins; Stop was not latched during

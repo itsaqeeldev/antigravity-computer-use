@@ -18,7 +18,14 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
-The current Windows installation was locally upgraded from source `f6bfa1f` to
+The current Windows installation was locally upgraded from `a4e7234` to build
+`50426a656d2374fca25706235407cafb80cb9c0719a19c3cf65760c49cc32474`. Its 108
+files and global skill verified, settings and project pins were preserved, and
+it started idle without desktop input. Stop was not latched at upgrade time.
+Existing diagnostics were readable without submitting them. This is not
+production signed-update or current-build Antigravity task qualification.
+
+The preceding Windows installation was locally upgraded from source `f6bfa1f` to
 build `6b4d9d967478f383c5cb620bee7f6d2a898510040b10926e08b534fd7a059c7b`.
 Its 108 files and global skill match, the service starts passively idle, and
 configuration and project pins were preserved. Stop was not latched during the
