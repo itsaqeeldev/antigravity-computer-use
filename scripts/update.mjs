@@ -45,7 +45,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(settings.mode==='manual')return {skipped:true};
   if(!last.attempt_at||now-last.attempt_at>=86400000){
    save({...read(),attempt_at:now});
-   try{await updateLocked(target,'check',{fetcher,adapters});}catch(error){save({...read(),attempt_at:now,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_check_failed'});return {deferred:true,next_action:'retry_next_day'};}
+   try{await updateLocked(target,'check',{fetcher,adapters});}catch(error){save({...read(),available:false,attempt_at:now,last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_check_failed'});return {deferred:true,next_action:'retry_next_day'};}
   }
   if(settings.mode==='automatic'&&read().available){try{return await updateLocked(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
   return {checked:true};

@@ -65,6 +65,18 @@ test('corrupted staged bundle is refused before any service shutdown',async()=>{
 test('offline checks retain the working installation and throttle scheduled retries',async()=>{
  const f=fixture();try{let attempts=0;const offline={...f,fetcher:async()=>{attempts++;throw Error('network_failure');}};await update(f.target,'scheduled',offline);await update(f.target,'scheduled',offline);assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).last_error,'network_failure');}finally{f.cleanup();}
 });
+test('a failed scheduled check never applies a previously staged update on a later tick',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);
+  const stateFile=path.join(f.target,'update-state.json'),state=JSON.parse(fs.readFileSync(stateFile));
+  assert(state.available&&state.staged);state.attempt_at=0;fs.writeFileSync(stateFile,JSON.stringify(state));
+  let attempts=0;const offline={...f,fetcher:async()=>{attempts++;throw Error('network_failure');}};
+  assert.equal((await update(f.target,'scheduled',offline)).next_action,'retry_next_day');
+  assert.equal((await update(f.target,'status',f)).available,false);
+  await update(f.target,'scheduled',offline);
+  assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert(fs.existsSync(state.staged));
+ }finally{f.cleanup();}
+});
 test('explicit install update preferences and reporting consent survive upgrades',()=>{
  const f=fixture();try{f.adapters.install({bundle:f.fresh.bundle,target:f.target,updateMode:'manual',updateChannel:'beta',reporting:true});f.adapters.install({bundle:f.fresh.bundle,target:f.target});assert.deepEqual(updateSettings(f.target),{mode:'manual',channel:'beta',reporting:true});}finally{f.cleanup();}
 });

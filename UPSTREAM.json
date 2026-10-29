@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "1398403c3a1142fe29dfae5d7b2784a800c83e5d7d2cec1e2eae084ad1d0a2fd"
+      "sha256": "162c050acc92c69687b957272da3ec236a434c567ab8fb3e531b4c5ff9dee85e"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -604,7 +604,7 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "681cdadf18e33ca93f5ef4a2c462be3131bb2840f41ba433ac0c9146eb409fb0"
+      "sha256": "24222bf5e98e56532cf024a8479916a2465cd03c1e8d2cbe7c723102703b920a"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
