@@ -15,7 +15,7 @@ fs.writeFileSync(executable,'not executed: mock tests only');
 process.on('exit',()=>{fs.rmSync(dir,{recursive:true,force:true});});
 function harness(windows){
  let launches=0,observations=0,attached=false;
- const r={state:'idle',generation:1,token:'',check(){if(this.state!=='active')throw Object.assign(Error('stopped'),{code:'control_inactive'});},stamp(){return {};},
+ const r={state:'idle',generation:1,token:'',check(){if(this.state!=='active')throw Object.assign(Error('stopped'),{code:'control_inactive'});},stamp(){return {};},sessions:{async withInput(_op,_target,run){return run();}},
  guardian:{send(message){assert.deepEqual(message,{op:'attach',pid:99});attached=true;},async start(){},async request(){return {allowed:true};},async prompt(){assert.equal(attached,true,'Register the worker before permission/dispatch');return {allowed:true,permit:'native-permit'};}},
  driver:{epoch:1,info:{pid:99},async start(){},async call(op,args){if(op==='launch'){assert.equal(args.__permit,'native-permit');assert.equal(args.__worker_epoch,1);launches++;return {result:{pid:123,path:app}};}assert.equal(op,'list_apps');return {result:{windows}};}},
  async observe(args){observations++;assert.equal(args.hwnd,8);return {metadata:{hwnd:8,observation_id:'fresh'},image:{data:'actual-mock-image'}};}};
@@ -41,6 +41,10 @@ test('post-launch Stop and observation failure retain delivery evidence without 
 });
 test('legacy launch remains a launch-only operation',async()=>{
  const {r,counts}=harness([]);const result=await Runtime.prototype.launch.call(r,{app,reason:'test'});assert.deepEqual(result,{pid:123,path:app});assert.deepEqual(counts(),{launches:1,observations:0});
+});
+test('Stop while launch waits for input ownership prevents process creation',async()=>{
+ const {r,counts}=harness([]);r.sessions.withInput=async(_op,_target,run)=>{r.state='stopped';r.generation++;return run();};
+ await assert.rejects(Runtime.prototype.launch.call(r,{app,reason:'test'}),e=>e.code==='control_inactive');assert.equal(counts().launches,0);
 });
 
 test('an exited starter returns pending promptly without guessing a handoff or relaunching',async()=>{

@@ -14,6 +14,15 @@ actions are serialized, but that does not prove whole-task isolation; coordinate
 one task at a time until a host-compatible ownership design is qualified. The
 skill now states that limit rather than promising safe concurrent tasks.
 
+[Antigravity's documented hooks](https://antigravity.google/docs/hooks) provide
+`conversationId` and tool-call details to `PreToolUse` handlers, which can deny
+a terminal call. This is a possible host-side coordination signal. The docs do
+not establish a trusted binding between a hook invocation and a later direct
+IPC caller, and shell commands can invoke the same local controller in multiple
+ways. Do not treat the ID, command text or a model-provided token as a security
+credential. No hook has been registered or tested in the live App; preserving
+unrelated hooks, failure behavior and two real concurrent tasks remains work.
+
 Agents can now record structured feedback about observed usability, speed or
 missing-capability concerns that did not produce a runtime error. Categories,
 operation and evidence level come from fixed lists; task text, paths, screenshots
@@ -822,6 +831,40 @@ exit, and refuses a replacement while the old process remains unresolved.
 Concurrent close requests share the same outcome. Isolated process fixtures cover
 late exit, missing exit, and startup timeout; real native failure injection is
 still pending. This does not resolve shared task ownership issue #7.
+
+## Input fence across sessions sharing an installation
+
+The inherited file lease could be removed after 30 seconds even while its owner
+was alive, or while another writer's metadata was incomplete. New runtimes now
+hold a native kernel fence around file-lease claim, action and release. Live or
+unreadable metadata is never stolen on age alone. Fence loss requests Stop;
+uncertain release after dispatch reports `input_outcome_unknown` and prohibits
+replay. Launch also uses the fence and rechecks cancellation after waiting.
+Fence waits use monotonic time so a wall-clock adjustment cannot extend a wait
+indefinitely. Invalid, partially written or dead-owner lease metadata is left
+untouched during ordinary acquisition. On Windows, verified recovered-task End
+can clear matching dead-owner metadata under the native fence after the prior
+guard, processes and input ledger pass the recovery checks.
+Inert tests exercise independent processes, a lost fence, partial metadata and
+slow live holders. A local six-sample Windows microbenchmark measured a 191 ms
+median for acquire plus release (176–209 ms); this is not an Antigravity task
+benchmark and is a deliberate per-action cost pending real performance work.
+An additional real process-death fixture confirms that the next session refuses
+the dead owner's metadata, and can proceed only after its internal verified
+cleanup path clears the matching record under the native fence. The fixture's
+action sends no desktop input.
+The fence only coordinates updated runtimes using the same data directory; it
+does not isolate conversations in one Sidecar (issue #7), coordinate separate
+installations, or establish safety against older runtimes that ignore the
+native fence. Real multi-agent and Mac interaction tests remain pending.
+The helper owns the kernel fence separately from the native input worker. If the
+helper dies mid-action, the metadata lease still blocks updated participants
+while its controller PID lives. If that PID dies, ordinary acquisition now
+refuses rather than assuming its native worker exited; matching stale metadata
+is removed only after verified recovered-task cleanup. Legacy runtimes that do
+not honor the native fence or these stale-owner rules remain outside this
+guarantee. Native worker-bound fencing and a real helper-death/input race test
+remain required before calling cross-process safety complete.
 
 ## Concurrent native build cache
 

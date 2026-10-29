@@ -48,7 +48,7 @@
     {
       "path": "server/sessions.mjs",
       "upstream_sha256": "09563923bcd19974f2882855c8b23883038e13942c6583c861b4e22cc274ebe0",
-      "local_sha256": "88004c676be561a46fabc2514a6d57998700657f1ba615b586908c4747f7170a",
+      "local_sha256": "7da4d6f85f2aa235cd435fe1269c68cf6bb8e21ef2157fa88f7506786a6631ea",
       "modified": true
     },
     {
@@ -215,12 +215,16 @@
   ],
   "authored_files": [
     {
+      "path": "tests/session-safety.test.mjs",
+      "sha256": "1ed92952e523f762464571042cde19279d4c2fd5193f221bc40659c066feb270"
+    },
+    {
       "path": "tests/recording-visuals-live.mjs",
       "sha256": "4d787902ce877b5b0a7acf46497d67541fc397d9a7aa66c1ecc055ec1ffd9165"
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "f4af009cf842077e1ece3573c614044f39d41f77e7ea2d2f702b40ebf9b4bd64"
+      "sha256": "8d5c62599ce1880a243981c5cad5aebe222534e6915e6625eb621628510e5eb2"
     },
     {
       "path": "server/mcp.mjs",
@@ -308,7 +312,7 @@
     },
     {
       "path": "tests/launch-observe.test.mjs",
-      "sha256": "3d0bd4c24ba22e523b4e0d419f25af8ea477a3c147e6e603e39c354ac176ede0"
+      "sha256": "e5c46428a01aafea09a5a1dfa1305939750139e184b7960dec8c9555802ae076"
     },
     {
       "path": "scripts/install.mjs",
@@ -608,7 +612,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "86c16811d084237fefb3260cd5e6b17bb197d7b2f7158aed1b4dffcfb2b0f5ac"
+      "sha256": "e5094adfb1b1f9e11dfb80de720e307be96a55bfafdb0a76aee5122a7eee1cfd"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +628,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "c03671fe5b78285fbc77f8ac4a75d82260f97a1effdafd488d591005c2bb57b1"
+      "sha256": "7d8a5f17fbaa75c69c70a904dbce908fb5241d14f1ee1ad04296391bce914ad6"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -676,7 +680,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "81984c83fd0a003d05f6eb079c49e719a4b9e14001e8de76979ec09961316fd4"
+      "sha256": "756a285209839eb95ac6ad648438187a1b351c480b0f7ae6f45dd562781a6690"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

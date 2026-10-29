@@ -7,9 +7,9 @@
 // user" and happily types over the top of it.
 //
 // Two agents sharing one pointer, one foreground window and one keyboard is not
-// something to detect after the fact. So sessions are registered in a directory
-// every install shares, and anything that sends input takes a machine-wide
-// lease first. The result is:
+// something to detect after the fact. Sessions registered under the same data
+// directory take a native input fence before actions. Separate installations
+// have separate directories and are not coordinated by this fence. The result is:
 //
 //   - actions from different sessions never interleave, they queue
 //   - each session can name the others, and say what they last touched
@@ -26,6 +26,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { dataDir } from './build.mjs';
+import { acquireServiceLease } from './service-lease.mjs';
 
 // Liveness is the pid, not the clock: a Claude session sitting idle for ten
 // minutes is still running, still owns its banner row, and must not have its
@@ -36,11 +37,6 @@ const STALE_MS = 90_000;
 // handed its pid to an unrelated process, so the record looks alive forever.
 // Nothing has heartbeat in half an hour, so the record goes.
 const ABANDONED_MS = 30 * 60_000;
-
-// The longest any one action may hold the input lease before another session is
-// entitled to take it. The host's own pattern deadline is 15s, so this is that
-// plus room to report the failure.
-const MAX_HOLD_MS = 30_000;
 
 // How long to wait for another session's action to finish before giving up.
 const WAIT_MS = 10_000;
@@ -65,7 +61,7 @@ function pidAlive(pid) {
     return true;
   } catch (err) {
     // EPERM means it exists and belongs to someone else, which still counts.
-    return !!(err && err.code === 'EPERM');
+    return !err || err.code !== 'ESRCH';
   }
 }
 
@@ -82,15 +78,18 @@ function writeJson(file, obj) {
 }
 
 export class Sessions {
-  constructor({ dir, pid = process.pid, now = () => Date.now(), sleep, isAlive, sessionId = null } = {}) {
+  constructor({ dir, pid = process.pid, now = () => Date.now(), monotonic = () => performance.now(), sleep, isAlive, sessionId = null, acquireInputLease = acquireServiceLease, onInputLeaseLost = null } = {}) {
     // The Claude Code session (conversation) this server belongs to. A resumed
     // conversation keeps its id and gets a new server process, so this is what
     // tells "an earlier process of this same conversation" from another Claude.
     this.sessionId = sessionId || null;
     this.dir = dir || path.join(dataDir(), 'sessions');
     this.lease = path.join(this.dir, 'input.lease');
+    this.inputFence = path.join(this.dir, 'input-fence');
+    this.acquireInputLease=acquireInputLease;this.onInputLeaseLost=onInputLeaseLost;
     this.pid = pid;
     this.now = now;
+    this.monotonic = monotonic;
     this.sleep = sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.alive = isAlive || pidAlive;
     this.file = path.join(this.dir, `${this.pid}.json`);
@@ -203,7 +202,6 @@ export class Sessions {
     const rec = readJson(this.lease);
     if (!rec) return null;
     if (!this.alive(Number(rec.pid))) return null;
-    if (this.now() - Number(rec.at || 0) > MAX_HOLD_MS) return null;
     return rec;
   }
 
@@ -222,13 +220,10 @@ export class Sessions {
         failure.code='input_lease_unavailable';throw failure;
       }
       const rec = readJson(this.lease);
-      // A lease with no readable owner, an owner that has died, or one held far
-      // past any legitimate action is not a lease any more.
-      const dead = !rec || !rec.pid || !this.alive(Number(rec.pid));
-      const expired = rec && this.now() - Number(rec.at || 0) > MAX_HOLD_MS;
-      if (dead || expired) {
-        try { fs.unlinkSync(this.lease); } catch {}
-      }
+      // An unreadable record can be another writer's partially published lease.
+      // A live owner is never displaced merely because an action is slow.
+      const dead = rec && Number.isSafeInteger(rec.pid) && rec.pid>0 && rec.pid<=4294967295 && !this.alive(rec.pid);
+      if(dead){const failure=new Error('A prior input owner exited without releasing its lease. Complete verified task recovery before retrying.');failure.code='input_lease_stale';throw failure;}
       return false;
     }
   }
@@ -237,11 +232,22 @@ export class Sessions {
     const rec = readJson(this.lease);
     // Only ever drop our own. If another session stole it because we were slow,
     // deleting it here would hand a third session a lease that is in use.
-    if (rec && Number(rec.pid) !== this.pid) return;
+    if (!rec || !Number.isSafeInteger(rec.pid) || rec.pid !== this.pid) return;
     try { fs.unlinkSync(this.lease); } catch {}
   }
 
-  // Run fn while holding the machine-wide input lease. Reads never call this;
+  async clearVerifiedStale(pid){
+    if(!Number.isSafeInteger(pid)||pid<=0||pid>4294967295)throw Error('Invalid prior input owner.');
+    fs.mkdirSync(this.inputFence,{recursive:true});const fence=await this.acquireInputLease(this.inputFence);
+    try{
+      fence.assertHeld();let raw;try{raw=fs.readFileSync(this.lease,'utf8');}catch(error){if(error.code==='ENOENT')return {cleared:false};throw error;}
+      let record;try{record=JSON.parse(raw);}catch{throw Error('Prior input lease metadata is invalid.');}
+      if(!Number.isSafeInteger(record?.pid)||record.pid!==pid||this.alive(pid))throw Error('Prior input owner is not confirmed gone.');
+      fs.unlinkSync(this.lease);fence.assertHeld();return {cleared:true};
+    }finally{await fence.release();}
+  }
+
+  // Run fn while holding this installation's input fence. Reads never call this;
   // anything that can move the pointer, change the foreground window or send a
   // keystroke does.
   async withInput(op, target, fn, { waitMs = WAIT_MS } = {}) {
@@ -249,22 +255,38 @@ export class Sessions {
       // Re-entrant within a session: the in-memory chain already serialises us.
       if (this._held > 0) { this._held++; try { return await fn(); } finally { this._held--; } }
 
-      const deadline = this.now() + waitMs;
+      const deadline = this.monotonic() + waitMs;
       let waited = 0;
+      // New runtimes fence read/claim/release with the native kernel lease.
+      // The metadata file remains for compatibility and diagnostics.
+      try{fs.mkdirSync(this.inputFence,{recursive:true});}catch{const error=new Error('Cannot prepare the input fence; no action was sent.');error.code='input_lease_unavailable';throw error;}
+      let fence;
+      while(!fence){
+        try{fence=await this.acquireInputLease(this.inputFence);}
+        catch(error){if(error.code!=='service_already_running'){const failure=new Error('Cannot acquire the native input fence; no action was sent.');failure.code='input_lease_unavailable';throw failure;}if(this.monotonic()>=deadline)throw new LeaseBusy(readJson(this.lease));await this.sleep(POLL_MS);waited+=POLL_MS;}
+      }
+      fence.once?.('lost',()=>{try{this.onInputLeaseLost?.();}catch{}});
+      let dispatched=false;
+      try{
+      fence.assertHeld();
       while (!this._tryClaim(op, target)) {
-        if (this.now() >= deadline) throw new LeaseBusy(readJson(this.lease));
+        if (this.monotonic() >= deadline) throw new LeaseBusy(readJson(this.lease));
         await this.sleep(POLL_MS);
         waited += POLL_MS;
       }
       this._held = 1;
       try {
+        fence.assertHeld();dispatched=true;
         const r = await fn();
+        fence.assertHeld();
         if (waited > 0 && r && typeof r === 'object') r.waited_for_session_ms = waited;
         return r;
       } finally {
         this._held = 0;
         this._release();
       }
+      }catch(error){if(dispatched&&fence.lost){const unknown=new Error('Input fence was lost during an operation. Inspect its effect without replay.');unknown.code='input_outcome_unknown';throw unknown;}throw error;}
+      finally{try{await fence.release();}catch{try{this.onInputLeaseLost?.();}catch{}const unknown=new Error('Input fence release is unconfirmed. Inspect the effect without replay.');unknown.code=dispatched?'input_outcome_unknown':'input_lease_unavailable';throw unknown;}}
     };
 
     // Chain, so two concurrent calls from this session queue instead of both
@@ -338,10 +360,7 @@ export class Sessions {
       lines.push('  input is serialised across sessions; grants are per session and never shared');
     }
     if (h && Number(h.pid) !== this.pid) lines.push(`input lease: held by ${h.label} for ${h.op}`);
-    if (this.leaseless) {
-      lines.push(`input lease: UNAVAILABLE (${this.dir} is not writable) - actions still run, ` +
-                 'but they are not serialised against other Claude sessions');
-    }
+    if (this.leaseless) lines.push('input lease: UNAVAILABLE - input actions are refused.');
     return lines.join('\n');
   }
 
