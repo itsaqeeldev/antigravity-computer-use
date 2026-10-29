@@ -35,6 +35,9 @@ It can also run as a batch step: a fresh frame feeds the next action, timeouts
 skip the rest, and its budget is combined with ordinary waits. The comparison
 starts from the previous action's returned frame, so an earlier change can be
 missed; a detected change can be unrelated and must not be treated as success.
+A direct authenticated IPC test now exercises the batch and actual shared wait
+logic with an inert runtime, checking fresh-frame propagation and one dispatch
+per action. It does not operate a desktop or establish host/model latency.
 
 Review found that Windows `set_value` could dispatch an accessibility write and
 then silently repeat it as keyboard input if the provider threw or returned

@@ -9,6 +9,7 @@ import {spawn,spawnSync} from 'node:child_process';import {createInterface} from
 import {fileURLToPath} from 'node:url';
 import {storageOperation} from '../server/storage.mjs';
 import {Incidents} from '../server/incidents.mjs';
+import {Runtime,appKey} from '../server/runtime.mjs';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -171,6 +172,20 @@ test('direct skill IPC authenticates, rejects overlapping actions, and permits i
   assert.equal((await request(session,'stop')).stopped,true);assert.equal(stops,1);assert.equal(calls,1);
   release();await pending;
   assert.equal((await request(session,'click',{hwnd:1,confirmed:true})).ok,false);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('direct IPC batches use a fresh change-wait frame without replaying prior actions',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-change-ipc-'));const app={hwnd:7,pid:9,started:'one',path:'fixture.exe'};const key=appKey(app),seen=[];
+ const runtime={frames:new Map(),generation:1,driver:{epoch:1},status(){return{state:'active'};},check(){},async grant(){return app;},async close(){},
+  async action(op,a){seen.push({op,frame:a.observation_id});if(seen.length===1){this.frames.set('post-action',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'Loading'});return{metadata:{observation_id:'post-action'}};}return{metadata:{observation_id:'finished'}};},
+  async observe(){this.frames.set('changed',{key,workerEpoch:1});return{metadata:{observation_id:'changed',tree:'Ready'}};}};
+ runtime.waitChange=Runtime.prototype.waitChange.bind(runtime);
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Verify IPC',steps:[{kind:'click',name:'Start'},{kind:'wait_change',timeout_ms:1000},{kind:'click',name:'Details'}]});
+  assert.equal(reply.ok,true);assert.equal(reply.batch.completed.length,3);
+  assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'click',frame:'changed'}]);assert(!runtime.frames.has('post-action'));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('direct IPC client timeout cancels active work without replay',async()=>{
