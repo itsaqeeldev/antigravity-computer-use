@@ -372,3 +372,27 @@ skipped seven (five Windows ACL qualification checks and two Mac-only tests).
 Native compilation succeeded. The historical before-fix failure and after-fix
 results are retained under ignored `.localdata/mac-port/`. No live installation
 was updated and desktop control was not resumed for this check.
+
+## Invisible-control recovery and explicit human retry
+
+`ready` previously returned no error when the guardian replied with
+`controls_visible:false` without an error field. That reply produced no incident
+and did not bound repeated attempts. The shared runtime now records
+`guardian_controls_not_visible`, retains the failure episode, and returns one
+diagnostic action. Isolated-desktop errors retain their explicit human-launcher
+handoff even on a cached failure. Neither path claims visible controls or clears
+Stop.
+
+An explicit human launcher now performs passive `start` followed by `controls`.
+It can retry showing controls after an earlier cached `ready` failure, while
+ordinary agent `ready` calls remain bounded. Failed startup does not advance to
+the controls command. Both launchers remain fixed and argument-free; they never
+re-arm. The shared skill explains the visible-desktop handoff and stops repeated
+startup advice if that attempt still fails.
+
+New regressions failed before the runtime fix and passed afterward. An additional
+integration test executes the generated human launcher against the real IPC
+service with an inert controls provider, verifies one show request and confirms
+Stop remains on disk. It does not create an actual bar or establish recovery on
+the affected second PC; native visibility, physical re-arm and real host/model
+qualification remain required.
