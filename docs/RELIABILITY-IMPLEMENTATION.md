@@ -34,8 +34,9 @@ The default physical path exposed an earlier native behavior: a disabled indexed
 control could be physically clicked and reported as delivered. Both native hosts
 now refuse a known disabled accessibility target before sending a click. A pixel
 target has no comparable semantic enabled state and still requires visual
-verification. The Windows host compiled locally; real-control and Mac checks
-are pending on this newer helper.
+verification. The Windows host compiled locally, and the installed new helper
+refused the actual disabled Upscaly 2× button with `element_disabled`; it then
+closed the app and ended control. Real Mac checks remain pending.
 An attempted existing native fixture run stopped with `confirmation_required`;
 it is not a pass and no approval was manufactured to make it proceed. The
 failure is retained as local test evidence and the real-app test remains open.
