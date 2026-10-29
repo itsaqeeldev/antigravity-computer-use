@@ -46,6 +46,18 @@ test('new service health failure rolls back actual installer changes and restart
 test('daily scheduler throttles checks and manual mode performs no network work',async()=>{
  const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false}));await update(f.target,'scheduled',f);const first=f.fetches();await update(f.target,'scheduled',f);assert.equal(f.fetches(),first);fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting:false}));await update(f.target,'scheduled',f);assert.equal(f.fetches(),first);}finally{f.cleanup();}
 });
+test('a release without this platform clears an older staged update without applying it',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);
+  const old=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));assert(old.available&&old.staged);
+  const missing={...f,fetcher:async()=>({ok:true,json:async()=>({assets:[]})})};
+  const result=await update(f.target,'check',missing);assert.equal(result.next_action,'no_signed_release_for_platform');
+  const status=await update(f.target,'status',f);assert.equal(status.available,false);assert.equal(status.staged,false);
+  assert(fs.existsSync(old.staged),'retained evidence is not deleted');
+  await assert.rejects(update(f.target,'apply',f),/update_not_staged/);
+  await update(f.target,'scheduled',f);assert(!f.calls.includes('shutdown'));
+ }finally{f.cleanup();}
+});
 test('version ordering blocks downgrade and respects numeric prerelease segments',()=>{assert(!newerVersion('1.0.0','2.0.0'));assert(newerVersion('1.0.0-beta.10','1.0.0-beta.2'));assert(newerVersion('1.0.0','1.0.0-beta.10'));assert(!newerVersion('1.0.0-beta.2','1.0.0'));});
 test('corrupted staged bundle is refused before any service shutdown',async()=>{
  const f=fixture();try{await update(f.target,'check',f);const state=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));fs.appendFileSync(path.join(state.staged,'scripts/desktop.mjs'),'tamper');await assert.rejects(update(f.target,'apply',f),/release_payload_mismatch/);assert(!f.calls.includes('shutdown'));}finally{f.cleanup();}

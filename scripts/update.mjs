@@ -72,7 +72,14 @@ async function updateLocked(target,command,{fetcher,adapters}){
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
    const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await response.json();
    if(Array.isArray(release))release=release.find(r=>!r.draft);if(!release||release.draft)throw Error('update_release_unavailable');
-   const asset=release.assets?.find(a=>a.name===`update-${process.platform}-${process.arch}.json`);if(!asset)return {available:false,next_action:'no_signed_release_for_platform'};
+   const asset=release.assets?.find(a=>a.name===`update-${process.platform}-${process.arch}.json`);
+   if(!asset){
+    // A previous staged release must not be applied after the selected channel
+    // moves to a release that has no signed package for this platform.
+    const {staged,envelope,available_version,...rest}=state;
+    save({...rest,available:false,attempt_at:Date.now(),checked_at:Date.now(),last_error:null});
+    return {available:false,next_action:'no_signed_release_for_platform'};
+   }
    const assetURL=new URL(asset.browser_download_url);if(assetURL.protocol!=='https:'||assetURL.hostname!=='github.com'||!assetURL.pathname.startsWith('/shayann07/antigravity-computer-use/releases/download/'))throw Error('update_metadata_origin_invalid');
    const envelopeResponse=await fetcher(asset.browser_download_url,{signal:AbortSignal.timeout(15000)});if(!envelopeResponse.ok)throw Error('update_metadata_unavailable');
    const envelope=await readBoundedJSON(envelopeResponse);
