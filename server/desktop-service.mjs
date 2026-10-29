@@ -88,6 +88,9 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
         if(given.length!==expected.length||!timingSafeEqual(given,expected))throw Error('Unauthorized local client');
         lastCall=Date.now();idleReleased=false;
         const name=request.command?.startsWith('computer_')?request.command:'computer_'+request.command;
+        // A replacement starts passively under the updater's installation lock.
+        // No task may acquire control until health verification and unlock.
+        if(fs.existsSync(path.join(path.dirname(directory),'update-switching.json'))&&!['computer_status','computer_stop','computer_shutdown','computer_prepare_update'].includes(name))throw Object.assign(Error('Installation update is in progress; no desktop input was accepted.'),{code:'update_in_progress'});
         ticket=receipts.begin(name,request.args);
         if(!closing)try{ownership.assertHeld();}catch{ownershipLost=true;}
         if(ownershipLost&&!['computer_status','computer_stop','computer_end','computer_shutdown'].includes(name))throw Object.assign(Error('Controller ownership was lost. Control is stopped; do not send or replay input.'),{code:'service_ownership_lost',hint:'End/shutdown for cleanup, then restart the App sidecar. A latched Stop still needs local human re-arm. Do not repeat the interrupted action.'});

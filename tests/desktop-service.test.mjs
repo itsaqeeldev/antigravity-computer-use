@@ -151,6 +151,13 @@ test('direct observations return an actual local image without duplicate tree pa
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 
+test('updater health startup stays passive and rejects tasks until installation unlocks',async()=>{
+ const parent=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-update-gate-')),dir=path.join(parent,'data');let inputs=0;
+ const runtime={status:()=>({state:'idle'}),async ready(){inputs++;return {};},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{fs.writeFileSync(path.join(parent,'update-switching.json'),'fixture');assert.equal((await request(session,'status')).state,'idle');assert.equal((await request(session,'ready')).error.code,'update_in_progress');assert.equal(inputs,0);fs.unlinkSync(path.join(parent,'update-switching.json'));assert.equal((await request(session,'ready')).ok,true);assert.equal(inputs,1);}finally{await service.shutdown();fs.rmSync(parent,{recursive:true,force:true});}
+});
+
 test('direct IPC preserves Urdu and emoji when UTF-8 bytes arrive separately',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-utf8-'));const unicode='اردو — café 👩🏽‍💻';
  const runtime={async observe(args){return {metadata:{tree:args.query}};},async close(){}};

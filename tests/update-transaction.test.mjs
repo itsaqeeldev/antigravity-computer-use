@@ -30,9 +30,9 @@ test('signed full-bundle update preserves settings and Stop, then rollback resto
   const config=path.join(f.home,'.gemini/config/config.json');const before=JSON.parse(fs.readFileSync(config));before.unrelated={keep:true};fs.writeFileSync(config,JSON.stringify(before));
   fs.mkdirSync(path.join(f.target,'data'),{recursive:true});fs.writeFileSync(path.join(f.target,'data/emergency.stop'),'stopped');
   await update(f.target,'check',f);assert((await update(f.target,'status',f)).available);
-  const result=await update(f.target,'apply',f);assert(result.applied);const current=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(current.release,'bundle-manifest.json'))).build_id,f.fresh.build_id);
+  const result=await update(f.target,'apply',f);assert(result.applied);assert(!fs.existsSync(path.join(f.target,'update-switching.json')));const current=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(current.release,'bundle-manifest.json'))).build_id,f.fresh.build_id);
   assert(fs.existsSync(path.join(f.target,'data/emergency.stop')));assert(JSON.parse(fs.readFileSync(config)).unrelated.keep);assert.equal(updateSettings(f.target).mode,'automatic');
-  assert((await update(f.target,'rollback',f)).rolled_back);const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
+  assert((await update(f.target,'rollback',f)).rolled_back);assert(!fs.existsSync(path.join(f.target,'update-switching.json')));const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
  }finally{f.cleanup();}
 });
 test('active and paused tasks defer before shutdown or installation',async()=>{
@@ -53,4 +53,14 @@ test('offline checks retain the working installation and throttle scheduled retr
 });
 test('explicit install update preferences and reporting consent survive upgrades',()=>{
  const f=fixture();try{f.adapters.install({bundle:f.fresh.bundle,target:f.target,updateMode:'manual',updateChannel:'beta',reporting:true});f.adapters.install({bundle:f.fresh.bundle,target:f.target});assert.deepEqual(updateSettings(f.target),{mode:'manual',channel:'beta',reporting:true});}finally{f.cleanup();}
+});
+test('a persisted interrupted-switch journal restores the old installation on scheduled recovery',async()=>{
+ const f=fixture();try{
+  const previous=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));
+  const staged=f.adapters.install({bundle:f.fresh.bundle,target:f.target});
+  fs.writeFileSync(path.join(f.target,'update-switching.json'),JSON.stringify({previous_installation:previous,rollback:[path.join(staged.backup,'rollback.json')]}));
+  assert.equal((await update(f.target,'status',f)).interrupted_switch,true);
+  const recovered=await update(f.target,'scheduled',f);assert(recovered.recovered);assert(!fs.existsSync(path.join(f.target,'update-switching.json')));
+  const restored=JSON.parse(fs.readFileSync(path.join(f.target,'installation.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(restored.release,'bundle-manifest.json'))).build_id,f.old.build_id);
+ }finally{f.cleanup();}
 });

@@ -14,7 +14,7 @@ for(const [name,hash]of Object.entries(entries)){
  files[name]={size:bytes.length,sha256:hash,url:`https://github.com/shayann07/antigravity-computer-use/releases/download/v${record.version}/${asset}`};
 }
 const manifest=Buffer.from(JSON.stringify({schema:1,version:record.version,build_id:record.build_id,sequence:Number(sequence),platform:record.platform,arch:record.arch,min_os:minOS,expires:new Date(Date.now()+30*86400000).toISOString(),files}));
-const key=fs.readFileSync(keyFile);const publicKey=createPublicKey(key).export({type:'spki',format:'pem'});
+const key=fs.readFileSync(keyFile==='-'?0:keyFile);const publicKey=createPublicKey(key).export({type:'spki',format:'pem'});
 const pinned=fs.readFileSync(new URL('../release-public-key.pem',import.meta.url),'utf8');if(publicKey!==pinned)throw Error('Signing key does not match pinned public key.');
 fs.writeFileSync(path.join(destination,`update-${record.platform}-${record.arch}.json`),JSON.stringify({manifest:manifest.toString('base64'),signature:sign(null,manifest,key).toString('base64')}));
 console.log(JSON.stringify({prepared:true,assets:Object.keys(files).length+1,output:destination}));

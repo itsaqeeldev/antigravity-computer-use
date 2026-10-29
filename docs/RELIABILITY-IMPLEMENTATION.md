@@ -7,11 +7,11 @@ in `.localdata/`. No release completion is claimed here.
 
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
-| Human launcher reveals controls, passive startup hidden | Implemented; qualification pending | Launcher uses `ready`; runtime requests native `show_controls` without re-arm. Need affected-PC reproduction and actual native lifecycle check. |
+| Human launcher reveals controls, passive startup hidden | Local native lifecycle passed; affected-PC trial pending | Launcher uses `ready`; runtime requests native `show_controls` without re-arm. Native Windows visibility test passed hidden idle/latched startup, explicit controls, End, Stop dismissal, restart and latch preservation. |
 | Guardian concurrency, timeout, early exit and bounded recovery | Implemented; focused tests passed | New process-fixture tests cover shared readiness and exit-before-ready; broader request/crash tests still being added. |
 | Simple model workflow | Implemented instructions; real trials pending | One entrypoint and structured next action. Actual Flash/Sonnet end-to-end measurements remain unrun. |
 | Shared signed update staging | Implemented; release setup pending | Ed25519 verifier, architecture/OS/channel/sequence checks, streamed bounded downloads, complete inventory verification. No production signing key or signed release is configured. |
-| Idle update, settings, Stop, rollback and pins | Partial | Transaction tests drive the real installer through upgrade and rollback, including failed new-service health, settings/Stop preservation and task deferral. Production uses a native updater ownership lease. Power-loss recovery and real installed updates still need qualification. |
+| Idle update, settings, Stop, rollback and pins | Implemented; native qualification pending | Transaction tests drive the real installer through upgrade/rollback, failed health, settings/Stop preservation, task deferral and persisted interrupted-switch recovery. Production uses native updater and controller leases. Real interrupted-process/power-loss and installed updates still need qualification. |
 | Automatic scheduling | Implemented; native qualification pending | Both passive and foreground Sidecar entrypoints schedule bounded workers; daily check policy, explicit manual/notify modes. No OS scheduled task. |
 | Local failure diagnostics and consented GitHub reports | Implemented; mocked integration passed | Allowlisted local incidents, deduplication, daily consented submission, missing-auth handling and backoff tests passed. No actual public test issue was created. |
 | Shared Windows/Mac implementation | Candidate exists | Mac PR #1 previously passed both architecture CI matrices. These changed sources need new CI; interactive Mac hardware checks remain unrun. |
@@ -52,11 +52,26 @@ Mac-only checks). The newer focused updater/recovery run passed 14 tests. Native
 Windows compilation passed. These results do not qualify the affected PC, a
 fresh production installation, real Flash/Sonnet tasks or Mac desktop input.
 
+The later full regression run passed **174 tests, zero failures, seven skips**.
+`tests/guardian-visibility.mjs` passed on the actual Windows helper, with no target
+app clicks or typing. It verified idle/stopped hidden startup, explicit controls,
+End cleanup, capture non-resurrection, Stop auto-dismissal and latch preservation
+across restart. Physical Esc/re-arm and affected-PC reproduction were not tested.
+No helper process remained after cleanup. Private result:
+`.localdata/tests/guardian-visibility/run-RztTZO/result.json`.
+
 Known remaining implementation/release work: establish reviewed release-key
-custody and pinned public key; signed published assets and bootstrap pin; hard
-crash/power-loss recovery for multi-scope switching; native updater acceptance;
-broader reporting/rate-limit tests and actual model trials. Do not replace the
+custody and pinned public key; signed published assets and bootstrap pin; real
+hard-crash/power-loss qualification for multi-scope switching; native updater
+acceptance; broader reporting/concurrency tests and actual model trials. Do not replace the
 published beta or advertise updater readiness based on current fixtures alone.
+
+Interrupted updates retain `update-switching.json` and rollback journal paths.
+The service blocks new control while this marker exists. A scheduled worker
+replays the retained rollback journals and checks passive startup before clearing
+it. Manual mode still permits interrupted-transaction recovery; it disables new
+update checks/installations. Download/check locks do not block an active task.
+Every install journal is persisted before the first deployment switch.
 
 ## Acceptance and delivery gates
 
@@ -71,3 +86,18 @@ published beta or advertise updater readiness based on current fixtures alone.
 Agent parity is not guaranteed by prose. Runtime checks enforce limits and log
 failures; real model trials establish operational evidence. The overall goal
 remains active until all required acceptance and delivery work is verified.
+
+## Maintainer key tools
+
+`scripts/setup-release-signing.ps1` creates a public Ed25519 trust root and
+stores the private key only as a current-user DPAPI envelope under ignored
+`.localdata/release-signing/`. `-ConfigureGitHub` explicitly adds the private key
+to the repository Actions secret `AGCU_RELEASE_SIGNING_KEY`. It refuses to
+overwrite an existing key. Rotation needs a separate compatibility change.
+Do not upload the protected key as an artifact; arrange maintainer custody and
+backup before publishing the trust root. The envelope is tied to that user.
+
+`scripts/sign-update-windows.ps1` decrypts into process memory and pipes the key
+to `sign-update.mjs`; no plaintext private-key file is needed. Generic signing
+also accepts `-` for standard input. These tools are not invoked by desktop tasks
+or normal installations. They have not configured a production key.

@@ -18,6 +18,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
  const save=v=>{fs.writeFileSync(stateFile+'.tmp',JSON.stringify(v),{mode:0o600});fs.renameSync(stateFile+'.tmp',stateFile);};
  if(command==='scheduled'){
   const now=Date.now(),last=read();
+  if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await update(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
   if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=86400000)){
    const result=diagnostics(path.join(target,'data'),{submit:true,target});save({...read(),reporting_at:now,reporting_status:result.next_action||'complete'});
   }
@@ -29,8 +30,8 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   if(settings.mode==='automatic'&&read().available){try{return await update(target,'apply',{fetcher,adapters});}catch(error){save({...read(),last_error:/^[a-z_]+$/.test(error.message)?error.message:'update_apply_failed'});return {deferred:true,next_action:'inspect_update_status'};}}
   return {checked:true};
  }
- if(command==='status'){let worker;try{worker=JSON.parse(fs.readFileSync(path.join(target,'update-worker-result.json')));}catch{}return {settings,...read(),worker};}
- if(!['check','apply','rollback'].includes(command))throw Error('Use update status|check|apply|rollback');
+ if(command==='status'){let worker;try{worker=JSON.parse(fs.readFileSync(path.join(target,'update-worker-result.json')));}catch{}return {settings,...read(),worker,interrupted_switch:fs.existsSync(path.join(target,'update-switching.json'))};}
+ if(!['check','apply','rollback','recover'].includes(command))throw Error('Use update status|check|apply|rollback');
  let ownership;
  if(!adapters.storage){
   ownership=await acquireServiceLease(target);
@@ -41,6 +42,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   }
  }
  let unlock;try{unlock=acquireUpdateLock(target);}catch(error){await ownership?.release();throw error;}
+ const switchingFile=path.join(target,'update-switching.json');let switching=false,safeToUnlock=true;
  try{
   const state=read();
   const cli=adapters.cli||((record,args)=>{const p=spawnSync(path.join(record.release,nativePlatform().node),[record.launcher,...args],{encoding:'utf8',timeout:20000,windowsHide:true});if(p.status!==0)throw Error('update_controller_check_failed');return JSON.parse(p.stdout);});
@@ -67,9 +69,27 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    if(!prepared.prepared)return {deferred:true,next_action:'wait_for_task_end'};
   }
   const runRollback=adapters.rollback||(file=>{const p=spawnSync(path.join(installed.release,nativePlatform().node),[path.join(installed.release,'scripts/rollback.mjs'),file],{encoding:'utf8',timeout:30000,windowsHide:true});if(p.status!==0)throw Error('update_rollback_failed');});
+  if(command==='recover'){
+   if(!fs.existsSync(switchingFile))return {recovered:false};
+   const interrupted=JSON.parse(fs.readFileSync(switchingFile));
+   if(!Array.isArray(interrupted.rollback)||!interrupted.previous_installation)throw Error('update_recovery_journal_invalid');
+   for(const file of interrupted.rollback){if(path.dirname(path.dirname(path.resolve(file)))!==path.join(target,'backups')||path.basename(file)!=='rollback.json')throw Error('update_recovery_journal_invalid');}
+   switching=true;safeToUnlock=false;
+   if(current.state!=='not_running')cli(installed,['shutdown']);
+   for(const file of [...interrupted.rollback].reverse())runRollback(file);
+   const prior=interrupted.previous_installation,health=cli(prior,['start']);
+   if(!['idle','stopped'].includes(health.state))throw Error('update_recovery_health_failed');
+   save({...state,available:false,last_error:'interrupted_update_rolled_back'});safeToUnlock=true;return {recovered:true,rolled_back:true};
+  }
+  let journal;
+  const markSwitch=()=>{if(fs.existsSync(switchingFile))throw Error('update_interrupted_requires_recovery');journal={pid:process.pid,previous_installation:installed,rollback:[]};fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600,flag:'wx'});switching=true;};
+  const addJournal=file=>{journal.rollback.push(file);fs.writeFileSync(switchingFile+'.tmp',JSON.stringify(journal),{mode:0o600});fs.renameSync(switchingFile+'.tmp',switchingFile);};
   if(command==='rollback'){
-   if(!state.rollback?.length)throw Error('update_no_rollback');if(current.state!=='not_running')cli(installed,['shutdown']);for(const file of [...state.rollback].reverse())runRollback(file);
-   const restored=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));cli(restored,['start']);save({...state,available:false,rollback:[]});return {rolled_back:true};
+   if(!state.rollback?.length)throw Error('update_no_rollback');markSwitch();
+   const firstRollback=JSON.parse(fs.readFileSync(state.rollback[0]));const priorRecord=firstRollback.records.find(r=>r.kind==='installation'&&r.existed);
+   if(!priorRecord)throw Error('update_rollback_journal_invalid');journal.previous_installation=JSON.parse(fs.readFileSync(priorRecord.saved));journal.rollback=[...state.rollback];fs.writeFileSync(switchingFile,JSON.stringify(journal),{mode:0o600});
+   if(current.state!=='not_running')cli(installed,['shutdown']);safeToUnlock=false;for(const file of [...state.rollback].reverse())runRollback(file);
+   const restored=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));cli(restored,['start']);save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
   if(!state.staged||!state.envelope)throw Error('update_not_staged');
   const m=verifyRelease(Buffer.from(state.envelope.manifest,'base64'),state.envelope.signature,fs.readFileSync(adapters.keyFile||path.join(root,'release-public-key.pem')),{channel:settings.channel});
@@ -78,22 +98,31 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   if(m.sequence<=(state.sequence||0)||!newerVersion(m.version,bundle.version))throw Error('update_downgrade_refused');
   const stagedBundle=JSON.parse(fs.readFileSync(path.join(state.staged,'bundle-manifest.json')));
   if(stagedBundle.build_id!==m.build_id||stagedBundle.version!==m.version||stagedBundle.platform!==m.platform||stagedBundle.arch!==m.arch)throw Error('update_bundle_identity_mismatch');
+  const registry=JSON.parse(fs.readFileSync(path.join(target,'deployments.json')));
+  if(!Object.values(registry).some(scope=>!scope.update_pin))return {deferred:true,next_action:'all_deployments_pinned'};
+  markSwitch();
   // Installer refuses live controllers. Shutdown independently confirms native cleanup.
   if(current.state!=='not_running')cli(installed,['shutdown']);
-  const registry=JSON.parse(fs.readFileSync(path.join(target,'deployments.json')));const records=[];let next;
+  // Hold the same native lease used by controllers while swapping files. An
+  // old Sidecar cannot restart into a half-switched deployment.
+  let controllerLease;if(!adapters.storage)controllerLease=await acquireServiceLease(path.join(target,'data'));
+  const records=[];let next;
   try{
    for(const scope of Object.values(registry)){
     if(scope.integration!=='direct')throw Error('update_legacy_scope_requires_manual_upgrade');
     if(scope.update_pin)continue;
-    next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,sidecar:scope.workspace?undefined:scope.sidecar,stagedUpdate:true});records.push(path.join(next.backup,'rollback.json'));
+    safeToUnlock=false;next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,sidecar:scope.workspace?undefined:scope.sidecar,stagedUpdate:true,journalCreated:addJournal});records.push(path.join(next.backup,'rollback.json'));
    }
-   if(!next)throw Error('update_no_deployment');const health=cli(next,['start']);if(health.build_id!==m.build_id||!['idle','stopped'].includes(health.state))throw Error('update_health_failed');
-   save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});return {applied:true,version:m.version};
+   if(!next)throw Error('update_no_deployment');await controllerLease?.release();controllerLease=null;
+   const health=cli(next,['start']);if(health.build_id!==m.build_id||!['idle','stopped'].includes(health.state))throw Error('update_health_failed');
+   save({sequence:m.sequence,attempt_at:Date.now(),checked_at:Date.now(),available:false,rollback:records,applied_version:m.version});safeToUnlock=true;return {applied:true,version:m.version};
   }catch(error){
+   if(error.code==='installation_recovery_failed')throw Error('update_recovery_requires_operator');
    if(next)try{cli(next,['shutdown']);}catch{throw Error('update_recovery_requires_operator');}
-   for(const file of records.reverse())runRollback(file);cli(installed,['start']);save({...state,available:false,last_error:'update_rolled_back'});throw error;
+   for(const file of records.reverse())runRollback(file);await controllerLease?.release();controllerLease=null;cli(installed,['start']);save({...state,available:false,last_error:'update_rolled_back'});safeToUnlock=true;throw error;
   }
- }finally{unlock();await ownership?.release();}
+  finally{await controllerLease?.release();}
+ }finally{if(switching&&safeToUnlock)fs.unlinkSync(switchingFile);unlock();await ownership?.release();}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const [target,command,parent]=process.argv.slice(2);

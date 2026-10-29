@@ -14,7 +14,7 @@ export function mergeConfig(file,entry){
 }
 // Inert installer unit fixtures inject this filesystem boundary, like the
 // runtime's mock driver. No CLI/environment/model argument can disable it.
-export function install({bundle=here,target,home=os.homedir(),workspace=null,legacyProfiles=false,integration='direct',permissionMode,sidecar,stagedUpdate=false,updateMode,updateChannel,updatePin,reporting,prepareStorage=(folder,helper,purpose='install')=>storageOperation(purpose,folder,{helper})}={}){
+export function install({bundle=here,target,home=os.homedir(),workspace=null,legacyProfiles=false,integration='direct',permissionMode,sidecar,stagedUpdate=false,updateMode,updateChannel,updatePin,reporting,journalCreated,prepareStorage=(folder,helper,purpose='install')=>storageOperation(purpose,folder,{helper})}={}){
  if(!['direct','mcp'].includes(integration)||permissionMode!=null&&!['standalone','host-managed'].includes(permissionMode))throw new Error('Invalid integration/permission mode');
  bundle=path.resolve(bundle);
  const stamp=new Date().toISOString().replace(/[:.]/g,'-')+'-'+randomUUID().slice(0,8);
@@ -136,6 +136,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const manifest={release,home,launcher,launcher_node:launcherNode,controller_start:controllerStart,sidecar:sidecarFiles,workspace:resolvedWorkspace,integration,permission_mode:permissionMode,configs,skills:skillDirs,records};
  const rollbackFile=path.join(backup,'rollback.json');
  fs.writeFileSync(rollbackFile,JSON.stringify(manifest,null,2));
+ journalCreated?.(rollbackFile);
  let switching=false;
  try{
  fs.mkdirSync(path.dirname(release),{recursive:true});fs.cpSync(bundle,release,{recursive:true});
