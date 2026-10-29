@@ -905,6 +905,13 @@ Task startup now creates and flushes its own empty native input ledger before
 dispatch, so a pointer-only task can leave verifiable empty evidence. An
 existing nonempty, malformed or linked ledger is refused and never overwritten.
 The tests use inert ledger contents; real pointer-only crash recovery is pending.
+On 30 October, a fresh Windows candidate built from `b1a0d7b` had build ID
+`727d06b5186a68518a4e5d4b6640b579715662e6f8827949ea0d3246bfcc2759` and all
+109 payload hashes matched. The isolated fresh-install and signed-update check
+returned `qualified:false`, `skipped:true`, `insecure_storage_ancestor`; no
+parent permissions were changed and no desktop input was sent. That is not an
+installation, updater or real Antigravity acceptance pass. The candidate and
+result are retained under `.localdata/tests/` and do not replace the live build.
 An authenticated direct IPC regression exercises recovered `ready`, a refused
 click, deferred update reservation and refused End, and confirms the inert
 driver saw no input. This is controller integration evidence, not a real
