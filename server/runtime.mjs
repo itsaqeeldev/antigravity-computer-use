@@ -13,7 +13,7 @@ import {renderSnapshot,subtreeNodes} from './render.mjs';
 import {targetImageSize} from './upstream-utils.mjs';
 import {VERSION,BUILD_ID} from './version.mjs';
 import {storageOperation} from './storage.mjs';
-import {contract,nativePlatform,launchTarget} from './platform.mjs';
+import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
@@ -21,7 +21,7 @@ export function savedTakeoverMode(file,fallback){
   try {const mode=JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')).takeover_mode;if(['manual','smart'].includes(mode))return mode;}catch{}
   return fallback;
 }
-export function appKey(w){return `${w.pid}:${w.started}:${String(w.path).toLowerCase()}`;}
+export function appKey(w,platform=process.platform){return `${w.pid}:${w.started}:${executableKey(w.path,platform)}`;}
 export function requireObservation(map,id,hwnd,now=Date.now()){
   const frame=map.get(id);map.delete(id);
   if(!frame||frame.hwnd!==Number(hwnd)||now-frame.at>contract.frame_ms)fail('stale_observation','Observe again: missing, consumed or stale observation.');
@@ -154,7 +154,7 @@ export class Runtime {
     }
     this.check();
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
-    for(const [id,frame] of this.frames)if(Date.now()-frame.at>90000||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
+    for(const [id,frame] of this.frames)if(Date.now()-frame.at>contract.frame_ms||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
     while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
     this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes});
     return {metadata:response,image};
@@ -261,7 +261,7 @@ export class Runtime {
       do {
         this.check();if(generation!==this.generation)fail('control_changed','Control changed after launch.');
         const windows=(await this.driver.call('list_apps',{})).result.windows;
-        const matches=windows.filter(w=>w.pid===result.pid&&path.resolve(w.path||'').toLowerCase()===executable.toLowerCase()&&!w.minimized&&!w.other_desktop&&w.rect?.[2]>0&&w.rect?.[3]>0);
+        const matches=windows.filter(w=>w.pid===result.pid&&executableKey(path.resolve(w.path||''))===executableKey(executable)&&!w.minimized&&!w.other_desktop&&w.rect?.[2]>0&&w.rect?.[3]>0);
         if(matches.length>1)return {...result,input_completed:true,observe_pending:true,observation_hint:'Several matching windows opened. Discover apps and select the intended window; do not relaunch.'};
         if(matches.length===1){
           const observed=await this.observe({hwnd:Number(matches[0].hwnd),reason:args.reason});

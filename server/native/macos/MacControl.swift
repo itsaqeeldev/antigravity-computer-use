@@ -53,7 +53,7 @@ func macIdentity(_ pid: pid_t) throws -> [String: Any] {
     let started = try macProcessStart(pid)
     let path = try macProcessPath(pid)
     return ["pid": Int(pid), "started": started, "path": path,
-            "key": "\(pid):\(started):\(path.lowercased())"]
+            "key": "\(pid):\(started):\(path)"]
 }
 
 func macFingerprint(_ op: String, _ args: [String: Any], _ label: String) throws -> String {

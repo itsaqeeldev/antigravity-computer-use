@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 export {contract};
+// Windows executable paths are case-insensitive; macOS volumes may be case-sensitive.
+export function executableKey(value,platform=process.platform){const name=String(value);return platform==='win32'?name.toLowerCase():name;}
 export function ipcEndpoint(directory,nonce,platform=process.platform){
   if(platform==='win32')return `\\\\.\\pipe\\agcu-${nonce}`;
   // Darwin AF_UNIX paths are limited to roughly 104 bytes. Per-user installs

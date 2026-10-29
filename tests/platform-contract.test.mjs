@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {nativePlatform,verifyNativeContract,contract,ipcEndpoint} from '../server/platform.mjs';
-import {Runtime,requireObservation} from '../server/runtime.mjs';
+import {Runtime,requireObservation,appKey} from '../server/runtime.mjs';
 import {call} from '../server/desktop-tools.mjs';
 
 test('both native adapters expose one shared lifecycle and tool core',()=>{
@@ -15,6 +15,12 @@ test('an old or partially guarded Mac helper is refused before control',()=>{
  for(const info of [{},{control_contract:1},{control_contract:1,native_fence:true}])
   assert.throws(()=>verifyNativeContract(info,'darwin'),e=>e.code==='native_contract_mismatch');
  assert.doesNotThrow(()=>verifyNativeContract({control_contract:1,native_fence:true,held_input_cleanup:true},'darwin'));
+});
+test('app grants do not conflate executables on case-sensitive Mac volumes',()=>{
+ const first={pid:123,started:'birth',path:'/Applications/Example.app/Contents/MacOS/Example'};
+ const second={...first,path:'/Applications/example.app/Contents/MacOS/example'};
+ assert.notEqual(appKey(first,'darwin'),appKey(second,'darwin'));
+ assert.equal(appKey(first,'win32'),appKey(second,'win32'));
 });
 test('Mac IPC stays loopback-only even with installation paths beyond the Unix socket limit',()=>{
  assert.deepEqual(ipcEndpoint('/very-long-private-home/'.repeat(20),'test','darwin'),{host:'127.0.0.1',port:0});
