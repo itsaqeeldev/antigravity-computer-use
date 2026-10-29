@@ -7,6 +7,14 @@ import {storageOperation} from '../server/storage.mjs';
 import {rollbackGuarded} from '../scripts/rollback.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('measure macOS native lease verification overhead',{skip:process.platform!=='darwin',timeout:30000},async t=>{
+ const dir=temporary();let lease;
+ try{
+  try{lease=await acquireServiceLease(dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  const samples=[];for(let i=0;i<20;i++){const started=performance.now();lease.assertHeld();samples.push(performance.now()-started);}
+  samples.sort((a,b)=>a-b);t.diagnostic(JSON.stringify({scope:'lease_assert_only_not_agent_or_workflow',samples:samples.length,median_ms:(samples[9]+samples[10])/2,p95_ms:samples[18]}));
+ }finally{if(lease)await lease.release();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('lost rollback lease prevents subsequent restoration and retains the journal',async()=>{
  const folder=temporary(),current=path.join(folder,'current'),data=path.join(current,'data'),journal=path.join(folder,'rollback.json');fs.mkdirSync(data,{recursive:true});
  const first=path.join(folder,'first'),second=path.join(folder,'second'),old1=path.join(folder,'old1'),old2=path.join(folder,'old2');

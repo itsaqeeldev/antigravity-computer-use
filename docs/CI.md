@@ -6,6 +6,9 @@ Windows and macOS source workflows run on push, pull request and manual dispatch
 without a signing key or other repository secret. They use a read-only token,
 do not persist checkout credentials, and pin third-party actions to commits.
 Fork owners may need to enable GitHub Actions on their fork.
+For each workflow, event type and branch, a newer run cancels older in-progress
+runs. Push and pull-request checks remain separate, and the signed-release
+preparation workflow is not automatically cancelled by this policy.
 
 | Workflow | What it runs | Important boundary |
 | --- | --- | --- |

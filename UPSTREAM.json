@@ -392,7 +392,7 @@
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "de04b3d3e530def349432cf7b8ff7e669ab1c588df230624f3ec83fc1a89b8e5"
+      "sha256": "f1fd57fd0889dc5ea80756190b71109dc582dfcd71f5714da203ac6b001e44ce"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "fbbd25f52509b387561ba18165f8dd091368c0365925ef56ef1366b22f46210a"
+      "sha256": "3df1c1730b1ee81e54f8c703e7170525e45fc36b6c3168613080219b62c2c4c3"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -660,7 +660,7 @@
     },
     {
       "path": ".github/workflows/windows.yml",
-      "sha256": "10e1070d3720ae62ab39ecb77ae1cb630482450fef5f90f3908ce004452bfb11"
+      "sha256": "33f2cfaecc628a48451214ec62821ecd9507d7a1784c1587b6efa4ee3589522b"
     },
     {
       "path": "release-public-key.pem",
@@ -744,7 +744,7 @@
     },
     {
       "path": "docs/CI.md",
-      "sha256": "d7bf196af64007d6a5c88e375048e87e7cea8c14b59320d8d335b0a8b5581141"
+      "sha256": "a99368e1522ce5d6fd20ef8ae715d6a1543cfe99ac3e9f4b98964bf40c7c3d63"
     }
   ]
 }
