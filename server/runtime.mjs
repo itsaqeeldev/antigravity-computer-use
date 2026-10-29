@@ -20,6 +20,7 @@ import {recoveryAdvice} from './recovery.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
+const persistenceFailure=reason=>['stop_persistence_failed','guard_persistence_failed'].includes(reason);
 export function savedTakeoverMode(file,fallback){
   try {const mode=JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')).takeover_mode;if(['manual','smart'].includes(mode))return mode;}catch{}
   return fallback;
@@ -98,6 +99,7 @@ export class Runtime {
   async prepare(){}
   async showControls(){const result=await this.guardian.request({op:'show_controls'});if(result.controls_visible===true)this.recoveryFailure=null;return result;}
   async ready(){
+    if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))return {...this.status(),ready:false,controls_visible:false,next_action:'inspect_stop_persistence_without_restart',replay_allowed:false,error:{code:this.lastControlReason,message:'Control is stopped because native control storage failed. Inspect private storage; do not restart or send input.'}};
     const unavailable=()=>({...this.status(),ready:false,controls_visible:false,guardian_running:!!this.guardian.proc&&!this.guardian.proc.killed,guardian_exit:this.guardian.lastExit??null,...recoveryAdvice({error:this.recoveryFailure}),error:this.recoveryFailure});
     if(this.recoveryFailure)return unavailable();
     try{
@@ -127,6 +129,7 @@ export class Runtime {
     return w;
   }
   async grant(hwnd,purpose='Operate this app for the requested desktop task'){
+    if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
     const w=await this.app(hwnd);const key=appKey(w);
@@ -252,6 +255,7 @@ export class Runtime {
   }
   async finish(){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();return {ended:true,state:this.state,restart_required:false};}
   async launch(args){
+    if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))fail(this.lastControlReason,'Control storage failed. Inspect private storage; do not restart or send input.');
     if(this.state==='stopped'){await this.showControls();this.check();}
     if(this.state==='paused')this.check();
     const {app,executable}=launchTarget(args.app);

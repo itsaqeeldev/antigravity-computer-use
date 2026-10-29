@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b87a38fd4bddde65802926c0f25db14e533ddc107c5cd2eb3271ce482173517c"
+      "sha256": "ed526442ec825658ab0b159f4d6bd29f6e54eb02d31a6eeaa0be7fb93a6d3006"
     },
     {
       "path": "server/mcp.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "190747c81d6856945233f5c7c1f0f5269fc0cbb09251424543c3861f2b13dde3"
+      "sha256": "0f6ddafeaaa64209b79a8b0d636137f8e731b6fbf780f9cea7900e10739de57a"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -624,7 +624,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "b1e9a3d3ef1dbe4543d6b2f1ac6403c692b85deef284775781afe62c4f451018"
+      "sha256": "2666fcbed2c1bd5635b19d547333bdcca4e792f84ee286f12fe1533c84858bfc"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -672,7 +672,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "70e68854b50cee1501b919f9a63563709ad83ff979188c19df5175be013ece28"
+      "sha256": "7677c31e86941e219ce10435687c4151229457441f5c78b78222e2c6c8154363"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

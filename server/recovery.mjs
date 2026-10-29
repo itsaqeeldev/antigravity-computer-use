@@ -6,7 +6,7 @@ export function recoveryAdvice(result){
  if(code==='window_minimized')return {next_action:'focus_target_then_observe',replay_allowed:false};
  if(code==='desktop_context_unavailable')return {next_action:'human_start_on_visible_desktop',replay_allowed:false};
  if(code==='version_mismatch')return {next_action:'resolve_version_mismatch',replay_allowed:false};
- if(code==='stop_persistence_failed')return {next_action:'inspect_stop_persistence_without_restart',replay_allowed:false};
+ if(['stop_persistence_failed','guard_persistence_failed'].includes(code))return {next_action:'inspect_stop_persistence_without_restart',replay_allowed:false};
  if(['permission_denied','approval_timeout','confirmation_required'].includes(code))return {next_action:'await_user_decision',replay_allowed:false};
  if(['control_stopped','control_inactive'].includes(code))return {next_action:'inspect_status_then_human_controls',replay_allowed:false};
  return {next_action:'inspect_diagnostics',replay_allowed:false};

@@ -29,6 +29,12 @@ test('a native Stop event reports a missing latch while keeping control stopped'
   assert.equal(r.state,'stopped');assert.equal(r.lastControlReason,'stop_persistence_failed');assert.equal(r.diagnosticError,'stop_persistence_failed');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('persistence failure does not invite re-arm or launch a guardian from ready',async()=>{
+ for(const reason of ['stop_persistence_failed','guard_persistence_failed']){const r=fixture();r.state='stopped';r.lastControlReason=reason;
+  const result=await r.ready();assert.equal(result.ready,false);assert.equal(result.next_action,'inspect_stop_persistence_without_restart');assert.equal(result.controls_visible,false);assert.equal(r.guardian.messages.length,0);
+  await assert.rejects(r.grant(1),e=>e.code===reason);await assert.rejects(r.launch({app:'anything.exe'}),e=>e.code===reason);assert.equal(r.guardian.messages.length,0);
+ }
+});
 test('normal finish returns idle without requiring host restart',async()=>{
  const r=fixture();r.state='active';r.token='old';r.grants.set('app',{});const result=await r.finish();assert.equal(r.state,'idle');assert.equal(r.token,'');assert.equal(r.grants.size,0);assert.equal(result.restart_required,false);assert.equal(r.guardian.messages[0].op,'end');assert.equal(r.status().control_reason,'completed');r.guardian.emit('state','idle');assert.equal(r.status().control_reason,'completed');
 });

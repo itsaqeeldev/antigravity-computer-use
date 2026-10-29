@@ -24,6 +24,10 @@ without a private path, and refuses orderly shutdown until it can persist the
 latch. A stopped event from the native guardian also checks that the latch exists
 and reports a failure if it does not. Focused tests cover missing storage and
 recovery; actual physical Esc under a failing disk remains unqualified.
+When the in-memory stopped reason is a latch or guard persistence failure,
+`ready`, grant and launch now report the storage problem without opening controls
+or suggesting ordinary re-arm. The explicit human controls command remains
+available to the operator; no model action clears Stop.
 On Windows, a failed native guardian state write now also forces stopped state
 and attempts cursor restoration, worker termination, held-input recovery and
 overlay removal independently before emitting `guard_persistence_failed`.
