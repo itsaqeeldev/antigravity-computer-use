@@ -311,3 +311,40 @@ limit rather than treating it as a power-loss qualification pass. Fault-injectio
 tests verify old-state retention and write ordering. Real power-loss and native
 interrupted-service acceptance remain pending, and no user desktop control was
 resumed for these tests.
+
+## Legacy project update migration
+
+The installed registry audit found a pre-updater project deployment on a release
+different from global, without an `update_pin` field. The updater now treats such
+divergent legacy project scopes as pinned. Explicit boolean choices take
+precedence, and new scopes retain the documented automatic-update default.
+Manually upgrading a legacy scope retains its inferred pin unless the operator
+uses `--unpin-version`. Tests verify global upgrade leaves the old project
+launcher and release unchanged, and explicit unpin remains possible.
+
+## Current acceptance audit
+
+The full objective remains incomplete. At the audited checkpoint:
+
+1. Recovery implementation and local visibility evidence exist; the affected
+   second PC and positive tests of the newest native helper remain pending.
+2. Flash produced a real file and ended control, but exact Unicode and speed
+   failed qualification. Sonnet was not submitted after physical Esc. Those
+   failures cannot be replaced by transport fixtures.
+3. Signed preparation/verification passed all architectures. Native Mac update
+   and rollback passed for exact signed bundles. Windows native updater
+   acceptance is still skipped under unsafe project ancestors.
+4. Installer/update preferences, migration, task deferral, pins, journal recovery
+   and process-termination checks have source evidence. Real native interruption,
+   power loss and production release transport remain pending.
+5. Runtime logging and consented submission have fixture coverage and issue #2
+   records the actual model failure. Automatic reporting on another user's
+   authenticated installation is not yet qualified.
+6. The Intel Mac prompt was supplied. No on-device report or repair PR was present
+   in the GitHub audit; interactive Mac permission/app/physical checks are unrun.
+7. Source/native CI is green at `d821262`; newer source changes need their own
+   checks. Skips remain explicitly unqualified.
+8. Public release and one-line bootstrap remain beta.2. The installed global
+   beta.3 build is `83487f3a...`, behind current source; its 102 payload files and
+   global skill verified. No release/pin update is authorized by a green fixture
+   alone. Physical desktop control remains stopped until the owner resumes it.

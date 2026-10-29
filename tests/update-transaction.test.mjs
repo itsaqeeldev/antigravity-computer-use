@@ -158,3 +158,13 @@ test('update status omits private staging paths, signing envelopes and untrusted
 test('notify-only status asks to review the update and drops unknown settings fields',async()=>{
  const f=fixture();try{fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false,private:'secret-setting'}));await update(f.target,'check',f);const result=await update(f.target,'status',f);assert.equal(result.next_action,'update_available');assert(!JSON.stringify(result).includes('secret-setting'));}finally{f.cleanup();}
 });
+test('legacy divergent project pointers stay pinned when the global installation updates',async()=>{
+ const f=fixture();try{
+  const workspace=path.join(f.directory,'legacy-project'),project=f.adapters.install({bundle:f.old.bundle,target:f.target,workspace});
+  const registryFile=path.join(f.target,'deployments.json'),registry=JSON.parse(fs.readFileSync(registryFile));const key=Object.keys(registry).find(k=>registry[k].workspace===workspace);delete registry[key].update_pin;fs.writeFileSync(registryFile,JSON.stringify(registry));
+  const launcher=fs.readFileSync(project.launcher,'utf8');await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);assert.equal(fs.readFileSync(project.launcher,'utf8'),launcher);
+  const updated=JSON.parse(fs.readFileSync(registryFile));assert.equal(updated[key].release,registry[key].release);
+  f.adapters.install({bundle:f.old.bundle,target:f.target,workspace});assert.equal(JSON.parse(fs.readFileSync(registryFile))[key].update_pin,true);
+  f.adapters.install({bundle:f.old.bundle,target:f.target,workspace,updatePin:false});assert.equal(JSON.parse(fs.readFileSync(registryFile))[key].update_pin,false);
+ }finally{f.cleanup();}
+});

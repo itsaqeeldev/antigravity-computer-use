@@ -6,6 +6,7 @@ import {nativePlatform} from '../server/platform.mjs';
 import {rollback} from './rollback.mjs';
 import {randomUUID} from 'node:crypto';
 import {writeAtomicJSON,writeAtomicText,flushPreparedTree,flushPreparedFile} from '../server/atomic-json.mjs';
+import {deploymentPinned} from '../server/update-core.mjs';
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function mergeConfig(file,entry){
  const current=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')):{};
@@ -174,7 +175,8 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
   writeAtomicJSON(path.join(file,'deployment.json'),{target,release,workspace:resolvedWorkspace,permission_mode:permissionMode});
  }
  if(updatePin!=null&&typeof updatePin!=='boolean')throw Error('Version pin must be boolean.');
- registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace,sidecar,update_pin:updatePin??previous?.update_pin??registry[scope||'global']?.update_pin??false};
+ const priorScope=registry[scope||'global']||previous;
+ registry[scope||'global']={release,integration,permission_mode:permissionMode,workspace:resolvedWorkspace,sidecar,update_pin:updatePin??(priorScope?deploymentPinned(priorScope,registry.global):false)};
  writeAtomicJSON(registryFile,registry);
  writeAtomicJSON(updateFile,updateSettings);
  writeAtomicJSON(path.join(target,'installation.json'),{...manifest,backup});

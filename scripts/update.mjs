@@ -1,6 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {spawnSync} from 'node:child_process';
 import {install} from './install.mjs';import {storageOperation} from '../server/storage.mjs';
-import {verifyRelease,verifyStaged,downloadFile,updateSettings,acquireUpdateLock,newerVersion,readBoundedJSON} from '../server/update-core.mjs';
+import {verifyRelease,verifyStaged,downloadFile,updateSettings,acquireUpdateLock,newerVersion,readBoundedJSON,deploymentPinned} from '../server/update-core.mjs';
 import {nativePlatform} from '../server/platform.mjs';
 import {randomUUID} from 'node:crypto';
 import {diagnostics} from './diagnostics.mjs';
@@ -130,7 +130,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   const stagedBundle=JSON.parse(fs.readFileSync(path.join(state.staged,'bundle-manifest.json')));
   if(stagedBundle.build_id!==m.build_id||stagedBundle.version!==m.version||stagedBundle.platform!==m.platform||stagedBundle.arch!==m.arch)throw Error('update_bundle_identity_mismatch');
   const registry=JSON.parse(fs.readFileSync(path.join(target,'deployments.json')));
-  if(!Object.values(registry).some(scope=>!scope.update_pin))return {deferred:true,next_action:'all_deployments_pinned'};
+  if(!Object.values(registry).some(scope=>!deploymentPinned(scope,registry.global)))return {deferred:true,next_action:'all_deployments_pinned'};
   if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};
   markSwitch();
   // Installer refuses live controllers. Shutdown independently confirms native cleanup.
@@ -142,7 +142,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   try{
    for(const scope of Object.values(registry)){
     if(scope.integration!=='direct')throw Error('update_legacy_scope_requires_manual_upgrade');
-    if(scope.update_pin)continue;
+    if(deploymentPinned(scope,registry.global))continue;
     safeToUnlock=false;next=installer({bundle:state.staged,target,home:installed.home,workspace:scope.workspace,permissionMode:scope.permission_mode,stagedUpdate:true,journalCreated:addJournal});records.push(path.join(next.backup,'rollback.json'));
    }
    if(!next)throw Error('update_no_deployment');await controllerLease?.release();controllerLease=null;

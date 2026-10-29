@@ -22,6 +22,12 @@ export function updateSettings(target,version='0.0.0'){
  const file=path.join(target,'update-settings.json');if(!fs.existsSync(file))return {mode:'automatic',channel:version.includes('-')?'beta':'stable',reporting:false};
  const v=JSON.parse(fs.readFileSync(file));if(!['automatic','notify','manual'].includes(v.mode)||!['stable','beta'].includes(v.channel)||typeof v.reporting!=='boolean')throw Error('invalid_update_settings');return {mode:v.mode,channel:v.channel,reporting:v.reporting};
 }
+export function deploymentPinned(scope,global){
+ if(typeof scope?.update_pin==='boolean')return scope.update_pin;
+ // Older project pointers were immutable pins before an update preference
+ // existed. Do not silently enrol a divergent legacy scope in global updates.
+ return !!scope?.workspace&&!!global&&scope.release!==global.release;
+}
 export function acquireUpdateLock(target){const file=path.join(target,'update.lock');const fd=fs.openSync(file,'wx',0o600);fs.writeFileSync(fd,JSON.stringify({pid:process.pid,at:new Date().toISOString()}));return ()=>{fs.closeSync(fd);fs.unlinkSync(file);};}
 export function verifyStaged(directory,m){
  const actual=[];const walk=folder=>{for(const entry of fs.readdirSync(folder,{withFileTypes:true})){const file=path.join(folder,entry.name);if(entry.isSymbolicLink())throw Error('release_payload_link');if(entry.isDirectory())walk(file);else if(entry.isFile())actual.push(path.relative(directory,file).replaceAll('\\','/'));else throw Error('release_payload_invalid');}};
