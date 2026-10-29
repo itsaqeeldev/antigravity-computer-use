@@ -10,6 +10,7 @@ import {fileURLToPath} from 'node:url';
 import {storageOperation} from '../server/storage.mjs';
 import {Incidents} from '../server/incidents.mjs';
 import {Runtime,appKey} from '../server/runtime.mjs';
+import {EventEmitter} from 'node:events';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -80,6 +81,21 @@ test('update reservation refuses an idle task and unavailable task state',async(
   assert.equal((await request(session,'prepare_update')).prepared,false);
   taskOpen=undefined;assert.equal((await request(session,'prepare_update')).prepared,false);
   taskOpen=false;assert.equal((await request(session,'prepare_update')).prepared,true);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('direct IPC refuses replay after task recovery until End confirms cleanup',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-recovered-ipc-')),taskFile=path.join(dir,'task-state.json');
+ try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){fs.rmSync(dir,{recursive:true,force:true});t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+ fs.writeFileSync(taskFile,JSON.stringify({schema:1,open:true}));let nativeCalls=0,cleanups=0;
+ const guardian=new EventEmitter();guardian.send=()=>{};guardian.request=async()=>({state:'idle',controls_visible:true});guardian.close=async()=>{};
+ const runtime=new Runtime({taskFile,guardian,driver:{async abort(){cleanups++;},async call(){nativeCalls++;throw Error('no native call expected');}},sessions:{register(){},close(){}}});
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ const send=(command,args={})=>request(session,command,args,5000,'standalone');
+ try{
+  const ready=await send('ready');assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_recovered_task');assert.equal(ready.recovered_task,true);
+  const result=await send('click',{hwnd:1,observation_id:'old',index:1,reason:'Do not replay'});assert.equal(result.error.code,'recovered_task_requires_end');assert.equal(result.replay_allowed,false);assert.equal(nativeCalls,0);
+  assert.equal((await send('prepare_update')).prepared,false);
+  const ended=await send('end');assert.equal(ended.ended,true);assert.equal(cleanups,1);assert.equal((await send('status')).recovered_task,false);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 

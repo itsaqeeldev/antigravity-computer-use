@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "f5d8229fc67b8ed32ed9aa3f1e0aa51fb755bdcd30c4bf4b614203a1ec04ba5b"
+      "sha256": "ae113eb564afd0b0cd9633991c16cd56ad517f5f45067511a47d683c093124bf"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "704c57f2269daa5cbddfcf731e0af84cd0bc8e7cb9a0706854c14b426df9c305"
+      "sha256": "e5122442143b296bb7d8348512679c4c9a4a1f943d0c19d7f6bd501e8ed918e1"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -620,7 +620,7 @@
     },
     {
       "path": "tests/incident-concurrency.test.mjs",
-      "sha256": "fc64dfdda18ca4cc1e47554f3c930caa5b2b8653ed478037513d30aafb45930c"
+      "sha256": "2b132894ebf1e1b2a753a18f97e5fad52c9f85c680487f31c822762ec9a9b02e"
     },
     {
       "path": "tests/lifecycle.test.mjs",

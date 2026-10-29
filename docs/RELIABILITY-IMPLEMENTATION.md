@@ -864,6 +864,9 @@ input, clipboard actions and new launches are refused until End confirms
 cleanup. End must only be sent by the owning task; because host-authenticated
 ownership is still unavailable, this is a recovery aid rather than a solution
 to issue #7. Stop and re-arm behavior remain unchanged.
+An authenticated direct IPC regression exercises recovered `ready`, a refused
+click, deferred update reservation and End, and confirms the inert driver saw no
+input. This is controller integration evidence, not a real desktop replay test.
 
 The installer also checks task state in the destination and previous deployment
 roots before switching files, and checks again after staging. An open marker or
@@ -890,9 +893,18 @@ An additional local Windows test now kills the actual lease helper between two
 rollback records: the next record remains untouched and the journal remains.
 On macOS a terminated helper can remain a zombie while synchronous file work
 blocks Node's event loop; lease checks now reject zombie or uninspectable helper
-state. The equivalent real Mac test and any latency cost await Mac CI/hardware
-measurement. A completed first filesystem operation is not rolled back merely
+state. Physical Mac qualification remains pending. A completed first
+filesystem operation is not rolled back merely
 because the helper died afterwards.
+On the hosted Apple Silicon job of run `40967555678` (source `8abb123`), the
+real helper-death and competing-lease regressions passed. Twenty isolated lease
+checks had a 6.30 ms median and 7.57 ms p95 on that runner. This is not a
+measurement of agent or desktop task latency. The Intel job passed the same two
+regressions with a 9.09 ms median and 12.56 ms p95 over 20 checks. Both jobs
+nevertheless failed an
+incident test because the new guard raised synchronously; the test now accepts
+both synchronous ownership loss and an asynchronous uncertain-publication error.
+The corrected suite and interactive Mac qualification remain pending.
 
 Local full-suite rerun on 30 October failed `update_insufficient_space` with
 drive D near 156 MiB free while tests ran concurrently. The focused rollback,

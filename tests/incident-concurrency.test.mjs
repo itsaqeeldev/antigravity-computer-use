@@ -30,7 +30,7 @@ test('a killed lease helper cannot publish a stale incident journal',async t=>{
   try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage refused: '+error.code);return;}throw error;}
   const lock=path.join(dir,'incident-writer-lease');fs.mkdirSync(lock);oldLease=await acquireServiceLease(lock);
   let killed=false;process.kill=(pid,signal)=>{if(pid===oldLease.pid&&signal===0&&!killed){killed=true;originalKill(pid);return true;}return originalKill(pid,signal);};
-  try{await assert.rejects(oldLease.publishIncidents(Buffer.from('[{"old":true}]')),e=>['incident_publish_outcome_unknown','service_ownership_lost'].includes(e.code));}finally{process.kill=originalKill;}
+  try{await assert.rejects(async()=>oldLease.publishIncidents(Buffer.from('[{"old":true}]')),e=>['incident_publish_outcome_unknown','service_ownership_lost'].includes(e.code));}finally{process.kill=originalKill;}
   await oldLease.release();oldLease=null;newLease=await acquireServiceLease(lock);await newLease.publishIncidents(Buffer.from('[{"new":true}]'));await newLease.release();newLease=null;
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir,'incidents.json'))),[{new:true}]);
  }finally{process.kill=originalKill;if(oldLease)await oldLease.release();if(newLease)await newLease.release();fs.rmSync(dir,{recursive:true,force:true});}
