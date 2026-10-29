@@ -874,6 +874,13 @@ failed before returning a successful installation record. Injected switch-failur
 tests exercise both paths. Issue #8 remains open pending helper-loss tests and
 real macOS/Windows recovery qualification; a lease can be lost during an
 individual filesystem operation and must not be assumed continuously held.
+An additional local Windows test now kills the actual lease helper between two
+rollback records: the next record remains untouched and the journal remains.
+On macOS a terminated helper can remain a zombie while synchronous file work
+blocks Node's event loop; lease checks now reject zombie or uninspectable helper
+state. The equivalent real Mac test and any latency cost await Mac CI/hardware
+measurement. A completed first filesystem operation is not rolled back merely
+because the helper died afterwards.
 
 Local full-suite rerun on 30 October failed `update_insufficient_space` with
 drive D near 156 MiB free while tests ran concurrently. The focused rollback,

@@ -2,11 +2,40 @@ import {testDirectory} from './paths.mjs';
 // Real Windows kernel ownership, using inert runtimes: no screenshots or input.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {once} from 'node:events';
 import {acquireServiceLease} from '../server/service-lease.mjs';import {serveDesktop} from '../server/desktop-service.mjs';import {request} from '../scripts/desktop.mjs';
-import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import {EventEmitter} from 'node:events';import {PassThrough} from 'node:stream';
+import {spawn,spawnSync} from 'node:child_process';import {createInterface} from 'node:readline';import {EventEmitter} from 'node:events';import {PassThrough} from 'node:stream';
 import {storageOperation} from '../server/storage.mjs';
 import {rollbackGuarded} from '../scripts/rollback.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('lost rollback lease prevents subsequent restoration and retains the journal',async()=>{
+ const folder=temporary(),current=path.join(folder,'current'),data=path.join(current,'data'),journal=path.join(folder,'rollback.json');fs.mkdirSync(data,{recursive:true});
+ const first=path.join(folder,'first'),second=path.join(folder,'second'),old1=path.join(folder,'old1'),old2=path.join(folder,'old2');
+ for(const file of [first,second])fs.writeFileSync(file,'new');for(const file of [old1,old2])fs.writeFileSync(file,'old');
+ fs.writeFileSync(journal,JSON.stringify({release:path.join(current,'releases','candidate'),records:[{kind:'launcher',existed:true,file:first,saved:old1},{kind:'launcher',existed:true,file:second,saved:old2}]}));
+ let lost=false;const lease={assertHeld(){if(lost)throw Object.assign(Error('ownership lost'),{code:'service_ownership_lost'});}};const rename=fs.renameSync;
+ try{
+  fs.renameSync=(from,to)=>{const result=rename(from,to);if(to===first)lost=true;return result;};
+  await assert.rejects(rollbackGuarded(journal,{held:new Map([[data,lease]])}),e=>e.code==='service_ownership_lost');
+  assert.equal(fs.readFileSync(first,'utf8'),'old');assert.equal(fs.readFileSync(second,'utf8'),'new');assert(fs.existsSync(journal));
+ }finally{fs.renameSync=rename;fs.rmSync(folder,{recursive:true,force:true});}
+});
+test('real lease-helper death interrupts a partially completed rollback',{timeout:30000},async t=>{
+ const folder=temporary(),current=path.join(folder,'current'),data=path.join(current,'data'),journal=path.join(folder,'rollback.json');fs.mkdirSync(data,{recursive:true});
+ const first=path.join(folder,'first'),second=path.join(folder,'second'),old1=path.join(folder,'old1'),old2=path.join(folder,'old2');
+ for(const file of [first,second])fs.writeFileSync(file,'new');for(const file of [old1,old2])fs.writeFileSync(file,'old');
+ fs.writeFileSync(journal,JSON.stringify({release:path.join(current,'releases','candidate'),records:[{kind:'launcher',existed:true,file:first,saved:old1},{kind:'launcher',existed:true,file:second,saved:old2}]}));
+ try{storageOperation('data',data);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){fs.rmSync(folder,{recursive:true,force:true});t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+ const script=`import fs from 'node:fs';import {rollbackGuarded} from ${JSON.stringify(new URL('../scripts/rollback.mjs',import.meta.url).href)};import {acquireServiceLease} from ${JSON.stringify(new URL('../server/service-lease.mjs',import.meta.url).href)};
+ const rename=fs.renameSync;fs.renameSync=(from,to)=>{const value=rename(from,to);if(to===process.argv[2]){console.log('barrier');const b=Buffer.alloc(1);fs.readSync(0,b,0,1,null);}return value;};
+ try{await rollbackGuarded(process.argv[1],{acquire:async dir=>{const lease=await acquireServiceLease(dir);console.log('lease:'+lease.pid);return lease;}});console.log('unexpected_success');}catch(error){console.log('result:'+error.code);}`;
+ const child=spawn(process.execPath,['--input-type=module','-e',script,journal,first],{stdio:['pipe','pipe','pipe'],windowsHide:true});let output='',errors='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>errors+=x);const closed=new Promise(resolve=>child.once('close',resolve));
+ try{
+  const until=Date.now()+15000;while(!output.includes('barrier')&&child.exitCode===null&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,20));
+  assert(output.includes('barrier'),errors+' '+output);const pid=Number(/lease:(\d+)/.exec(output)?.[1]);assert(pid>0);process.kill(pid);
+  let alive=true;while(alive&&Date.now()<until){try{process.kill(pid,0);if(process.platform==='darwin'){const state=spawnSync('/bin/ps',['-o','stat=','-p',String(pid)],{encoding:'utf8',timeout:3000});if(state.status!==0||/^\s*Z/.test(state.stdout||'')){alive=false;break;}}await new Promise(resolve=>setTimeout(resolve,20));}catch(error){if(error.code==='ESRCH')alive=false;else throw error;}}assert.equal(alive,false,'helper must terminate before resuming restore');
+  child.stdin.end('x');assert.equal(await closed,0,errors);assert.match(output,/result:service_ownership_lost/);assert(!output.includes('unexpected_success'));assert.equal(fs.readFileSync(first,'utf8'),'old');assert.equal(fs.readFileSync(second,'utf8'),'new');assert(fs.existsSync(journal));
+ }finally{if(child.exitCode===null&&child.signalCode===null)child.kill();await closed;fs.rmSync(folder,{recursive:true,force:true});}
+});
 test('cross-root rollback fences real competing controller leases',{timeout:30000},async t=>{
  const folder=temporary(),current=path.join(folder,'current'),previous=path.join(folder,'previous'),data=path.join(previous,'data');fs.mkdirSync(data,{recursive:true});
  const saved=path.join(folder,'saved-deployment.json'),source=path.join(folder,'saved-launcher'),destination=path.join(folder,'launcher'),journal=path.join(folder,'rollback.json');

@@ -1,6 +1,6 @@
 // Lifetime ownership for one controller per private data directory. The small
 // existing Windows storage helper holds a kernel mutex until this pipe closes.
-import {spawn} from 'node:child_process';import path from 'node:path';import {EventEmitter} from 'node:events';
+import {spawn,spawnSync} from 'node:child_process';import path from 'node:path';import {EventEmitter} from 'node:events';
 import {ensureStorageGuard,storageOperationAsync} from './storage.mjs';
 export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=ensureStorageGuard(),prepareStorage=storageOperationAsync,startupTimeout=5000,cleanupTimeout=2000,releaseTimeout=2000}={}){
  const child=spawnProcess(helper,['lease',path.resolve(directory)],{windowsHide:true,stdio:['pipe','pipe','pipe']});
@@ -11,7 +11,12 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
  lease.pid=child.pid;lease.lost=false;
  const ownershipError=()=>Object.assign(Error('Controller ownership helper is unavailable. Control must stop.'),{code:'service_ownership_lost'});
  const markLost=()=>{if(!lease.lost){lease.lost=true;lease.emit('lost',ownershipError());}if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}};
- lease.assertHeld=()=>{if(releasing||lease.lost||child.exitCode!==null||child.signalCode!=null){markLost();throw ownershipError();}try{process.kill(child.pid,0);}catch{markLost();throw ownershipError();}};
+ lease.assertHeld=()=>{if(releasing||lease.lost||child.exitCode!==null||child.signalCode!=null){markLost();throw ownershipError();}try{
+  process.kill(child.pid,0);
+  // A terminated POSIX child may remain a zombie until Node's event loop
+  // reaps it. Synchronous rollback can block that loop between guard checks.
+  if(process.platform==='darwin'){const state=spawnSync('/bin/ps',['-o','stat=','-p',String(child.pid)],{encoding:'utf8',timeout:3000});if(state.status!==0||!/^\s*[A-Z]/.test(state.stdout||'')||/^\s*Z/.test(state.stdout||''))throw Error('helper not live');}
+ }catch{markLost();throw ownershipError();}};
  const startup=new Promise((resolve,reject)=>{
   const fail=error=>{if(settled)return;settled=true;clearTimeout(timer);releasing=true;try{child.kill();}catch{}
    // A killed helper may still hold the directory until Windows reaps it.
