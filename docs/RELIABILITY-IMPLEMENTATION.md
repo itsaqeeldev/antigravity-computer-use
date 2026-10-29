@@ -60,6 +60,14 @@ across restart. Physical Esc/re-arm and affected-PC reproduction were not tested
 No helper process remained after cleanup. Private result:
 `.localdata/tests/guardian-visibility/run-RztTZO/result.json`.
 
+At `e1e861e`, Windows CI passed 176 tests with zero failures and seven skips,
+native compilation, provenance and development-bundle packaging. Its native
+updater integration explicitly **skipped** because of
+`insecure_storage_ancestor`; parent ACLs were retained. This is not a Windows
+native updater qualification pass. The Mac workflow now runs the signed update
+and rollback with real native storage/services and isolated test signing data;
+inspect the latest job logs for actual results. Desktop input remains unrun.
+
 Known remaining implementation/release work: establish reviewed release-key
 custody and pinned public key; signed published assets and bootstrap pin; real
 hard-crash/power-loss qualification for multi-scope switching; native updater

@@ -67,3 +67,6 @@ test('a persisted interrupted-switch journal restores the old installation on sc
 test('updating does not re-enable an explicitly disabled Sidecar',async()=>{
  const f=fixture();try{const config=path.join(f.home,'.gemini/config/config.json');const saved=JSON.parse(fs.readFileSync(config));saved.sidecars['antigravity-computer-use'].enabled=false;fs.writeFileSync(config,JSON.stringify(saved));await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);assert.equal(JSON.parse(fs.readFileSync(config)).sidecars['antigravity-computer-use'].enabled,false);}finally{f.cleanup();}
 });
+test('insufficient staging space refuses before payload transfer or service shutdown',async()=>{
+ const f=fixture();try{f.adapters.diskInfo=()=>({bavail:1,bsize:1});await assert.rejects(update(f.target,'check',f),/update_insufficient_space/);assert.equal(f.fetches(),2);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available,undefined);}finally{f.cleanup();}
+});

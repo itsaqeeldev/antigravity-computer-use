@@ -6,6 +6,14 @@ For the **experimental macOS candidate**, including architecture-matched prebuil
 downloads and human OS permission setup, see [Mac installation](MACOS.md).
 The Windows command below does not install the Mac candidate.
 
+The development branch also contains control-recovery and signed-updater work.
+It is not part of the pinned beta.2 download. See
+[implementation and qualification status](RELIABILITY-IMPLEMENTATION.md) before
+using a CI candidate. An old installation needs one supported upgrade before it
+can check for signed automatic updates; installing a skill file alone cannot
+upgrade its runtime. The production signing trust root and release assets remain
+unconfigured, so no automatic distribution is claimed.
+
 ## Quick install
 
 Paste this in Windows PowerShell:

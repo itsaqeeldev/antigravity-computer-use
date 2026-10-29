@@ -37,7 +37,9 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
   ownership=await acquireServiceLease(target);
   const lockFile=path.join(target,'update.lock');
   if(fs.existsSync(lockFile)){
-   try{const saved=JSON.parse(fs.readFileSync(lockFile));let alive=true;try{process.kill(saved.pid,0);}catch(e){if(e.code==='ESRCH')alive=false;}if(alive)throw Error('update_lock_requires_review');fs.unlinkSync(lockFile);}
+   // Holding the native lease proves a leftover marker has no live updater
+   // owner. A reused PID must not strand the installation indefinitely.
+   try{fs.unlinkSync(lockFile);}
    catch(error){await ownership.release();throw error;}
   }
  }
@@ -58,7 +60,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    if(m.sequence<=(state.sequence||0)||!newerVersion(m.version,bundle.version)){save({...state,available:false,attempt_at:Date.now()});return {available:false};}
    // A fresh directory lets an interrupted download retry without adopting partial bytes.
    const stage=path.join(target,'updates',String(m.sequence)+'-'+randomUUID());fs.mkdirSync(stage,{recursive:true,mode:0o700});
-   const required=Object.values(m.files).reduce((n,f)=>n+f.size,0)*2+100*1024*1024;const disk=fs.statfsSync(stage);if(disk.bavail*disk.bsize<required)throw Error('update_insufficient_space');
+   const required=Object.values(m.files).reduce((n,f)=>n+f.size,0)*2+100*1024*1024;const disk=adapters.diskInfo?adapters.diskInfo(stage):fs.statfsSync(stage);if(disk.bavail*disk.bsize<required)throw Error('update_insufficient_space');
    for(const [name,f]of Object.entries(m.files)){const destination=path.join(stage,name);fs.mkdirSync(path.dirname(destination),{recursive:true});await downloadFile(f.url,destination,{size:f.size,hash:f.sha256,fetcher});if(process.platform!=='win32'&&(name==='node'||name.startsWith('bin/')||name.endsWith('.command')))fs.chmodSync(destination,0o700);}
    verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
   }

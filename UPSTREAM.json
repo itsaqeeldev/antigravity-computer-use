@@ -588,7 +588,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "1bdada5a001cd5d9c50757568b55a1e84d36bdd33982028b3d14d684ee7801c4"
+      "sha256": "95c8f4455e140094e92af447d9f9f86cbdfce5ebf3013fc9e1d1ae6a56f05b15"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -600,15 +600,15 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "e35425b67b206547306528a90990974eb01ea936e6381b27da9e4685db7019b7"
+      "sha256": "2462a8e201a57ba58ef70995f23217957f5dfa7e56fede1dda217ed020acf632"
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "40b3d5696bed0edcc66f57712079002960479ccf5247659286274e89eef7ec02"
+      "sha256": "2c04fcb47fd1c42b92e17e74e371ea24b9300d35dd6aca0ec2364141e234b0da"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "886e9ad26c971e1f36f025c65bbb5d0faddce11cca13c23d2d4eed7df105f91e"
+      "sha256": "fdc1c78c86348f5cc1414a60f4ac2e16c272356bdb0a471aba8adad4a6a1a8b0"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -628,7 +628,7 @@
     },
     {
       "path": "scripts/qualify-signed-update.mjs",
-      "sha256": "fb91bb2cf36861bdb4684da74d7d301975d24da76ce619f732f9cca8239d7234"
+      "sha256": "f5428f93fa8ec615fa948aec8437fafacd84957ea1a16024da1d8ec49214dab2"
     },
     {
       "path": "scripts/windows-install-check.mjs",
