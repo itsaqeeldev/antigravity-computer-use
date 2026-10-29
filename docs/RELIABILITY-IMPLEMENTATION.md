@@ -16,6 +16,14 @@ comfort, or the actual Mac UI. The change is source-only: the existing installed
 controller was not replaced while the Upscaly task was active. The local suite
 passed 259 tests with nine explicit skips.
 
+The shared `wait` operation accepts up to eight explicit `abort_on` labels for
+known app failure states. It observes without repeating input, prioritizes an
+observed failure over a success label, returns a fresh frame, and stops later
+batch steps. Focused tests exercise failure precedence, frame cleanup, argument
+bounds and skipped input. Labels are literal substrings, so callers must choose
+specific observed text and avoid queries that hide errors. This is source/test
+evidence only; a real Antigravity app workflow and its latency remain unmeasured.
+
 | Requirement | Status | Evidence / next step |
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Source repaired; current affected-PC/native trial pending | Human launcher uses passive `start` then explicit `controls`, recovering cached `ready` failures without re-arm. Earlier native Windows visibility evidence exists; latest generated-launcher test uses inert IPC controls, not a real bar. Issue #3 tracks device acceptance. |

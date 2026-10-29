@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {call,TOOLS} from '../server/desktop-tools.mjs';
+import {call,TOOLS,validate} from '../server/desktop-tools.mjs';
+import {Runtime} from '../server/runtime.mjs';
 import {parseRunArguments} from '../scripts/arguments.mjs';
 const args=steps=>({hwnd:7,observation_id:'initial',reason:'Verify once, never replay',steps});
 const describe=kind=>({inputSchema:TOOLS.find(tool=>tool.name==='computer_'+kind).inputSchema});
@@ -30,4 +31,25 @@ test('Stop during a wait prevents later actions, and invalid wait budgets refuse
  await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',timeout_ms:20000},{kind:'wait',until:'Saved',timeout_ms:20000}])),/Combined batch waits/);
  assert.equal(inputs,0);
  await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:' '}])));assert.equal(inputs,0);
+});
+
+test('known failure wins over success, returns a fresh frame and prevents subsequent batch input',async()=>{
+ let inputs=0,observations=0;
+ const runtime={frames:new Map(),check(){},async action(){inputs++;return{metadata:{observation_id:'after'}};},
+  async observe(){const id='frame'+(++observations);this.frames.set(id,{});return{metadata:{observation_id:id,tree:'Completed — Failed'}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Completed',abort_on:['Failed','Cancelled']},{kind:'click',name:'Publish'}]));
+ assert.equal(inputs,1);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.matched,false);
+ assert.equal(result.verification_error.code,'wait_failure_observed');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'frame2');assert(!runtime.frames.has('frame1'));
+});
+
+test('wait abort labels are bounded and success remains compatible',async()=>{
+ const schema=describe('wait').inputSchema;
+ const plan=parseRunArguments(describe('run').inputSchema,['--hwnd','7','--observation-id','initial','--reason','Wait safely','--step','wait','--until','Ready','--abort-on','["Failed","Cancelled"]'],describe);
+ assert.deepEqual(plan.steps[0].abort_on,['Failed','Cancelled']);
+ for(const abort_on of [[],[''],Array(9).fill('Failed')])assert.throws(()=>validate('computer_wait',{hwnd:7,until:'Ready',reason:'test',abort_on}));
+ assert(schema.properties.abort_on);
+ let count=0;const runtime={frames:new Map(),check(){},async observe(){const id='s'+(++count);this.frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'ready',abort_on:['Failed']});
+ assert.equal(result.matched,true);assert.equal(result.metadata.observation_id,'s2');assert(!runtime.frames.has('s1'));
 });

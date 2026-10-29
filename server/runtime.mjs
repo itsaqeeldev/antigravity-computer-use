@@ -247,7 +247,10 @@ export class Runtime {
     const until=Date.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);let latest;
     do {
       this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query});
-      if(latest.metadata.tree.toLowerCase().includes(args.until.toLowerCase()))return {matched:true,...await this.observe({hwnd:args.hwnd,query:args.query})};
+      const tree=latest.metadata.tree.toLowerCase();
+      const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
+      if(failure){this.frames.delete(latest.metadata.observation_id);return {matched:false,aborted:true,abort_match:failure,...await this.observe({hwnd:args.hwnd,query:args.query})};}
+      if(tree.includes(args.until.toLowerCase())){this.frames.delete(latest.metadata.observation_id);return {matched:true,...await this.observe({hwnd:args.hwnd,query:args.query})};}
       this.frames.delete(latest.metadata.observation_id);
       if(Date.now()>=until)break;
       await new Promise(resolve=>setTimeout(resolve,500));
