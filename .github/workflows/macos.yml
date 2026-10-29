@@ -16,12 +16,10 @@ jobs:
         with:
           node-version: 24.20.0
           package-manager-cache: false
-      - name: Shared control and observation regressions
-        run: node --test tests/platform-contract.test.mjs tests/lifecycle.test.mjs tests/workflow.test.mjs tests/observed-selectors.test.mjs tests/launch-observe.test.mjs tests/recovery-update.test.mjs tests/update-transaction.test.mjs tests/atomic-json.test.mjs tests/transport-failure.test.mjs
       - name: Compile native adapters and check contracts without desktop access
         run: node scripts/macos-native-check.mjs
-      - name: Native private storage and controller-ownership checks
-        run: node --test tests/macos-storage.test.mjs tests/desktop-service.test.mjs
+      - name: Full shared and platform regression suite
+        run: node --test tests/*.test.mjs
       - name: Package the prebuilt Mac candidate
         run: node scripts/bundle.mjs --output .localdata/macos-bundle
       - name: Install, restart, update and rollback in a project-local fake home

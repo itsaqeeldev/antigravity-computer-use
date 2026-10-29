@@ -1,5 +1,12 @@
 import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {mergeSidecarConfig,sidecarDefinition,SIDECAR_ID} from '../scripts/sidecar.mjs';
+test('empty Sidecar configuration can be initialized without relaxing invalid JSON refusal',()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'empty-sidecar-')),file=path.join(dir,'config.json');
+ try{
+  for(const text of ['', ' \n\t', '\uFEFF \r\n']){fs.writeFileSync(file,text);assert.equal(JSON.parse(mergeSidecarConfig(file,{enable:true})).sidecars[SIDECAR_ID].enabled,true);}
+  for(const text of ['null','[]','{broken']){fs.writeFileSync(file,text);assert.throws(()=>mergeSidecarConfig(file));assert.equal(fs.readFileSync(file,'utf8'),text);}
+ }finally{fs.rmSync(dir,{recursive:true});}
+});
 test('sidecar configuration preserves permissions and unrelated sidecars, and respects a disabled entry on update',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-sidecar-')),file=path.join(dir,'config.json');
  try{

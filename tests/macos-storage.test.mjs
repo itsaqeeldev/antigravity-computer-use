@@ -1,9 +1,44 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';
+import fs from 'node:fs';import path from 'node:path';import {spawn,spawnSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
 import {testDirectory} from './paths.mjs';
 import {ensureStorageGuard,storageOperation} from '../server/storage.mjs';
 import {acquireServiceLease} from '../server/service-lease.mjs';
 const native=process.platform==='darwin'?test:test.skip;
+native('Mac preparation waits for complete marker publication and handles concurrent first creation',async()=>{
+ const base=testDirectory('mac-prepare-race'),directory=fs.mkdtempSync(path.join(base,'run-')),root=path.join(directory,'data'),writerFile=path.join(directory,'MarkerWriter');
+ fs.mkdirSync(root,{mode:0o700});
+ const compiled=spawnSync('/usr/bin/swiftc',['-parse-as-library',fileURLToPath(new URL('./MacStorageMarkerWriter.swift',import.meta.url)),'-o',writerFile],{encoding:'utf8',timeout:30000});
+ assert.equal(compiled.status,0,compiled.stdout+compiled.stderr);
+ const helper=ensureStorageGuard(),parentMode=fs.statSync(directory).mode;
+ function child(exe,args){
+  const process=spawn(exe,args,{stdio:['pipe','pipe','pipe']});let stdout='',stderr='',finished=false;
+  process.stdout.on('data',data=>stdout+=data);process.stderr.on('data',data=>stderr+=data);
+  const done=new Promise((resolve,reject)=>{process.once('error',reject);process.once('close',code=>{finished=true;resolve({code,stdout,stderr});});});
+  return {process,done,get finished(){return finished;},get stdout(){return stdout;}};
+ }
+ const writer=child(writerFile,[root]);let preparer;
+ try{
+  const until=Date.now()+5000;while(!writer.stdout.includes('marker-open')&&Date.now()<until&&!writer.finished)await new Promise(resolve=>setTimeout(resolve,10));
+  assert(writer.stdout.includes('marker-open'),'the inert producer must hold an unfinished marker');
+  preparer=child(helper,['data',root]);
+  await new Promise(resolve=>setTimeout(resolve,750));
+  assert.equal(preparer.finished,false,'a concurrent preparer must wait, not reject or trust an incomplete marker');
+  writer.process.stdin.end('commit\n');assert.equal((await writer.done).code,0);
+  const result=await preparer.done;assert.equal(result.code,0,result.stdout+result.stderr);
+  assert.equal(storageOperation('verify-tree',root,{helper}).private_storage,true);
+  for(let round=0;round<3;round++){
+   const fresh=path.join(directory,'fresh-'+round),attempts=Array.from({length:8},()=>child(helper,['data',fresh]));
+   const results=await Promise.all(attempts.map(attempt=>attempt.done));
+   for(const result of results)assert.equal(result.code,0,result.stdout+result.stderr);
+   assert.equal(storageOperation('verify-tree',fresh,{helper}).private_storage,true);
+  }
+  assert.equal(fs.statSync(directory).mode,parentMode,'parent permissions must remain unchanged');
+ }finally{
+  if(!writer.process.stdin.destroyed)writer.process.stdin.end('commit\n');
+  if(preparer&&!preparer.finished)preparer.process.kill();
+  await Promise.allSettled([writer.done,...(preparer?[preparer.done]:[])]);
+ }
+});
 native('Mac private storage refuses links, unsafe parents and extended Allow ACLs without changing parents',()=>{
  const base=testDirectory('mac-private-storage'),helper=ensureStorageGuard();fs.chmodSync(base,0o700);
  const privateDir=path.join(base,'private');storageOperation('data',privateDir,{helper});

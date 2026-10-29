@@ -300,7 +300,7 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "8bc9b0ac16dcbf9daea2c13fabab80453c8423193ba72793a4ca5488e9d8080e"
+      "sha256": "31e9f692042134fbb8a3ce36ca7f530aa45e69c9a5d34b33e8a54c0baef0171a"
     },
     {
       "path": "tests/receipts.test.mjs",
@@ -312,7 +312,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "c2da4bd5ba2f324bac06943a3f327bcc352f3708ff5180ab0317ae32c6d5349c"
+      "sha256": "1effcc3307b0287bc7c86e3c90280c1fa7d7dbd01446fadfc009b2f01efc3bd8"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -328,7 +328,7 @@
     },
     {
       "path": "tests/install.test.mjs",
-      "sha256": "2725df98604749bb1405209a20ab7e6fcefb1a694c3b01a7f5312f9823877205"
+      "sha256": "b4936d19dcfda3fc63bbff27b5f86352d0969e5fee0b6fe3e0fc99758adc061f"
     },
     {
       "path": "tests/core.test.mjs",
@@ -356,7 +356,7 @@
     },
     {
       "path": "tests/storage.test.mjs",
-      "sha256": "2f0c6bbe8f88972ae914b72c87b82fc4a94e15f8918ce27bb65317ee6bbbd49d"
+      "sha256": "adc04d11dab7da81f01b50db28593c527ee35f731d7fc606301adafae8115d8f"
     },
     {
       "path": "server/deployment.mjs",
@@ -376,15 +376,15 @@
     },
     {
       "path": "tests/desktop-context.test.mjs",
-      "sha256": "967fa4e3187825972c83aff84822d941e7871b6916d6e2a0fe2c8b497647e5b0"
+      "sha256": "9f7dd5e0d3898da86b64decf6a43ae149f0b1951819c44c28be63a1d30ca8d1a"
     },
     {
       "path": "scripts/sidecar.mjs",
-      "sha256": "3c32eb4d986f67b886962caca628cbc4268765bd34d26404c6da1677e3596d2c"
+      "sha256": "30f49bd6af31c376ea356f99a1e3ec01444ebc95815e0816772eab09c499d20a"
     },
     {
       "path": "tests/sidecar.test.mjs",
-      "sha256": "b91a66e5d4c5238006585edd9c4758d8b5a6a8f3ef044fa3c5c1a25d610221dc"
+      "sha256": "16fd0247a95dd5766294f07472d5e73b2c9fbc259cff8898039e8a5f1688695b"
     },
     {
       "path": "server/service-lease.mjs",
@@ -392,7 +392,7 @@
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "0cb730dd5fb6fc2809ca7510cb8740ed77d7060cfe281f9c098e3ca8794bfd82"
+      "sha256": "e7b3d8a94d7f0179f6607a75f22bc646fdb6aae00f4294c9c36b595dea1eb4b3"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -404,7 +404,7 @@
     },
     {
       "path": "tests/window-geometry.test.mjs",
-      "sha256": "4e9cb9e23e90fd4df8299f3bf03e1e28f2c259b229fbd8abfe522380da3d871a"
+      "sha256": "751ee459b0c8ee9019c545904e931dc1101501212896d1e208163e3af19c08eb"
     },
     {
       "path": "tests/OffscreenWindowTarget.cs",
@@ -528,7 +528,7 @@
     },
     {
       "path": ".github/workflows/macos.yml",
-      "sha256": "a6e61a86983d7913f9f4e4107bddc6dc6f7a8015ab72c4c9531cb11d0dd18c60"
+      "sha256": "52bd49407ece5f1410953eb84209034bd1d8656484392ed2b5d2b913d2407b86"
     },
     {
       "path": "server/native/macos/MacControl.swift",
@@ -548,7 +548,7 @@
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
-      "sha256": "8070255f6107c0b9226d8ddd2a9242265c1a4ebd361ca7e1848481fced656a26"
+      "sha256": "f01e6d7fb07224cac28ae288c0bab1289662863cc72a9c32ceb45d7644b85411"
     },
     {
       "path": "server/native/macos/StorageMain.swift",
@@ -556,7 +556,7 @@
     },
     {
       "path": "tests/macos-storage.test.mjs",
-      "sha256": "cf85b73d01055cdb4de417df4b36af2a8ec549381b4ad6d84616e5c3c11b7d0c"
+      "sha256": "7617974ba11c5c7eeb7a304e3bf43b8fd11bc6dc9033555ee21336f6bf699a0a"
     },
     {
       "path": "server/native/ControlContract.cs",
@@ -564,7 +564,7 @@
     },
     {
       "path": "scripts/macos-install-check.mjs",
-      "sha256": "5a7ce797b5c885f1f1d48508eb1b81f58467bd0318515f646f1cf1cbf9bbd984"
+      "sha256": "1b9664ff448e9961df4ce73a9916cfc412dfb956498b31b941f4e9bf64000cfe"
     },
     {
       "path": "skills/computer-use/SKILL.md",
@@ -701,6 +701,14 @@
     {
       "path": "tests/native-storage-layout.test.mjs",
       "sha256": "d5c627a707759724047c0f48894e30232af52421aea03ac216198c494f211fd0"
+    },
+    {
+      "path": "docs/MACOS-QUALIFICATION.md",
+      "sha256": "96dd9b7f65d4aa40effe202703c15dc8f6e7386949b723800d60cdc7ae0945c1"
+    },
+    {
+      "path": "tests/MacStorageMarkerWriter.swift",
+      "sha256": "db4c4090e7b569b97285e4bac4752858bb089501e0891eb8cc5763181911f7a2"
     }
   ]
 }

@@ -3,9 +3,10 @@ import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {once} from 'node:events';
 import {acquireServiceLease} from '../server/service-lease.mjs';import {serveDesktop} from '../server/desktop-service.mjs';import {request} from '../scripts/desktop.mjs';
 import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';
+import {storageOperation} from '../server/storage.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
-test('one real kernel owner covers path-case aliases and prevents directory replacement until release',async()=>{
+test('one real kernel owner covers path-case aliases and prevents directory replacement until release',{skip:process.platform!=='win32'},async()=>{
  const dir=temporary(),moved=dir+'-moved';const lease=await acquireServiceLease(dir);
  try{
   await assert.rejects(acquireServiceLease(dir.toUpperCase()),e=>e.code==='service_already_running');
@@ -26,7 +27,9 @@ test('a competing service cannot replace capability metadata or prepare its runt
 });
 
 test('a live legacy controller is respected even without a kernel lease',async()=>{
- const dir=temporary(),file=path.join(dir,'desktop-session.json'),saved=JSON.stringify({pid:process.pid,secret:'inert fixture; never log'});fs.writeFileSync(file,saved);let prepared=0;
+ const dir=temporary(),file=path.join(dir,'desktop-session.json'),saved=JSON.stringify({pid:process.pid,secret:'inert fixture; never log'});
+ if(process.platform==='darwin')storageOperation('data',dir);
+ fs.writeFileSync(file,saved);let prepared=0;
  try{await assert.rejects(serveDesktop({directory:dir,runtime:{async prepare(){prepared++;},async close(){}}}),e=>e.code==='service_already_running');assert.equal(prepared,0);assert.equal(fs.readFileSync(file,'utf8'),saved);}
  finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

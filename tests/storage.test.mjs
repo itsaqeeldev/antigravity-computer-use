@@ -8,12 +8,14 @@ const root=path.join(base,'agcu-storage-test-'+process.pid+'-'+randomUUID());
 // installation ACLs. Report that boundary; never fall back to a drive root or
 // change the checkout's parent permissions merely to make these tests pass.
 let unsafeAncestor;
-try{storageOperation('verify-tree',root);}catch(error){
- if(error.code==='insecure_storage_ancestor')unsafeAncestor=error;
- else if(error.code!=='storage_missing')throw error;
+if(process.platform==='win32'){
+ try{storageOperation('verify-tree',root);}catch(error){
+  if(error.code==='insecure_storage_ancestor')unsafeAncestor=error;
+  else if(error.code!=='storage_missing')throw error;
+ }
 }
-const aclTest=(name,run)=>test(name,{skip:unsafeAncestor?`Project-local ACL qualification unavailable: ${unsafeAncestor.path}`:false},run);
-test('unsafe project ancestors refuse without creating an external test folder',{skip:!unsafeAncestor},()=>{
+const aclTest=(name,run)=>test(name,{skip:process.platform!=='win32'?'Windows NTFS ACL qualification only':unsafeAncestor?`Project-local ACL qualification unavailable: ${unsafeAncestor.path}`:false},run);
+test('unsafe project ancestors refuse without creating an external test folder',{skip:process.platform!=='win32'||!unsafeAncestor},()=>{
  assert.throws(()=>storageOperation('install',root),error=>error.code==='insecure_storage_ancestor');
  assert(!fs.existsSync(root));
 });
