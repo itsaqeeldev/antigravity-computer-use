@@ -13,6 +13,7 @@ import {loadDeployment,applyDeployment} from '../server/deployment.mjs';
 import {diagnostics} from './diagnostics.mjs';
 import {scheduleUpdates} from '../server/auto-update.mjs';
 import {Incidents} from '../server/incidents.mjs';
+import {recoveryAdvice} from '../server/recovery.mjs';
 const EMPTY_INPUT={type:'object',properties:{},required:[],additionalProperties:false};
 const LIFECYCLE=[
   {command:'start',description:'Start or reconnect to this exact installed build. No arguments. Never clears emergency Stop or changes the installed permission policy.',inputSchema:EMPTY_INPUT},
@@ -44,6 +45,7 @@ let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
 export function failureReply(error,{directory,record=true}={}){
  const result={ok:false,error:{code:error.code||'refused',message:error.message},next_action:'inspect_diagnostics'};
+ Object.assign(result,recoveryAdvice(result));
  if(record)try{
   applyDeployment(loadDeployment());const folder=directory||dataDir();storageOperation('verify',folder);
   result.incident_id=new Incidents(folder).record('computer_startup',result);

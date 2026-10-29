@@ -62,6 +62,13 @@ For processing, use `wait --hwnd 123 --until 'ACTUAL EXPECTED TEXT' --timeout-ms
 
 `type` is limited to400 UTF-16 units. Explicit `paste` accepts up to20,000 and requires an observed editor target; it preserves supported clipboard formats and refuses if preservation is impossible. `clipboard` is for intentionally reading/leaving clipboard contents. Review clipboard access under the installed policy.
 
+For exact Unicode text, preserve the original string or an authorized UTF-8
+source file; do not reconstruct emoji or mixed-script text from visible glyphs.
+Joiners (U+200D/U+200C), combining marks and emoji modifiers are content. Verify
+the saved text against the original code points, allowing only explicitly
+requested line-ending/encoding differences. A screenshot, byte count or hex dump
+without comparison does not prove exact content. Report a mismatch honestly.
+
 Click the actual Open/Browse/Save control first. `file_dialog` fills an **already-open picker** using the **owner app's hwnd and fresh owner frame**, exact path and `--action open`/`save`. Prefer explicit `--entry-method clipboard` for authorized temporary clipboard use: atomic filename entry must match readback before confirmation. The compatibility keyboard method can lose characters through Windows text services; `file_dialog_path_mismatch` means confirmation was refused. Never blindly send Enter/replay. Owner screenshots can omit a separate modal; discover and inspect the actual dialog if needed, while keeping file_dialog bound to its owner. Dialog closure alone does not prove import/save completed.
 
 ## Control, permission and recovery

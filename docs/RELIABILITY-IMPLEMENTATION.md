@@ -9,12 +9,12 @@ in `.localdata/`. No release completion is claimed here.
 | --- | --- | --- |
 | Human launcher reveals controls, passive startup hidden | Local native lifecycle passed; affected-PC trial pending | Launcher uses `ready`; runtime requests native `show_controls` without re-arm. Native Windows visibility test passed hidden idle/latched startup, explicit controls, End, Stop dismissal, restart and latch preservation. |
 | Guardian concurrency, timeout, early exit and bounded recovery | Implemented; focused tests passed | New process-fixture tests cover shared readiness and exit-before-ready; broader request/crash tests still being added. |
-| Simple model workflow | Implemented instructions; real trials pending | One entrypoint and structured next action. Actual Flash/Sonnet end-to-end measurements remain unrun. |
-| Shared signed update staging | Implemented; release setup pending | Ed25519 verifier, architecture/OS/channel/sequence checks, streamed bounded downloads, complete inventory verification. No production signing key or signed release is configured. |
+| Simple model workflow | First real Flash trial partial; Sonnet pending | Flash completed Notepad save/cleanup but took about 10 minutes and failed exact Unicode comparison. Structured error follow-up remains to be installed and compared. |
+| Shared signed update staging | Implemented; release transport pending | Ed25519 verification, architecture/OS/channel/sequence checks, bounded hashed downloads and inventory checks. Protected key and Actions secret configured; local signing verified. No release published. |
 | Idle update, settings, Stop, rollback and pins | Implemented; native qualification pending | Transaction tests drive the real installer through upgrade/rollback, failed health, settings/Stop preservation, task deferral and persisted interrupted-switch recovery. Production uses native updater and controller leases. Real interrupted-process/power-loss and installed updates still need qualification. |
 | Automatic scheduling | Implemented; native qualification pending | Both passive and foreground Sidecar entrypoints schedule bounded workers; daily check policy, explicit manual/notify modes. No OS scheduled task. |
 | Local failure diagnostics and consented GitHub reports | Implemented; mocked integration passed | Allowlisted local incidents, deduplication, daily consented submission, missing-auth handling and backoff tests passed. No actual public test issue was created. |
-| Shared Windows/Mac implementation | Candidate exists | Mac PR #1 previously passed both architecture CI matrices. These changed sources need new CI; interactive Mac hardware checks remain unrun. |
+| Shared Windows/Mac implementation | Candidate exists | At `c79c6d6`, the PR matrix passed both Mac architectures; Windows checks passed. Native signed update/rollback previously passed both Mac runners. Interactive Mac acceptance remains unrun. |
 | Real app and physical/hardware acceptance | Pending | Affected PC, fresh PC, Mac, physical Stop/re-arm, held-input cancellation, actual skill rediscovery and updater acceptance required. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
@@ -117,6 +117,49 @@ Actions secret `AGCU_RELEASE_SIGNING_KEY`. No plaintext private key was written
 or included in source. Signed release preparation and production transport still
 need qualification; this setup did not publish or update any installation.
 The source candidate is `0.3.0-beta.3`; the public bootstrap remains beta.2.
+
+## Installed beta.3 and first real model trial
+
+Global beta.3 candidate build
+`83487f3a409d36dd615e2da2542a60ae0858cc0ddacb40ee2aa13adad514873d`
+was installed through the supported installer and verified against all 102
+sealed files and the global skill. Running status confirmed that build, idle,
+host-managed policy, manual takeover and no cursor ownership before the trial.
+The previous installation and configuration backups are retained. Project-local
+deployment pins were not repointed. This is a development installation, not the
+published release.
+
+The owner opened a dedicated No Project Antigravity chat for a Gemini 3.8 Flash
+High Notepad Unicode/save task. The live trial reached `ready`, discovery,
+launch and screenshot. It spent about 108 seconds between a screenshot and a
+click, exceeding the 90-second frame limit; the controller refused stale input.
+The agent subsequently re-observed, handled a minimized-window refusal, focused
+the target, clicked and pasted. At this checkpoint the run is still active and
+the output has not been independently qualified. Unnecessary directory/timing
+file reads and large model decision gaps are retained as failures of efficiency.
+
+Source follow-up now supplies deterministic `next_action` fields for expired
+frames, minimized targets and unknown/completed delivery, with explicit
+`replay_allowed:false`. Service integration tests cover stale-action refusal and
+post-input verification failure without replay. This follow-up is not patched
+into the active run; matched candidate trials remain required.
+
+The Flash trial finished at 09:50:00 UTC with control idle. It made 21 controller
+calls consuming about 20,999 ms, over 605,626 ms from submission to End. It saved
+64 UTF-8 bytes and closed the created window. Independent comparison failed:
+U+200D was missing between the emoji modifier and laptop. The original user
+message's accessible text retained that joiner; exact model argument vs runtime
+loss has not yet been isolated. The model's successful summary is not an exact
+Unicode pass. Errors logged automatically: stale observation, minimized window
+and obscured target. The agent recovered from these without automatic replay.
+
+Private evidence is under
+`.localdata/real-model-qualification-20261029/flash-run-summary.json` and its
+receipts/output verification files. Output SHA-256:
+`acf33b9ae945e678b208714a28114ea0cfea62e073dd38903bb59a8b896c4e3a`.
+The dedicated chat is “Creating Notepad Qualification File”. A Sonnet comparison
+was deferred after the desktop tool detected human input. No unrelated message
+was edited or sent. The goal remains active; speed/reliability are not solved.
 
 Local beta.3 release preparation passed signature verification and independent
 verification of 102 payload files, using the configured protected signing key.

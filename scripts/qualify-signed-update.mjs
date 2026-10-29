@@ -19,8 +19,8 @@ export async function qualifySignedUpdate({target,bundle,directory}){
  const bytes=Buffer.from(JSON.stringify({schema:1,version:metadata.version,build_id:metadata.build_id,sequence:1,platform:process.platform,arch:process.arch,min_os:'0.0.0',expires:'2099-01-01',files}));
  const envelope={manifest:bytes.toString('base64'),signature:sign(null,bytes,privateKey).toString('base64')};
  const fetcher=async url=>{
-  if(url.startsWith('https://api.github.com/'))return {ok:true,json:async()=>[{draft:false,assets:[{name:`update-${process.platform}-${process.arch}.json`,browser_download_url:'test-metadata'}]}]};
-  if(url==='test-metadata')return {ok:true,text:async()=>JSON.stringify(envelope)};
+  if(url.startsWith('https://api.github.com/'))return {ok:true,json:async()=>[{draft:false,assets:[{name:`update-${process.platform}-${process.arch}.json`,browser_download_url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.1-ci.1/test-metadata.json'}]}]};
+  if(url.endsWith('/test-metadata.json'))return {ok:true,text:async()=>JSON.stringify(envelope)};
   if(!payloads.has(url))throw Error('Unexpected qualification download');return {ok:true,body:fs.createReadStream(payloads.get(url))};
  };
  const options={fetcher,adapters:{keyFile}};

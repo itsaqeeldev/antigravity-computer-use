@@ -54,6 +54,7 @@ export async function update(target,command,{fetcher=fetch,adapters={}}={}){
    const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await response.json();
    if(Array.isArray(release))release=release.find(r=>!r.draft);if(!release||release.draft)throw Error('update_release_unavailable');
    const asset=release.assets?.find(a=>a.name===`update-${process.platform}-${process.arch}.json`);if(!asset)return {available:false,next_action:'no_signed_release_for_platform'};
+   const assetURL=new URL(asset.browser_download_url);if(assetURL.protocol!=='https:'||assetURL.hostname!=='github.com'||!assetURL.pathname.startsWith('/shayann07/antigravity-computer-use/releases/download/'))throw Error('update_metadata_origin_invalid');
    const envelopeResponse=await fetcher(asset.browser_download_url,{signal:AbortSignal.timeout(15000)});if(!envelopeResponse.ok)throw Error('update_metadata_unavailable');
    const text=await envelopeResponse.text();if(text.length>262144)throw Error('update_metadata_size');const envelope=JSON.parse(text);
    const bytes=Buffer.from(envelope.manifest,'base64'),m=verifyRelease(bytes,envelope.signature,fs.readFileSync(keyFile),{channel:settings.channel});

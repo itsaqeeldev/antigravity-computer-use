@@ -157,6 +157,16 @@ test('updater health startup stays passive and rejects tasks until installation 
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{fs.writeFileSync(path.join(parent,'update-switching.json'),'fixture');assert.equal((await request(session,'status')).state,'idle');assert.equal((await request(session,'ready')).error.code,'update_in_progress');assert.equal(inputs,0);fs.unlinkSync(path.join(parent,'update-switching.json'));assert.equal((await request(session,'ready')).ok,true);assert.equal(inputs,1);}finally{await service.shutdown();fs.rmSync(parent,{recursive:true,force:true});}
 });
+test('stale input returns an explicit fresh-observation instruction without retrying',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-stale-advice-'));let calls=0;
+ const runtime={async action(){calls++;throw Object.assign(Error('Expired frame'),{code:'stale_observation'});},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});try{const result=await request(JSON.parse(fs.readFileSync(service.file)),'click',{hwnd:1,observation_id:'expired',index:1,reason:'Observed target'});assert.equal(result.error.code,'stale_observation');assert.equal(result.next_action,'observe_again');assert.equal(result.replay_allowed,false);assert.equal(calls,1);}finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('completed input with a stale verification error directs inspection without replay',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-completed-advice-'));let calls=0;
+ const runtime={async action(){calls++;return {input_completed:true,verification_error:{code:'stale_observation'}};},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});try{const result=await request(JSON.parse(fs.readFileSync(service.file)),'click',{hwnd:1,observation_id:'fresh',index:1,reason:'Observed target'});assert.equal(result.next_action,'inspect_effect_without_replay');assert.equal(result.replay_allowed,false);assert.equal(result.input_completed,true);assert.equal(calls,1);}finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 
 test('direct IPC preserves Urdu and emoji when UTF-8 bytes arrive separately',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-utf8-'));const unicode='اردو — café 👩🏽‍💻';
