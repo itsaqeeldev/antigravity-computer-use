@@ -122,6 +122,9 @@ test('short launcher forwards literal argv without a command shell or character 
  const words=['paste','--text','اردو 😀 %PATH% & x|y > z ^ !', '--reason','literal "quotes" and \\slashes'];
  const run=spawnSync(result.launcher_node,[result.launcher,...words],{windowsHide:true,encoding:'utf8'});assert.equal(run.status,0,run.stderr);assert.deepEqual(JSON.parse(run.stdout),words);
  const failed=spawnSync(result.launcher_node,[result.launcher,'fail'],{windowsHide:true,encoding:'utf8'});assert.equal(failed.status,1,failed.stderr);assert.deepEqual(JSON.parse(failed.stdout),{ok:false,error:{message:'fixture failure'}});
+ // This one fixture contains full Node executable copies. Keep it on failure
+ // for diagnosis, but do not accumulate hundreds of MiB on every green run.
+ fs.rmSync(dir,{recursive:true,force:true});
 });
 
 test('a live desktop service blocks update before backups, executable or configuration writes',()=>{

@@ -879,6 +879,10 @@ installer fixture folders account for substantial apparent test data; automated
 approval blocked their attempted cleanup. Preserve this as a capacity limitation,
 not a successful full-suite qualification. GitHub CI for the subsequent commit
 must be checked independently.
+The largest recurring fixture is the launcher argv test, which copies the full
+Node executable into its bundle and release. It now removes only its own newly
+created directory after a successful run, while retaining it on failure. That
+change does not remove old fixtures or make low-space local qualification pass.
 The older beta had no task marker, so its absence in an older stopped service
 cannot establish that an Antigravity conversation has finished; that bootstrap
 qualification remains outstanding.
