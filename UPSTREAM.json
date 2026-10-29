@@ -220,7 +220,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "c55c74431173b610ce5869c1c8148bc423aea0dd76c671053c53a4aeb4ee6047"
+      "sha256": "b87a38fd4bddde65802926c0f25db14e533ddc107c5cd2eb3271ce482173517c"
     },
     {
       "path": "server/mcp.mjs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "4656709e5909cbed2518e751c3a1ef48a6e410474bb340b5992a1593a882b9d0"
+      "sha256": "cb0845d86c04d6c8cb86661155fe79ee318816e2848a741da377df36f5927f17"
     },
     {
       "path": "docs/MACOS.md",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "ddcdddac630570dad1407af15f0de0fdc23721f17b4bf649b4a44f1d88858d02"
+      "sha256": "28e59261190f110f247994e48e109be41ed6140c8ba39ebd751e5b6f22f63c61"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -621,6 +621,10 @@
     {
       "path": "tests/incident-concurrency.test.mjs",
       "sha256": "fc64dfdda18ca4cc1e47554f3c930caa5b2b8653ed478037513d30aafb45930c"
+    },
+    {
+      "path": "tests/lifecycle.test.mjs",
+      "sha256": "b1e9a3d3ef1dbe4543d6b2f1ac6403c692b85deef284775781afe62c4f451018"
     },
     {
       "path": "scripts/setup-release-signing.ps1",
@@ -656,7 +660,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "584e89ec438649d51c9a6fc9eff135cdee4c64e4a3199b84cca6e5d866770363"
+      "sha256": "70e68854b50cee1501b919f9a63563709ad83ff979188c19df5175be013ece28"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

@@ -15,6 +15,20 @@ test('emergency stop invalidates grants/frames before awaiting the native worker
  const r=fixture();r.state='active';r.frames.set('old',{});r.grants.set('app',{});const pending=r.stop();assert.equal(r.state,'stopped');assert.equal(r.frames.size,0);assert.equal(r.grants.size,0);await pending;
  await assert.rejects(r.grant(123,'cannot self-rearm'),e=>e.code==='control_inactive');
 });
+test('failed Stop persistence keeps the service stopped and refuses shutdown until repaired',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-stop-write-'));try{
+  const r=fixture();r.state='active';r.latchFile=path.join(dir,'missing','emergency.stop');r.frames.set('old',{});r.grants.set('app',{});
+  await assert.rejects(r.stop(),e=>e.code==='stop_persistence_failed');assert.equal(r.state,'stopped');assert.equal(r.frames.size,0);assert.equal(r.grants.size,0);assert.equal(r.driver.abortCalls,1);assert.equal(r.lastControlReason,'stop_persistence_failed');
+  await assert.rejects(r.close(),e=>e.code==='stop_persistence_failed');assert.equal(r.state,'stopped');
+  fs.mkdirSync(path.dirname(r.latchFile));await r.stop();assert.equal(fs.readFileSync(r.latchFile,'utf8'),'stopped');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('a native Stop event reports a missing latch while keeping control stopped',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-native-stop-'));const guardian=new EventEmitter();guardian.send=()=>{};const driver={abort:async()=>{}};
+ try{const r=new Runtime({guardian,driver,sessions:{register(){},close(){}},latchFile:path.join(dir,'emergency.stop')});r.state='active';guardian.emit('state','stopped','escape');
+  assert.equal(r.state,'stopped');assert.equal(r.lastControlReason,'stop_persistence_failed');assert.equal(r.diagnosticError,'stop_persistence_failed');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('normal finish returns idle without requiring host restart',async()=>{
  const r=fixture();r.state='active';r.token='old';r.grants.set('app',{});const result=await r.finish();assert.equal(r.state,'idle');assert.equal(r.token,'');assert.equal(r.grants.size,0);assert.equal(result.restart_required,false);assert.equal(r.guardian.messages[0].op,'end');assert.equal(r.status().control_reason,'completed');r.guardian.emit('state','idle');assert.equal(r.status().control_reason,'completed');
 });

@@ -18,6 +18,13 @@ in `.localdata/`. No release completion is claimed here.
 | Real app and physical/hardware acceptance | Partial | Physical Esc during a held Windows mouse drag, queued-action cancellation, restart and human re-arm were observed on `bc457343...`. Affected PC, fresh PC, Mac physical input, held-key, mixed-display and production updater acceptance remain pending. |
 | Publication and bootstrap installer pin | Pending | Keep release draft until applicable gates pass. Existing published beta cannot acquire updater without one supported upgrade. |
 
+Stop persistence errors are no longer reported as successful durable Stop. The
+runtime invalidates control and cleans up input, reports `stop_persistence_failed`
+without a private path, and refuses orderly shutdown until it can persist the
+latch. A stopped event from the native guardian also checks that the latch exists
+and reports a failure if it does not. Focused tests cover missing storage and
+recovery; actual physical Esc under a failing disk remains unqualified.
+
 The operator authorized reconciling the Upscaly project-local pin. Source
 `36bef78` was built after its Windows and both Mac CI jobs passed. Global and
 `D:\Work\Extras\Upscaly\image upscaler` project scopes now both identify build
@@ -41,7 +48,7 @@ without dispatching input. The skill instructs agents to stop and preserve pins;
 this does not change or unpin any deployment. A real project-scoped task after
 an operator reconciles the versions is still required.
 
-The current Windows installation was locally upgraded from `a4e7234` to build
+The preceding Windows installation was locally upgraded from `a4e7234` to build
 `50426a656d2374fca25706235407cafb80cb9c0719a19c3cf65760c49cc32474`. Its 108
 files and global skill verified, settings and project pins were preserved, and
 it started idle without desktop input. Stop was not latched at upgrade time.

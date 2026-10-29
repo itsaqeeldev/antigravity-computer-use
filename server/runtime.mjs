@@ -82,6 +82,7 @@ export class Runtime {
       if(reason||s!==this.state)this.lastControlReason=reason||s;
       this.state=s;
       if(reason==='guardian_exited'&&previousState!=='idle'&&this.latchFile)try{fs.writeFileSync(this.latchFile,'stopped');}catch{}
+      if(s==='stopped'&&this.latchFile){try{if(fs.readFileSync(this.latchFile,'utf8')!=='stopped')throw Error('invalid latch');}catch{this.lastControlReason='stop_persistence_failed';this.diagnosticError='stop_persistence_failed';}}
       if(reason==='guardian_exited'&&this.privateDataStorage===true)new Incidents(dataDir()).recordSerialized('computer_guardian',{state:s,error:{code:'guardian_exited'},guardian_exit:this.guardian.lastExit}).catch(()=>{this.diagnosticError='private_diagnostic_storage_unavailable';});
       if(s!=='active'){
         this.generation++;this.frames.clear();
@@ -308,7 +309,7 @@ export class Runtime {
     this.state='active';this.lastControlReason='host_authorized_resume';this.deadline=Date.now()+contract.session_ms;
     return {resumed:true,fresh_observation_required:true,replayed_actions:0};
   }
-  async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch(error){this.lastControlReason='stop_persistence_failed: '+error.message;}await this.driver.abort?.();return {stopped:true,human_rearm_required:true};}
+  async stop(){this.generation++;this.frames.clear();this.grants.clear();this.state='stopped';this.lastControlReason='requested_stop';this.guardian.send({op:'stop'});let persistenceFailed=false;try{if(this.latchFile)fs.writeFileSync(this.latchFile,'stopped');}catch{persistenceFailed=true;this.lastControlReason='stop_persistence_failed';}await this.driver.abort?.();if(persistenceFailed)throw Object.assign(Error('Control is stopped, but the emergency Stop latch could not be saved. Do not restart the controller; inspect its private storage.'),{code:'stop_persistence_failed'});return {stopped:true,human_rearm_required:true};}
   status(){return {state:this.state,remaining_actions:this.remaining,approved_apps:[...this.grants.values()].map(w=>({pid:w.pid,path:w.path})),runtime:nativePlatform().runtime,build_version:VERSION,build_id:BUILD_ID,private_data_storage:this.privateDataStorage,real_cursor:true,custom_cursor:this.guardian.customCursor??null,permission_mode:this.permissionMode,takeover_mode:this.guardian.takeoverMode||savedTakeoverMode(path.join(dataDir(),'control-preferences.json'),this.takeoverMode),control_reason:this.lastControlReason};}
   async close(){const normal=this.state==='idle';if(!normal)await this.stop();else await this.driver.abort?.();await this.guardian.close({normal});this.sessions.close();}
 }
