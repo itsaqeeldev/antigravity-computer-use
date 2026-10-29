@@ -27,7 +27,11 @@ export function describeCommand(name){
   const intrinsic=LIFECYCLE.find(tool=>tool.command===normalized);if(intrinsic)return intrinsic;
   const tool=TOOLS.find(tool=>tool.name==='computer_'+normalized);
   if(!tool)throw Object.assign(Error('Unknown desktop command. Run --help for the command list.'),{code:'unknown_command'});
-  return {command:tool.name.replace(/^computer_/,''),description:tool.description,inputSchema:tool.inputSchema};
+  const properties=tool.inputSchema.properties||{};
+  const cliAliases=[];
+  if(properties.text)cliAliases.push({flag:'--text-file',replaces:'--text',description:'Read UTF-8 text from a local file; do not combine with --text. The same text limit and permissions apply.'});
+  if(properties.steps)cliAliases.push({flag:'--steps-file',replaces:'--steps',description:'Read the steps JSON array from a local file; do not combine with --steps.'});
+  return {command:tool.name.replace(/^computer_/,''),description:tool.description,inputSchema:tool.inputSchema,...(cliAliases.length?{cliAliases}:{})};
 }
 
 // Windows PowerShell can decode native stdout using its legacy OEM code page

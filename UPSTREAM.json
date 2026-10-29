@@ -264,7 +264,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "65c08e647d04adace7b1fd03d1b520657a91a3cac22454dbb6db611c2330c8b5"
+      "sha256": "085aee44bdaf39dc30c2706cdc3c35be4290b46e6aafe95d3f716bf036f7be99"
     },
     {
       "path": "server/version.mjs",
@@ -272,7 +272,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "0cb8baa4ad199697bd40a981d9345a70af9b1668eafa53073ca11425e4dbefc0"
+      "sha256": "5dfc5da01022f3120bc545beb8db539314264d6565950bd229a8646ae32c081c"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",

@@ -12,6 +12,9 @@ import {storageOperation} from '../server/storage.mjs';
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
  assert.equal(describeCommand('computer_launch').inputSchema.properties.app.type,'string');
+ const paste=describeCommand('paste');assert(paste.cliAliases.some(alias=>alias.flag==='--text-file'&&alias.replaces==='--text'));assert.equal(paste.inputSchema.additionalProperties,false);
+ assert(describeCommand('run').cliAliases.some(alias=>alias.flag==='--steps-file'));
+ assert.equal(describeCommand('click').cliAliases,undefined);
  assert.equal(describeCommand('snapshot').inputSchema.properties.settle_ms.maximum,2000);
  for(const command of ['start','shutdown','describe'])assert.equal(describeCommand(command).inputSchema.additionalProperties,false);
  assert.deepEqual(describeCommand('start').inputSchema.required,[]);
