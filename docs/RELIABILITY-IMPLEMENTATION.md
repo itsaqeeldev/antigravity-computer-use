@@ -1214,8 +1214,13 @@ states and requires it in the worker fence, with matching guardian UI expiry
 checks. It rejects malformed or legacy active records and clamps requested
 durations. Windows headless native tests cover arithmetic and refusal; Mac
 compilation and the equivalent contract checks await CI. The independent
-watchdogs do not yet enforce these deadlines. Do not install or release this
-partial change.
+Mac's independent watchdog does not yet enforce this deadline. A Windows
+candidate now lets ordinary guardian cleanup complete, then escalates an
+unresolved expired/inactive state after five seconds or a persistently invalid
+state after one second. It retains crash monitoring until explicit disarm after
+worker termination and ledger recovery. Headless classification and grace
+tests pass locally; native physical expiry/Stop races and Mac watchdog behavior
+remain unqualified. Do not install or release this partial change.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

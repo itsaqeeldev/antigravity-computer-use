@@ -12,6 +12,13 @@ class NativeWatchdogMetadataTests {
             var host=Assembly.LoadFrom(args[0]);var type=host.GetType("Axon.CursorSafety",true);
             var write=type.GetMethod("WriteWatchdogRecord",BindingFlags.Static|BindingFlags.NonPublic);
             var check=host.GetType("Axon.ControlFence",true).GetMethod("CheckWatchdogIdentity",BindingFlags.Static|BindingFlags.NonPublic);
+            var watchdogState=type.GetMethod("WatchdogState",BindingFlags.Static|BindingFlags.NonPublic);
+            Func<string,ulong,string> classify=delegate(string value,ulong now){return (string)watchdogState.Invoke(null,new object[]{value,now});};
+            if(classify("active|token|10000||500",499)!="active"||classify("active|token|10000||500",500)!="expired"||
+               classify("active|token|10000|",10)!="invalid"||classify(null,10)!="invalid"||classify("stopped||0|",10)!="inactive")throw new Exception("watchdog state classification differs");
+            var grace=type.GetMethod("WatchdogGraceElapsed",BindingFlags.Static|BindingFlags.NonPublic);
+            Func<string,ulong,ulong,bool> elapsed=delegate(string state,ulong since,ulong now){return (bool)grace.Invoke(null,new object[]{state,since,now});};
+            if(elapsed("invalid",100,1099)||!elapsed("invalid",100,1100)||elapsed("expired",100,5099)||!elapsed("expired",100,5100)||elapsed("inactive",100,99)||elapsed("active",100,10000))throw new Exception("watchdog grace boundary differs");
             var deadline=host.GetType("Axon.NativeDeadline",true);
             var create=deadline.GetMethod("Create",BindingFlags.Static|BindingFlags.NonPublic);
             var valid=deadline.GetMethod("Valid",BindingFlags.Static|BindingFlags.NonPublic);

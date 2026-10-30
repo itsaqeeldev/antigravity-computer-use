@@ -430,7 +430,7 @@ namespace Axon {
                 // A failed state transition must never skip cleanup or leave a
                 // newly active session usable on an older native fence.
                 state="stopped";grants.Clear();ControlFence.LatchStop();
-                GuardCleanup.Run(CursorSafety.Restore,StopWorkers,ControlFence.Recover,Overlay.HideAll);
+                GuardCleanup.Run(StopWorkers,ControlFence.Recover,Overlay.HideAll,CursorSafety.Restore);
                 try { RefreshHud(); } catch { }
                 Emit(new {ev="state",state="stopped",reason="guard_persistence_failed",custom_cursor=CursorSafety.Applied});return;
             }
@@ -438,7 +438,7 @@ namespace Axon {
             if (state != "active") {
                 // Missing or failed ledgers must not interrupt the remaining
                 // cleanup or leave the guardian claiming an idle/paused state.
-                GuardCleanup.Run(CursorSafety.Restore,StopWorkers,ControlFence.Recover,Overlay.HideAll);
+                GuardCleanup.Run(StopWorkers,ControlFence.Recover,Overlay.HideAll,CursorSafety.Restore);
                 if(InputLedger.HasHeld()) {
                     state="stopped";grants.Clear();ControlFence.LatchStop();reason="input_cleanup_failed";
                     try {WriteState();}catch {reason="guard_persistence_failed";}

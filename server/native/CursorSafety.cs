@@ -103,6 +103,9 @@ namespace Axon {
                 // the local success flag was recorded.
                 if(applied || watchdog!=null)SystemParametersInfo(0x57,0,IntPtr.Zero,0);
                 applied=false;
+                // Do not abandon independent cleanup while the journal is
+                // missing, unreadable, or still contains a held input.
+                if(InputLedger.HasHeld())return;
                 try {if(watchdog!=null&&!watchdog.HasExited){watchdog.StandardInput.WriteLine("disarm");watchdog.StandardInput.Flush();}}catch {}
                 monitoring=false;
             }
@@ -118,6 +121,24 @@ namespace Axon {
             }
         }
         static volatile bool armed,finished;
+        static readonly object watchGate=new object();static long armEpoch;
+        // Pure classification is shared with the headless contract test. An
+        // unreadable or malformed active record never means safe disarm.
+        internal static string WatchdogState(string text,ulong bootNow) {
+            if(String.IsNullOrEmpty(text))return "invalid";
+            string[] state=text.Split('|');
+            if(state.Length<3)return "invalid";
+            if(state[0]=="idle"||state[0]=="paused"||state[0]=="stopped")return "inactive";
+            long wall;ulong until;
+            if(state[0]!="active"||String.IsNullOrEmpty(state[1])||state.Length<5||
+               !Int64.TryParse(state[2],out wall)||wall<=0||!UInt64.TryParse(state[4],out until)||until==0)return "invalid";
+            return NativeDeadline.Valid(until,bootNow)?"active":"expired";
+        }
+        internal static bool WatchdogGraceElapsed(string state,ulong since,ulong now) {
+            if(state!="invalid"&&state!="expired"&&state!="inactive")return false;
+            ulong grace=state=="invalid"?1000UL:5000UL;
+            return now>=since&&now-since>=grace;
+        }
         static void CrashCleanup() {
             // This process outlives a hard-killed UI, and does not depend on the
             // Node event loop to revoke input or release keys/buttons.
@@ -153,18 +174,35 @@ namespace Axon {
                 Thread input=new Thread(delegate() {
                     try {
                         string line;while((line=Console.ReadLine())!=null) {
-                            if(line=="arm") {armed=true;Console.WriteLine("armed");Console.Out.Flush();}
-                            if(line=="disarm") {if(armed)SystemParametersInfo(0x57,0,IntPtr.Zero,0);armed=false;}
+                            if(line=="arm") {lock(watchGate){armed=true;armEpoch++;}Console.WriteLine("armed");Console.Out.Flush();}
+                            if(line=="disarm") {lock(watchGate){if(armed)SystemParametersInfo(0x57,0,IntPtr.Zero,0);armed=false;armEpoch++;}}
                         }
                     }finally {finished=true;}
                 });input.IsBackground=true;input.Start();
                 Console.WriteLine("cursor-watchdog-ready");Console.Out.Flush();
+                ulong problemSince=0;string problem="",problemState="";
                 try {
                     while(!finished && !owner.WaitForExit(100)) {
-                        if(armed) {
+                        long epoch;lock(watchGate){epoch=armed?armEpoch:-1;}
+                        if(epoch>=0) {
                             string file=ControlFence.FileName;
-                            bool active=false;try {active=File.ReadAllText(file).StartsWith("active|");}catch {}
-                            if(!active){SystemParametersInfo(0x57,0,IntPtr.Zero,0);armed=false;}
+                            ulong now=NativeDeadline.GetTickCount64();string status,text="";
+                            try {text=File.ReadAllText(file);status=WatchdogState(text,now);}catch {status="invalid";}
+                            if(status=="active"){problem="";problemState="";problemSince=0;}
+                            else {
+                                if(problem!=status||problemState!=text){problem=status;problemState=text;problemSince=now;}
+                                // Only the guardian's explicit disarm, after
+                                // worker termination and input recovery, ends
+                                // crash protection. Allow normal cleanup time.
+                                if(WatchdogGraceElapsed(status,problemSince,now))lock(watchGate){
+                                    if(armed&&armEpoch==epoch){
+                                        // A new state or disarm may have arrived
+                                        // while the guard was being inspected.
+                                        string latest="";try{latest=File.ReadAllText(file);}catch{}
+                                        if(latest==text){CrashCleanup();armed=false;armEpoch++;return 3;}
+                                    }
+                                }
+                            }
                         }
                     }
                 }finally {if(armed)CrashCleanup();}
