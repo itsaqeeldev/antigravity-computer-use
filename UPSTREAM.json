@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "d88686bcf6f48b11d72011d6880d280147238f615aeae1be5152f30674828def",
+      "local_sha256": "0775a1b628019f7efca1553fb8b24481c954e2faa42dcf2d28495fe6cb456c1b",
       "modified": true
     },
     {
@@ -568,15 +568,15 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "58db540b4fc760b8554b1a5a31a8498805d882b59b8db4cb3ad8a8d501db26bb"
+      "sha256": "ee5a712f0b933e0bcfb568a6cb21f4774685ab17f4d5876e5099e6efdb357cab"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
-      "sha256": "b249182683814a75345968686187bd145a0e7053b76c1687947212fc1852d9ca"
+      "sha256": "441f76a67fc780044be0b80f6a067a5453f67e25caeae329304816e3219ad612"
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "6057c872fcc0f9a9c6c30ac914fc34609e0fc24a139e52d39440588812eed7e6"
+      "sha256": "8eff24614ba994f31288867b224590bb7912fb6766cc9dc19309e69c4155bb99"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/MACOS.md",
-      "sha256": "a74bfcaed5c12d326e97506af16e2f91327aa79bd24789f7a9c6de12d39ef38b"
+      "sha256": "db81a19f5f5766a9c6bd0c7310b607e2340612a050757081b2b25e1dd52379db"
     },
     {
       "path": "server/update-core.mjs",
@@ -644,11 +644,11 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "082667fc9ce858b81354d95a2e94a2e23d94329018a519610fbca1eacefcc0b9"
+      "sha256": "846acd9b3e1856aa0a90b2893cdf0cae4d8ab284ad8b9cd8bf36e08b80f1c153"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
-      "sha256": "594d28956978b602b7a93efc1f694cb26091164b01fd793aa1ad27a0bac8b051"
+      "sha256": "6b6069ddef257fca082ad30ea3acb52beeaabdc48431da10d02ddc63dc84598f"
     },
     {
       "path": "tests/reporting.test.mjs",

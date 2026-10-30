@@ -214,7 +214,7 @@ func macContractTest() throws {
     holder.environment = ProcessInfo.processInfo.environment
     holder.standardOutput = output; holder.standardInput = input; holder.standardError = FileHandle.standardError
     try holder.run()
-    defer { if holder.isRunning { kill(holder.processIdentifier, SIGKILL); holder.waitUntilExit() } }
+    defer { if holder.isRunning { holder.terminate(); holder.waitUntilExit() } }
     let ready = DispatchSemaphore(value: 0); var message: String?
     DispatchQueue.global().async { message = String(data: output.fileHandleForReading.availableData, encoding: .utf8); ready.signal() }
     guard ready.wait(timeout: .now() + 5) == .success, message?.contains("lock_held") == true else {
@@ -231,21 +231,38 @@ func macContractTest() throws {
     worker.standardOutput = workerOutput; worker.standardInput = workerInput; worker.standardError = FileHandle.standardError
     try worker.run()
     let workerMarker = MacFence.file + ".worker-\(worker.processIdentifier)"
-    defer { if worker.isRunning { kill(worker.processIdentifier, SIGKILL); worker.waitUntilExit() }; try? FileManager.default.removeItem(atPath: workerMarker) }
+    defer { if worker.isRunning { worker.terminate(); worker.waitUntilExit() }; try? FileManager.default.removeItem(atPath: workerMarker) }
     let workerReady = DispatchSemaphore(value: 0); var workerMessage: String?
     DispatchQueue.global().async { workerMessage = String(data: workerOutput.fileHandleForReading.availableData, encoding: .utf8); workerReady.signal() }
     guard workerReady.wait(timeout: .now() + 5) == .success, workerMessage?.contains("lock_held") == true else { throw AxonError("contract_test_failed", "Worker fixture did not start.") }
     let workerBirth = try macProcessStart(worker.processIdentifier)
     try Data("0.0".utf8).write(to: URL(fileURLWithPath: workerMarker), options: [.atomic]); chmod(workerMarker, 0o600)
-    guard macKillWorkers(), worker.isRunning else { throw AxonError("contract_test_failed", "A reused PID was killed.") }
+    guard macWaitForWorkers(), worker.isRunning else { throw AxonError("contract_test_failed", "A reused PID was killed.") }
     try Data(workerBirth.utf8).write(to: URL(fileURLWithPath: workerMarker), options: [.atomic])
-    guard chmod(workerMarker, 0o600) == 0, macKillWorkers() else { throw AxonError("contract_test_failed", "Worker termination was not confirmed.") }
-    worker.waitUntilExit(); try FileManager.default.removeItem(atPath: workerMarker)
+    guard chmod(workerMarker, 0o600) == 0, !macWaitForWorkers(), worker.isRunning else { throw AxonError("contract_test_failed", "An unresponsive worker was treated as exited or signalled.") }
+    guard MacWorkers.terminateBeforeRetry(worker, expectedBirth: workerBirth) else { throw AxonError("contract_test_failed", "Fixture termination was not confirmed.") }
+    try FileManager.default.removeItem(atPath: workerMarker)
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup failed after confirmed worker exit.") }
+    try FileManager.default.removeItem(atPath: MacFence.latch)
+    try MacFence.write("active|fixture|\(MacFenceState.now + 100_000_000)||\(MacDeadline.now + 10_000)|0")
+    let cooperative = Process(), cooperativeOutput = Pipe()
+    cooperative.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    cooperative.arguments = ["--contract-cooperative-worker"]; cooperative.environment = ProcessInfo.processInfo.environment
+    cooperative.standardOutput = cooperativeOutput; cooperative.standardError = FileHandle.standardError
+    try cooperative.run()
+    let cooperativeMarker = MacFence.file + ".worker-\(cooperative.processIdentifier)"
+    defer { if cooperative.isRunning { cooperative.terminate(); cooperative.waitUntilExit() }; try? FileManager.default.removeItem(atPath: cooperativeMarker) }
+    let cooperativeReady = DispatchSemaphore(value: 0); var cooperativeMessage: String?
+    DispatchQueue.global().async { cooperativeMessage = String(data: cooperativeOutput.fileHandleForReading.availableData, encoding: .utf8); cooperativeReady.signal() }
+    guard cooperativeReady.wait(timeout: .now() + 5) == .success, cooperativeMessage?.contains("cooperative_ready") == true else { throw AxonError("contract_test_failed", "Cooperative worker did not start.") }
+    try Data("stopped".utf8).write(to: URL(fileURLWithPath: MacFence.latch), options: [.atomic])
+    try MacFence.write("stopped||0||0|1")
+    guard macWaitForWorkers() else { throw AxonError("contract_test_failed", "Cooperative worker did not exit after Stop.") }
+    cooperative.waitUntilExit(); try FileManager.default.removeItem(atPath: cooperativeMarker)
     let invalidWorker = MacFence.file + ".worker-invalid"
     try Data("invalid".utf8).write(to: URL(fileURLWithPath: invalidWorker), options: [.atomic]); chmod(invalidWorker, 0o600)
     defer { try? FileManager.default.removeItem(atPath: invalidWorker) }
-    guard !macKillWorkers() else { throw AxonError("contract_test_failed", "Malformed worker registry was accepted.") }
+    guard !macWaitForWorkers() else { throw AxonError("contract_test_failed", "Malformed worker registry was accepted.") }
     try FileManager.default.removeItem(atPath: invalidWorker)
     // Replacing the private root while its original inode is locked must not
     // let a contender acquire a different directory lock and claim cleanup.

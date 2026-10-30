@@ -40,6 +40,9 @@ head. Check serialization of native dispatch and cleanup, a worker killed while
 an input is held, lock/ledger replacement, cleanup failure and a second task.
 Posting a CGEvent or seeing an empty journal does not by itself prove that a
 release reached the target. Record actual physical observations separately.
+Check cooperative worker self-exit after Stop, Pause and expiry, and verify an
+unresponsive worker leaves cleanup unconfirmed without signalling a recycled
+PID. Do not suspend or kill unrelated processes to create the test.
 The Sidecar does not yet authenticate host conversation ownership; never use a
 model-supplied ID as a credential or disturb another task to make this pass.
 

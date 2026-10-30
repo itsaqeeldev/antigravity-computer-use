@@ -79,9 +79,11 @@ macOS may require new permission approval after an ad-hoc-signed update.
 - Physical input uses marked CGEvents, eased real-pointer travel and ownership
   checks. Semantic actions do not invent mouse movement. Ambiguous provider
   failures return unknown delivery without a physical retry.
-- A separate event-tap watchdog handles physical Esc or Control+Option+F12,
-  invalidates the native fence, terminates birth-time-matched input workers and
-  attempts to release journaled automation-held input. Stop persists across
+- A separate event-tap watchdog handles physical Esc or Control+Option+F12 and
+  invalidates the native fence. Workers observe revocation and exit themselves;
+  the watchdog waits for their recorded identities and attempts to release
+  journaled automation-held input. An unresponsive worker leaves cleanup
+  unconfirmed and Stop latched. Stop persists across
   restart; only the local human Re-arm control clears it. macOS event posting
   does not acknowledge delivery: physical held-input cleanup remains unqualified.
 - Input permission and point ownership are rechecked while dispatching native

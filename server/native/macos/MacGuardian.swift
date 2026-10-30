@@ -31,7 +31,7 @@ enum MacWorkers {
         if child.isRunning {
             let pid = child.processIdentifier
             guard let birth = expectedBirth, (try? macProcessStart(pid)) == birth else { return false }
-            _ = kill(pid, SIGKILL)
+            child.terminate()
         }
         guard timeout.isFinite else { return false }
         let start = MacDeadline.now, budget = UInt64(max(0, min(timeout, 5)) * 1000)
@@ -154,7 +154,7 @@ final class MacPanicMonitor {
         }
         if deliberate {
             try? MacFence.write("paused|\(state.token)|\(state.until)|\(Data(state.grants.sorted().joined(separator: "\n").utf8).base64EncodedString())")
-            let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+            let workersStopped = macWaitForWorkers(), inputsRecovered = MacInputLedger.recover()
             if !workersStopped || !inputsRecovered { MacFence.emergency("input_cleanup_failed") }
         }
     }
@@ -177,7 +177,7 @@ final class MacPanicMonitor {
             let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0
             if (try? macProcessStart(guardian)) != birth || (try? macProcessStart(parent)) != MacFence.parentIdentity {
                 if (try? MacFence.read().state) != "idle" { MacFence.emergency("guardian_exited") }
-                else { let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover(); if !workersStopped || !inputsRecovered { MacFence.emergency("input_cleanup_failed") } }
+                else { let workersStopped = macWaitForWorkers(), inputsRecovered = MacInputLedger.recover(); if !workersStopped || !inputsRecovered { MacFence.emergency("input_cleanup_failed") } }
                 exit(0)
             }
             self.checkDeadline()
@@ -262,7 +262,7 @@ final class MacGuardian: NSObject {
             do { try writeState() } catch { MacFence.emergency("state_write_failed") }
         }
         if state != "active" {
-            let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+            let workersStopped = macWaitForWorkers(), inputsRecovered = MacInputLedger.recover()
             if !workersStopped || !inputsRecovered { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }
             else {
                 cleanupPending = false

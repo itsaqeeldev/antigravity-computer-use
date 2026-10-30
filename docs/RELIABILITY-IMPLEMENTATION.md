@@ -1222,10 +1222,12 @@ tests pass locally; native physical expiry/Stop races and Mac watchdog behavior
 remain unqualified. A further Mac candidate records cleanup as pending until
 worker termination is confirmed and the ledger recovery routine reports success,
 allowing the watchdog to
-detect a guardian stalled after publishing idle. Worker termination checks the
-recorded birth identity and refuses an unconfirmed exit; it skips a PID already
-observed as reused. A PID can still change between that check and the signal,
-so this does not prove an unrelated process can never be signalled. Its startup also refuses if watchdog
+detect a guardian stalled after publishing idle. A further candidate has each
+worker exit itself when its native guard is revoked; the guardian and watchdog
+wait for recorded birth identities without signalling numeric worker PIDs. An
+unresponsive worker leaves cleanup unconfirmed and Stop latched. The separate
+watchdog startup path uses its direct child `Process` for termination; the new
+approach needs Mac CI, crash and real-device qualification. Its startup also refuses if watchdog
 identity cannot be written and flushed. Parser tests are headless; Mac
 compilation, actual cleanup acknowledgement, CGEvent delivery and device tests
 for these changes remain pending. Do not install or release this partial change.

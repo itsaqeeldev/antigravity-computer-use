@@ -159,6 +159,7 @@ enum MacFence {
               MacDeadline.valid(state.bootUntil, now: MacDeadline.now) else {
             throw AxonError("control_stopped", "Control is paused, stopped or expired. Observe again after authorized resume.")
         }
+        MacWorkerLifetime.markActive()
         let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0
         guard try macProcessStart(parent) == parentIdentity else { throw AxonError("control_stopped", "The controller parent changed.") }
         guard let watchdog = try? String(contentsOfFile: file + ".watchdog", encoding: .utf8).split(separator: "|"),
@@ -255,8 +256,33 @@ enum MacFence {
     static func emergency(_ reason: String) {
         if !latch.isEmpty { try? Data("stopped".utf8).write(to: URL(fileURLWithPath: latch), options: [.atomic]) }
         try? write("stopped||0||0|1")
-        let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+        let workersStopped = macWaitForWorkers(), inputsRecovered = MacInputLedger.recover()
         if !workersStopped || !inputsRecovered { emit(["ev": "visual_warning", "message": "Input cleanup is incomplete; control stays stopped."]) }
+    }
+}
+
+// A worker cancels itself when its own guard is revoked. This avoids sending a
+// signal to a numeric PID that may have been recycled by the operating system.
+enum MacWorkerLifetime {
+    static let gate = NSLock()
+    static var enabled = false, wasActive = false
+    static func markActive() { gate.lock(); if enabled { wasActive = true }; gate.unlock() }
+    static func start() {
+        gate.lock(); enabled = true; gate.unlock()
+        Thread.detachNewThread {
+            while true {
+                gate.lock(); let active = wasActive; gate.unlock()
+                if !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) { _exit(0) }
+                if let state = try? MacFence.read() {
+                    if state.state == "stopped" || state.state == "paused" || (state.state == "idle" && active) { _exit(0) }
+                    if state.state == "active" {
+                        markActive()
+                        if state.until <= MacFenceState.now || !MacDeadline.valid(state.bootUntil, now: MacDeadline.now) { _exit(0) }
+                    }
+                } else if active { _exit(0) }
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+        }
     }
 }
 
@@ -356,14 +382,14 @@ enum MacInputLedger {
     }
 }
 
-// Birth-time-bound registry. A mismatched PID is skipped, but checking and
-// signalling are not atomic; see issue #11 before release qualification.
+// Birth-time-bound registry. Workers exit cooperatively after guard revocation;
+// the guardian never signals a potentially recycled numeric PID.
 func macRegisterWorker() throws {
     let file = MacFence.file + ".worker-\(getpid())"
     try Data((try macProcessStart(getpid())).utf8).write(to: URL(fileURLWithPath: file), options: [.atomic])
     chmod(file, 0o600)
 }
-@discardableResult func macKillWorkers() -> Bool {
+@discardableResult func macWaitForWorkers() -> Bool {
     let root = URL(fileURLWithPath: MacFence.file).deletingLastPathComponent()
     let prefix = URL(fileURLWithPath: MacFence.file).lastPathComponent + ".worker-"
     guard let names = try? FileManager.default.contentsOfDirectory(atPath: root.path) else { return false }
@@ -376,7 +402,6 @@ func macRegisterWorker() throws {
               let expected = try? String(contentsOf: file, encoding: .utf8), !expected.isEmpty else { confirmed = false; continue }
         if let actual = try? macProcessStart(pid) {
             if actual != expected { continue } // PID was reused; never kill the new process.
-            if kill(pid, SIGKILL) != 0 && errno != ESRCH { confirmed = false }
             pending.append((pid, expected))
         } else if kill(pid, 0) == 0 || errno != ESRCH { confirmed = false }
     }

@@ -1290,6 +1290,11 @@ func readLoop() {
                 try MacInputLedger.withLock { emit(["lock_held": true]); _ = readLine() }
                 return
             }
+            if args.contains("--contract-cooperative-worker") {
+                try MacFence.initialize(requireDirectParent: false)
+                try macRegisterWorker(); MacWorkerLifetime.start(); MacWorkerLifetime.markActive()
+                emit(["cooperative_ready": true]); RunLoop.current.run(); return
+            }
             try MacFence.initialize(requireDirectParent: !args.contains("--mac-watchdog"))
             if args.contains("--release-inputs") { exit(MacInputLedger.recover() ? 0 : 1) }
             if let at = args.firstIndex(of: "--mac-watchdog"), args.count > at+2,
@@ -1298,6 +1303,7 @@ func readLoop() {
             }
             if args.contains("--guardian") { try MacGuardian().run() }
             try macRegisterWorker()
+            MacWorkerLifetime.start()
             defaultMode = "take"
             emit(["event": "ready", "pid": Int(getpid()), "platform": "darwin", "dpi_mode": "native",
                   "control_contract": 1, "native_fence": true, "held_input_cleanup": true,
