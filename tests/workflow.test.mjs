@@ -75,6 +75,23 @@ test('worker error retains a possibly live child until its exit is confirmed',as
  await assert.rejects(driver.aborting,e=>e.code==='input_cleanup_failed');assert.equal(driver.retiring,child);assert.equal(releases,1);
  child.exitCode=1;child.emit('exit',1);await driver.abort();assert.equal(driver.retiring,null);assert.equal(driver.inputMayBeHeld,false);assert.equal(releases,2);
 });
+test('lost worker responses mark effects unknown without misclassifying observations',async()=>{
+ for(const op of ['click','close_window','clipboard','open','launch','snapshot']){
+  const child=new EventEmitter();child.exitCode=1;child.signalCode=null;child.stdin={write(){}};
+  const driver=new Driver();driver.proc=child;driver.info={};driver.releaseHeldInputs=async()=>true;
+  const request=driver.call(op,{});await new Promise(resolve=>setImmediate(resolve));
+  driver.workerFailed(child,Object.assign(Error('worker exited'),{code:'host_exited'}));
+  await assert.rejects(request,e=>e.code===(op==='snapshot'?'host_exited':'input_outcome_unknown')&&(op==='snapshot'||/do not repeat/i.test(e.hint)));
+  if(driver.aborting)await driver.aborting;
+ }
+});
+test('timeouts and failed writes do not invite replay of effectful operations',async()=>{
+ for(const failure of ['timeout','write'])for(const op of ['click','launch','snapshot']){
+  const driver=new Driver({timeoutMs:10});driver.info={};driver.proc={stdin:{write(){if(failure==='write')throw Error('broken pipe');}}};
+  driver.abort=async()=>{};
+  await assert.rejects(driver.call(op,{}),e=>e.code===(op==='snapshot'?(failure==='write'?'host_write_failed':'op_timeout'):'input_outcome_unknown'));
+ }
+});
 test('driver observes a real child exit before reporting cleanup',async()=>{
  const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:['pipe','ignore','ignore'],windowsHide:true});const closed=new Promise(resolve=>child.once('close',resolve));
  const driver=new Driver();driver.proc=child;driver.inputMayBeHeld=true;driver.exitTimeoutMs=5000;let releases=0;

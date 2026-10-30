@@ -22,6 +22,10 @@ separate from ordinary pull-request CI; release and installer pins only change
 after the documented acceptance gates in [reliability status](RELIABILITY-IMPLEMENTATION.md).
 The Mac workflow and updater changes are currently on the development branch;
 the default branch and published beta may not contain them yet.
+The [public draft PR checks](https://github.com/shayann07/antigravity-computer-use/pull/6/checks)
+show the current candidate's Windows and Mac runs. The [Actions page](https://github.com/shayann07/antigravity-computer-use/actions)
+shows their logs and workflow definitions; the Mac workflow becomes part of the
+default branch only after the candidate is reviewed and merged.
 
 The Windows workflow limits Node's test-file concurrency to four to reduce
 competition between native compilation, PowerShell and installer fixtures on

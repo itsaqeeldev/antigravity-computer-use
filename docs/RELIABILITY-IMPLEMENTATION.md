@@ -1313,3 +1313,12 @@ and [event-source state](https://developer.apple.com/documentation/coregraphics/
 The current native recovery still clears a nonempty journal after posting
 release events; that is a best-effort cleanup, not a verified release. Do not
 use it as evidence for physical Mac acceptance or safe recovered-task End.
+# Native worker delivery uncertainty (2026-10-30)
+
+Worker exit, cancellation, a write failure or a timeout can occur after an
+effectful request was submitted. The driver now reports `input_outcome_unknown`
+for those requests and directs the agent to inspect without replay; read-only
+observations retain their specific transport errors. This also covers launch,
+open, close and clipboard operations. Input cleanup still runs independently.
+Driver fixture and IPC/batch regression coverage does not establish physical
+Stop behavior or real-app delivery; those acceptance checks remain pending.

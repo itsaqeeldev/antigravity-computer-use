@@ -8,6 +8,13 @@ import { createInterface } from 'node:readline';
 import { ensureHost } from './build.mjs';
 import {verifyNativeContract} from './platform.mjs';
 
+// A lost response after submitting any of these operations cannot establish
+// whether the target changed, even if the operation uses accessibility APIs.
+const EFFECTFUL = new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog','launch']);
+const unknownOutcome = () => new HostError('input_outcome_unknown',
+  'The native worker did not confirm the operation; its effect is unknown.',
+  'Inspect the target before continuing. Do not repeat the operation automatically.');
+
 export class HostError extends Error {
   constructor(code, message, hint) {
     super(message);
@@ -156,7 +163,7 @@ export class Driver {
   _failAll(err) {
     for (const [, entry] of this.pending) {
       clearTimeout(entry.timer);
-      entry.reject(err);
+      entry.reject(entry.effectful ? unknownOutcome() : err);
     }
     this.pending.clear();
   }
@@ -167,12 +174,13 @@ export class Driver {
     const id = ++this.seq;
     const payload = JSON.stringify({ id, op, args }) + '\n';
     const limit = timeoutMs || this.timeoutMs;
+    const effectful = EFFECTFUL.has(op);
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         this.abort().catch(() => {});
-        reject(new HostError('op_timeout', `Operation '${op}' exceeded ${limit}ms.`,
+        reject(effectful ? unknownOutcome() : new HostError('op_timeout', `Operation '${op}' exceeded ${limit}ms.`,
           'The target app may be busy or showing a modal dialog.'));
       }, limit);
 
@@ -180,14 +188,15 @@ export class Driver {
       // it needs the same independent held-input recovery as ordinary typing.
       const input = ['move','click','type','set_value','key','scroll','drag','paste','paste_files','focus','fit_window','file_dialog'].includes(op);
       if (input) this.inputMayBeHeld = true;
-      this.pending.set(id, { resolve, reject, timer, input });
+      this.pending.set(id, { resolve, reject, timer, input, effectful });
 
       try {
         this.proc.stdin.write(payload);
       } catch (err) {
         this.pending.delete(id);
         clearTimeout(timer);
-        reject(new HostError('host_write_failed', err.message));
+        if (input) this.abort().catch(() => {});
+        reject(effectful ? unknownOutcome() : new HostError('host_write_failed', err.message));
       }
     });
   }
