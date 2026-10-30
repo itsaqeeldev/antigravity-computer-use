@@ -191,18 +191,26 @@ enum MacFence {
                 throw AxonError("focus_changed", "Keyboard focus left the approved application. No further input was sent.")
             }
             if keyboardPID != 0, let window=keyboardWindow {
-                guard let focused=axAttr(AXUIElementCreateApplication(keyboardPID),kAXFocusedUIElementAttribute as String),
-                      CFGetTypeID(focused)==AXUIElementGetTypeID() else {throw AxonError("focus_changed","No keyboard target is currently observable.")}
-                let target=focused as! AXUIElement
-                let role=(axString(target,kAXRoleAttribute as String) ?? "")+(axString(target,kAXSubroleAttribute as String) ?? "")
-                guard !IsSecureEventInputEnabled(), !role.lowercased().contains("secure") else {throw AxonError("protected_app","Keyboard focus became secure. Human handoff is required; no further input was sent.")}
-                var element: AXUIElement?=target;var inside=false
-                for _ in 0..<64 {
-                    guard let node=element else {break}
-                    if CFEqual(node,window) {inside=true;break}
-                    element=axAttr(node,kAXParentAttribute as String) as! AXUIElement?
+                guard !IsSecureEventInputEnabled() else {throw AxonError("protected_app","Keyboard focus became secure. Human handoff is required; no further input was sent.")}
+                let axApp = AXUIElementCreateApplication(keyboardPID)
+                if let focused=axAttr(axApp,kAXFocusedUIElementAttribute as String),
+                   CFGetTypeID(focused)==AXUIElementGetTypeID() {
+                    let target=focused as! AXUIElement
+                    let role=(axString(target,kAXRoleAttribute as String) ?? "")+(axString(target,kAXSubroleAttribute as String) ?? "")
+                    guard !role.lowercased().contains("secure") else {throw AxonError("protected_app","Keyboard focus became secure. Human handoff is required; no further input was sent.")}
+                    let inside = CFEqual(target, axApp) || macElementInWindow(target, window)
+                    guard inside else {throw AxonError("focus_changed","Keyboard focus moved outside the approved window or dialog. No further input was sent.")}
+                } else {
+                    let isMainOrFocused = (axBool(window, kAXMainAttribute as String) == true)
+                        || (axBool(window, kAXFocusedAttribute as String) == true)
+                        || {
+                            if let fw = axAttr(axApp, kAXFocusedWindowAttribute as String), CFGetTypeID(fw) == AXUIElementGetTypeID() {
+                                return CFEqual(fw, window)
+                            }
+                            return false
+                        }()
+                    guard isMainOrFocused else {throw AxonError("focus_changed","No keyboard target is currently observable.")}
                 }
-                guard inside else {throw AxonError("focus_changed","Keyboard focus moved outside the approved window or dialog. No further input was sent.")}
             }
         }
     }

@@ -42,7 +42,7 @@
     {
       "path": "server/render.mjs",
       "upstream_sha256": "5ff0044fd2becc4b2232f6c370a73ff8245aa258a5b82caadcf118cb46f1d3c4",
-      "local_sha256": "53cc94423a869108dd3d9f07de84e48f399fd7002a2b6982fe17be7732c95c9f",
+      "local_sha256": "dff6aa4572837d805fd8f1397ee75a5d1d78b1359a617e7fb19ada5c845356c5",
       "modified": true
     },
     {
@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "69f1126ffabeacc5b51d736fd6b684e7b4368bb39f8be2ca3c133a754b1777c7",
+      "local_sha256": "45803ea3c816bb48c00fd8257a74c94efafc7bd9926cf493edf7828dbe0f7a8e",
       "modified": true
     },
     {
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b79265b279e6045c9255c7a597d999ef036d26424beadc5d760505cc4b43094c"
+      "sha256": "b5f310ca36092422af66af2b26e5972f69c106b0c5be36ee9634b69700fc2259"
     },
     {
       "path": "server/mcp.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "49805db104af78a7adc8b3de34f57364892869145b7bd9f1da4b26f4a196b439"
+      "sha256": "d916538a98fbcf2b4d23d8a9eeb7fc679c2a763944d471d9d1e6272d93891742"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -568,7 +568,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "fc115f1b676fa71673d1e2b067686c13de9ce072aff8dc2346346a21b1e19aa6"
+      "sha256": "e0b55b81e051cc1e1cf752b3e253f2db57afdc311b2e8028567b7ece495a680e"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "168d2883a0ae487224cbf57128b1eec6a0832a5c2c29df1f641d64e9c8c6e8d4"
+      "sha256": "020f9719768f5bdb9db14862adf8af5d1a6094e81c0d1263e8efc867ba0ff4bb"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",

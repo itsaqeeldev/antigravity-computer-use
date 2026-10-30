@@ -278,6 +278,12 @@ final class WindowRegistry {
 
     func handle(for el: AXUIElement, pid: pid_t) -> Int {
         lock.lock(); defer { lock.unlock() }
+        let directID = Int(axWindowID(el))
+        if directID > 0 {
+            entries[directID] = (el, pid)
+            retired.remove(directID)
+            return directID
+        }
         for (h, e) in entries where e.pid == pid && CFEqual(e.el, el) { return h }
         let h = next
         next += 1
@@ -471,7 +477,13 @@ func resolveWindow(_ a: [String: Any]) throws -> (AXUIElement, pid_t, String, In
         if let hit = registry.lookup(wantHandle) {
             return (hit.0, hit.1, axString(hit.0, kAXTitleAttribute as String) ?? "", wantHandle)
         }
-        if registry.isRetired(wantHandle) {
+        if !registry.isRetired(wantHandle) {
+            _ = enumerateWindows()
+            if let hit = registry.lookup(wantHandle) {
+                return (hit.0, hit.1, axString(hit.0, kAXTitleAttribute as String) ?? "", wantHandle)
+            }
+        }
+        if registry.isRetired(wantHandle) || a["__pid"] != nil || a["__started"] != nil {
             throw AxonError("identity_changed", "The target window handle is stale because the window closed or its identity changed. Run apps once to discover current windows; do not poll the stale handle.")
         }
         throw AxonError("window_not_found", "No window matched hwnd/title.",
@@ -507,45 +519,122 @@ func resolveWindow(_ a: [String: Any]) throws -> (AXUIElement, pid_t, String, In
 let interestingActions: Set<String> = ["AXPress", "AXIncrement", "AXDecrement", "AXShowMenu", "AXPick", "AXConfirm"]
 let toggleRoles: Set<String> = ["AXCheckBox", "AXRadioButton", "AXToggle", "AXSwitch"]
 
+func macEnableWebAccessibility(_ pid: pid_t) {
+    let axApp = AXUIElementCreateApplication(pid)
+    _ = AXUIElementSetAttributeValue(axApp, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+    _ = AXUIElementSetAttributeValue(axApp, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+}
+
+func macHasWebArea(_ root: AXUIElement, maxVisit: Int = 250) -> Bool {
+    var stack: [AXUIElement] = [root]
+    var visited = 0
+    while !stack.isEmpty && visited < maxVisit {
+        let el = stack.removeLast()
+        visited += 1
+        if axString(el, kAXRoleAttribute as String) == "AXWebArea" { return true }
+        for kid in axChildren(el).reversed() { stack.append(kid) }
+    }
+    return false
+}
+
+func macIsWebOrElectronApp(pid: pid_t, window: AXUIElement) -> Bool {
+    if let app = NSRunningApplication(processIdentifier: pid) {
+        let bid = (app.bundleIdentifier ?? "").lowercased()
+        let name = (app.localizedName ?? "").lowercased()
+        let webIds = ["chrome", "chromium", "safari", "webkit", "firefox", "brave", "edgemac", "arc", "vivaldi", "opera", "slack", "vscode", "cursor", "electron", "discord", "notion", "obsidian", "teams", "whatsapp"]
+        if webIds.contains(where: { bid.contains($0) || name.contains($0) }) { return true }
+    }
+    return macHasWebArea(window, maxVisit: 80)
+}
+
+func macPatterns(role: String, actions: [String], hasNameOrId: Bool) -> [String] {
+    var out: [String] = []
+    func add(_ p: String) { if !out.contains(p) { out.append(p) } }
+    if toggleRoles.contains(role) { add("Toggle") }
+    if role == "AXTextField" || role == "AXTextArea" || role == "AXComboBox" || role == "AXSearchField" { add("Value") }
+    if role == "AXSlider" || role == "AXValueIndicator" || role == "AXProgressIndicator" || actions.contains("AXIncrement") || actions.contains("AXDecrement") { add("RangeValue") }
+    if role == "AXPopUpButton" || role == "AXComboBox" || actions.contains("AXShowMenu") { add("ExpandCollapse") }
+    if role == "AXRadioButton" || role == "AXTab" { add("SelectionItem") }
+    if role == "AXScrollArea" || role == "AXScrollBar" { add("Scroll") }
+    let layoutRoles: Set<String> = ["AXGroup", "AXUnknown", "AXSplitGroup", "AXLayoutArea", "AXWebArea", "AXWindow", "AXScrollArea"]
+    if (actions.contains("AXPress") || actions.contains("AXConfirm") || actions.contains("AXPick")) && (!layoutRoles.contains(role) || hasNameOrId) {
+        add("Invoke")
+    }
+    for raw in actions {
+        let stripped = raw.replacingOccurrences(of: "AX", with: "")
+        if !stripped.isEmpty && (!layoutRoles.contains(role) || hasNameOrId || stripped != "Press") {
+            add(stripped)
+        }
+    }
+    return out
+}
+
 func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
     let (win, pid, title, handle) = try resolveWindow(a)
-    let maxNodes = int(a["max_nodes"], 1500)
-    let maxDepth = int(a["max_depth"], 20)
-    let interactiveOnly = bool(a["interactive_only"], false)
-    // Every attribute read is a message to the app; a slow one must not pin the
-    // host. Past the budget the walk stops and says so, as the Windows host does.
     let budgetMs = int(a["time_budget_ms"], 4000)
     let started = MacDeadline.now
+
+    macEnableWebAccessibility(pid)
+    let isWebCandidate = macIsWebOrElectronApp(pid: pid, window: win)
+    if isWebCandidate && !macHasWebArea(win, maxVisit: 120) {
+        let waitCapMs = min(450, max(0, budgetMs / 3))
+        var waitedMs = 0
+        while waitedMs < waitCapMs {
+            if MacDeadline.walkBudgetExceeded(start: started, now: MacDeadline.now, budgetMs: budgetMs) { break }
+            Thread.sleep(forTimeInterval: 0.05)
+            waitedMs += 50
+            if macHasWebArea(win, maxVisit: 160) { break }
+        }
+    }
+
+    let requestedNodes = int(a["max_nodes"], 1500)
+    let walkMaxNodes = isWebCandidate ? max(requestedNodes, 1200) : max(requestedNodes, 600)
+    let maxDepth = int(a["max_depth"], isWebCandidate ? 42 : 28)
+    let interactiveOnly = bool(a["interactive_only"], false)
 
     var nodes: [[String: Any]] = []
     var elements: [AXUIElement] = []
     var truncated = false
     var overBudget = false
+    var foundWebArea = false
 
     var stack: [(AXUIElement, Int)] = [(win, 0)]
     while !stack.isEmpty {
-        if nodes.count >= maxNodes { truncated = true; break }
+        if nodes.count >= walkMaxNodes { truncated = true; break }
         if MacDeadline.walkBudgetExceeded(start: started, now: MacDeadline.now, budgetMs: budgetMs) { overBudget = true; break }
         let (el, depth) = stack.removeLast()
 
         let rect = axRect(el)
         let actions = axActions(el)
         let role = axString(el, kAXRoleAttribute as String) ?? "AXUnknown"
+        let subrole = axString(el, kAXSubroleAttribute as String) ?? ""
+        let isSecure = role.lowercased().contains("secure") || subrole.lowercased().contains("secure")
+        if role == "AXWebArea" { foundWebArea = true }
         let name = axString(el, kAXTitleAttribute as String)
             ?? axString(el, kAXDescriptionAttribute as String)
-        let interactive = actions.contains { interestingActions.contains($0) }
+            ?? axString(el, "AXPlaceholderValue")
+        let ident = axString(el, kAXIdentifierAttribute as String)
+        let textVal = !isSecure ? axValueText(el) : nil
+        let hasNameOrId = !(name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            || !(ident?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let hasText = !(textVal?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        let patterns = macPatterns(role: role, actions: actions, hasNameOrId: hasNameOrId)
+        let interactive = !patterns.isEmpty || actions.contains { interestingActions.contains($0) }
 
         var include = true
         if interactiveOnly && depth > 0 && !interactive { include = false }
         if rect == nil && depth > 0 { include = false }
+        if depth > 0 && (role == "AXGroup" || role == "AXSplitGroup" || role == "AXUnknown" || role == "AXLayoutArea") && !hasNameOrId && !hasText {
+            include = false
+        }
 
         if include {
             var node: [String: Any] = ["i": nodes.count, "role": macRole(role), "depth": depth]
             if let n = name, !n.isEmpty { node["name"] = n }
-            if let ident = axString(el, kAXIdentifierAttribute as String), !ident.isEmpty { node["id"] = ident; node["aid"] = ident }
+            if let id = ident, !id.isEmpty { node["id"] = id; node["aid"] = id }
             if let r = rect { node["rect"] = r }
-            if !actions.isEmpty { node["patterns"] = actions.map { $0.replacingOccurrences(of: "AX", with: "") } }
-            if !role.lowercased().contains("secure"), !(axString(el, kAXSubroleAttribute as String) ?? "").lowercased().contains("secure"), let t = axValueText(el) {
+            if !patterns.isEmpty { node["patterns"] = patterns }
+            if let t = textVal {
                 node["text"] = t.count > 4000 ? String(t.prefix(4000)) + "...[truncated]" : t
             }
             var state: [String: Any] = [:]
@@ -561,7 +650,7 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
             elements.append(el)
         }
 
-        if depth < maxDepth && !role.lowercased().contains("secure") && !(axString(el, kAXSubroleAttribute as String) ?? "").lowercased().contains("secure") {
+        if depth < maxDepth && !isSecure {
             let kids = axChildren(el)
             for kid in kids.reversed() { stack.append((kid, depth + 1)) }
         }
@@ -596,6 +685,7 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
         "truncated": truncated || overBudget,
         "nodes": nodes,
     ]
+    if foundWebArea { out["web"] = true }
     if overBudget { out["time_budget_ms"] = budgetMs }
     return out
 }

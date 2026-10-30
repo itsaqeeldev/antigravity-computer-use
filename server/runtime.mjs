@@ -20,7 +20,6 @@ import {recoveryAdvice,priorWindowsCleanupVerified,priorMacCleanupVerified} from
 import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
-const WAIT_TRANSPORT_GRACE_MS=100;
 const fail=(code,message)=>{throw new HostError(code,message,null);};
 export async function waitUntil(target,{now=()=>performance.now(),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),check=()=>{}}={}){
   // Node timers may wake before a fractional deadline. Do not start another
@@ -337,7 +336,7 @@ export class Runtime {
     // native walk's cooperative budget. Retire the worker if that snapshot
     // exceeds the budget plus transport grace; Driver fences its replacement
     // until the old process and any held-input cleanup are confirmed.
-     const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})},walkBudget!==null?{timeoutMs:walkBudget+WAIT_TRANSPORT_GRACE_MS}:undefined)).result;
+    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})},walkBudget!==null?{timeoutMs:walkBudget+1000}:undefined)).result;
     const nodes=queryNodes(tree.nodes,query);
     const rowLimit=Math.min(args.max_nodes||80,500);
     // This marks known loss, not proof that every visual error is accessible.
@@ -350,12 +349,13 @@ export class Runtime {
     let image;
     if(args.with_image!==false){
       const prepareBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now())))+1000:null;
-       try{await this.guardian.request({op:'capture'},prepareBudget!==null?{timeoutMs:prepareBudget}:undefined);}
+      try{await this.guardian.request({op:'capture'},prepareBudget!==null?{timeoutMs:prepareBudget}:undefined);}
       catch(error){if(error.code==='guardian_request_timeout')fail('capture_preparation_timeout','Capture preparation timed out; Stop was attempted but is unconfirmed. Inspect status and prior effects; do not replay input.');throw error;}
       try {
         if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the screenshot could start. Inspect the app; do not replay prior input.');
         const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
-         image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80},captureBudget!==null?{timeoutMs:captureBudget+WAIT_TRANSPORT_GRACE_MS}:undefined)).result;
+        const needsOcr=process.platform==='darwin'&&(nodes.length<=2||rendered.includes('BLIND TREE'));
+        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80,...(needsOcr?{ocr:true}:{})},captureBudget!==null?{timeoutMs:captureBudget+1000}:undefined)).result;
       }
       catch(error){
         if(['window_capture_unavailable','other_desktop','window_fullscreen','window_minimized','window_hidden','mac_permissions_required'].includes(error.code)){
@@ -365,6 +365,10 @@ export class Runtime {
       }
       finally { this.guardian.send({op:'capture_end'}); }
       if(image.capture==='screen_occluded')failWindowState('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.',true);
+      if(Array.isArray(image.screen_text)&&image.screen_text.length){
+        const ocrLines=image.screen_text.slice(0,40).map(item=>`  @${item.x},${item.y} ${JSON.stringify(item.text)}`).join('\n');
+        response.tree+=`\n\n[Screen text (OCR @x,y)]\n${ocrLines}`;
+      }
       response.image={...image};delete response.image.data;
     }
     failures.delete(handle);
@@ -498,10 +502,10 @@ export class Runtime {
       }
       this.frames.delete(latest.metadata.observation_id);
     }while(true);
-     // The deadline has already expired. A final accessibility/screenshot call
-     // would turn a bounded wait into an unbounded request and can exceed the
-     // agent's orchestration budget by seconds. Return the last frame and stop.
-     return finish({matched:false,timed_out:true,...latest});
+    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
+    const finalFailure=waitFailure(final,args.abort_on);
+    if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
+    return finish({matched:false,timed_out:true,...final});
   }
   async waitChange(args){
     const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000);let observations=0;
