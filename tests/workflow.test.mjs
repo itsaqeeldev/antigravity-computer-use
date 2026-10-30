@@ -186,6 +186,12 @@ test('queries search a bounded larger hierarchy before compacting results',async
  assert.equal(requested,500);assert.match(result.metadata.tree,/Export PNG/);assert(!result.metadata.tree.includes('Toolbar'));
 });
 
+test('internal wait snapshot budget reaches the native snapshot without changing public schema',async()=>{
+ let received;const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args){received=args;return {result:{snapshot_id:'s',nodes:[]}};}}};
+ await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_budget_ms:120});
+ assert.equal(received.time_budget_ms,120);
+});
+
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{
  let snapshot={snapshot_id:'s',truncated:true,nodes:[{i:1,name:'Ready',role:'Button'}]};
  const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(){return {result:snapshot};}}};

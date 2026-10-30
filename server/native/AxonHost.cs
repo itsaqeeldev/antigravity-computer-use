@@ -1544,6 +1544,7 @@ namespace Axon
 
             System.Diagnostics.Stopwatch walkClock = System.Diagnostics.Stopwatch.StartNew();
             int walkBudgetMs = EnvInt("CU_SNAPSHOT_MS", 8000);
+            if (Get(a, "time_budget_ms") != null) walkBudgetMs = Math.Min(walkBudgetMs, Math.Max(100, Int(Get(a, "time_budget_ms"), walkBudgetMs)));
 
             if (web)
             {

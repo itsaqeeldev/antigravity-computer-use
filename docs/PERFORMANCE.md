@@ -1,5 +1,15 @@
 # Measuring desktop task latency
 
+Text and change waits pass their remaining polling budget (at least 100 ms)
+to the native accessibility walk. Windows caps it by the existing configured
+walk budget; macOS caps it at its existing 4-second default. Truncated or unread
+change-wait views stop instead of counting as an application change. This is a
+cooperative limit between accessibility calls, not a hard deadline for a hung
+provider, grant, screenshot, or cleanup. Swift currently measures its native
+walk with wall time; clock changes and real-app latency remain unqualified.
+Focused mocked forwarding and incomplete-view tests passed, and Windows native
+compilation passed. Mac compilation and actual application checks are pending.
+
 `wait` and `wait_change` replies include `wait_metrics`: elapsed monotonic milliseconds,
 observation count and polling budget. Successful batch steps retain the same
 metrics when a later action supplies the final result. These fields contain no

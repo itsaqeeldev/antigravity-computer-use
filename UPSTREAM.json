@@ -60,7 +60,7 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "f89d17de47484ea446412bc78dd438bba88cc5d463c83279311b9fc16ccc6e66",
+      "local_sha256": "14ede521df8702a3c78210009e2f409e158a3d6f9d1f4ca6d7126e3fc6bdafcd",
       "modified": true
     },
     {
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "a3d891480a7f6aff8061854381d4d91f2bfd2c16eb07f952a2a8f16c972feef1"
+      "sha256": "d1d38e2197fb69a6256ca37fff90a6c456dea14908c04d1f70a9e3d07a3ebf1b"
     },
     {
       "path": "server/mcp.mjs",
@@ -296,7 +296,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "cbdf4b503fa6657ede1929c1de72c5dd7e0a7b702562ed8dd8e6c529d35d9912"
+      "sha256": "bc69736c659da81ab8a8c67a9bf271670dd8a7f5f300c819f9d9ba7d78d6e646"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "64622b861a2a0904a044a967242918072eca448596206942f664f6d9c16d6086"
+      "sha256": "aa29dafa18c6a3874acd24f30b038a17da67f0c711c5e44c9760cf83adf76b32"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "51083695a5e4fcf1974f67666457245a8ecc7cefe861cc406ddeb76083e788cd"
+      "sha256": "543be2a4a7c507f8c98aa6916a0b9ac3f73c27e9e52eb93fea7a102c611d1f8f"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "66a68a4b249fa87dfddd5446185be9acf902df6f506e75ba90cb15e8a4a7f801"
+      "sha256": "19331090319973307d36784620a23acb6c17892902b2ace0f899d30d33a86a45"
     },
     {
       "path": "HANDOFF.md",
@@ -604,7 +604,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "111588eb116f48e22263bada2b9797c6b5644cf68cfbbf94f5474c5418c1b802"
+      "sha256": "e5bfc98fd3afa6ed96e7b6708654032d9bdb3abebe7c003a31aeeb8a4770af74"
     },
     {
       "path": "docs/MACOS.md",

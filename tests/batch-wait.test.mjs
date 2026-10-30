@@ -185,6 +185,22 @@ test('wait_change compares the original view and returns a fresh usable observat
  assert.throws(()=>validate('computer_wait_change',{hwnd:7,reason:'No frame'}));
 });
 
+test('wait_change refuses incomplete baselines and does not treat truncated observations as change',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
+ const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'old',viewIncomplete:true}]]);
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){assert(a.native_snapshot_budget_ms>=100);frames.set('new',{key,workerEpoch:1});return{metadata:{observation_id:'new',tree:'different',tree_incomplete:true}};}};
+ await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait'}),e=>e.code==='wait_observation_incomplete');
+ frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'old'});
+ const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});
+ assert.equal(result.changed,false);assert.equal(result.incomplete,true);assert.equal(result.metadata.observation_id,'new');
+});
+
+test('an incomplete change wait never dispatches the following batch action',async()=>{
+ let inputs=0;const runtime={async waitChange(){return{changed:false,incomplete:true,metadata:{observation_id:'new'}};},async action(){inputs++;return{};}};
+ const result=await call(runtime,'computer_run',args([{kind:'wait_change',timeout_ms:1000},{kind:'click',name:'Continue'}]));
+ assert.equal(result.verification_error.code,'wait_observation_incomplete');assert.equal(result.batch.skipped,1);assert.equal(inputs,0);
+});
+
 test('wait_change refuses stale frames and stops on identity or control changes',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
  const runtime={frames:new Map(),generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){this.frames.set('fresh',{key:'different',workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'new-snapshot "App" hwnd=7\nChanged'}};}};

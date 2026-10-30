@@ -246,7 +246,7 @@ export class Runtime {
     const query=String(args.query||'').trim().toLowerCase();
     // Query the larger bounded tree before filtering; a compact reply must not
     // prevent discovery of controls late in a real application's hierarchy.
-    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500)})).result;
+    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(args.native_snapshot_budget_ms?{time_budget_ms:args.native_snapshot_budget_ms}:{})})).result;
     const nodes=queryNodes(tree.nodes,query);
     const rowLimit=Math.min(args.max_nodes||80,500);
     // This marks known loss, not proof that every visual error is accessible.
@@ -268,7 +268,7 @@ export class Runtime {
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
     for(const [id,frame] of this.frames){const age=Date.now()-frame.at,monoAge=Object.hasOwn(frame,'atMono')?performance.now()-frame.atMono:null;if(!Number.isFinite(frame.at)||!Number.isFinite(age)||age<0||age>contract.frame_ms||(monoAge!==null&&(!Number.isFinite(frame.atMono)||!Number.isFinite(monoAge)||monoAge<0||monoAge>contract.frame_ms))||frame.workerEpoch!==workerEpoch)this.frames.delete(id);}
     while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
-    this.frames.set(response.observation_id,{at:response.at,atMono:capturedMono,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:comparableView(rendered),viewQuery:args.query,viewMaxNodes:args.max_nodes});
+    this.frames.set(response.observation_id,{at:response.at,atMono:capturedMono,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:comparableView(rendered),viewIncomplete:treeIncomplete,viewQuery:args.query,viewMaxNodes:args.max_nodes});
     return {metadata:response,image};
   }
   async action(op,args){
@@ -342,19 +342,20 @@ export class Runtime {
     const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget;let latest,observations=0;
     const observe=async options=>{observations++;return this.observe(options);};
     const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
+    const snapshotBudget=()=>Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(until-performance.now())));
     do {
-      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,...(args.abort_on?.length?{max_nodes:500}:{})});
+      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=waitFailure(latest,args.abort_on);
       if(failure){
         if(args.with_image===false)return finish({matched:false,aborted:true,abort_match:failure,...latest});
-        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,max_nodes:500})});
+        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,max_nodes:500,native_snapshot_budget_ms:snapshotBudget()})});
       }
       if(tree.includes(args.until.toLowerCase())){
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
         this.frames.delete(latest.metadata.observation_id);
-        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
+        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
         const verifiedFailure=waitFailure(verified,args.abort_on);
         if(verifiedFailure)return finish({matched:false,aborted:true,abort_match:verifiedFailure,...verified});
@@ -373,7 +374,7 @@ export class Runtime {
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
-    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
+    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
     const finalFailure=waitFailure(final,args.abort_on);
     if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
     return finish({matched:false,timed_out:true,...final});
@@ -384,6 +385,7 @@ export class Runtime {
     this.check();
     const baseline=requireObservation(this.frames,args.observation_id,args.hwnd);
     if(typeof baseline.viewTree!=='string')fail('stale_observation','The observation cannot be compared. Take a fresh snapshot.');
+    if(baseline.viewIncomplete)fail('wait_observation_incomplete','The baseline tree was incomplete. Inspect the app and take a fresh observation before waiting.');
     if(baseline.workerEpoch!==this.driver.epoch)fail('stale_observation','The native worker restarted. Take a fresh snapshot.');
     const generation=this.generation,w=await this.grant(Number(args.hwnd),args.reason);this.check();
     if(generation!==this.generation)fail('control_changed','Control changed. Take a fresh snapshot.');
@@ -391,10 +393,11 @@ export class Runtime {
     const until=performance.now()+budget;
     do {
       this.check();
-      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason});
+      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_budget_ms:Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(until-performance.now())))});
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
+      if(latest.metadata.tree_incomplete)return finish({changed:false,incomplete:true,...latest});
       if(comparableView(latest.metadata.tree)!==baseline.viewTree)return finish({changed:true,...latest});
       if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
       this.frames.delete(latest.metadata.observation_id);
