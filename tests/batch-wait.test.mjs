@@ -188,7 +188,7 @@ test('wait_change compares the original view and returns a fresh usable observat
 test('wait_change refuses incomplete baselines and does not treat truncated observations as change',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
  const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'old',viewIncomplete:true}]]);
- const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){assert(a.native_snapshot_budget_ms>=100);frames.set('new',{key,workerEpoch:1});return{metadata:{observation_id:'new',tree:'different',tree_incomplete:true}};}};
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){assert(Number.isFinite(a.native_snapshot_deadline));frames.set('new',{key,workerEpoch:1});return{metadata:{observation_id:'new',tree:'different',tree_incomplete:true}};}};
  await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait'}),e=>e.code==='wait_observation_incomplete');
  frames.set('initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'old'});
  const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});

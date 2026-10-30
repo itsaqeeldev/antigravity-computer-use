@@ -186,10 +186,10 @@ test('queries search a bounded larger hierarchy before compacting results',async
  assert.equal(requested,500);assert.match(result.metadata.tree,/Export PNG/);assert(!result.metadata.tree.includes('Toolbar'));
 });
 
-test('internal wait snapshot budget reaches the native snapshot without changing public schema',async()=>{
- let received;const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args){received=args;return {result:{snapshot_id:'s',nodes:[]}};}}};
- await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_budget_ms:120});
- assert.equal(received.time_budget_ms,120);
+test('native wait budget is recalculated after a slow grant',async()=>{
+ let received;const r={async grant(){await new Promise(resolve=>setTimeout(resolve,100));return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args){received=args;return {result:{snapshot_id:'s',nodes:[]}};}}};
+ await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+500});
+ assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);
 });
 
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{

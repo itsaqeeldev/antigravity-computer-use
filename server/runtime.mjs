@@ -246,7 +246,10 @@ export class Runtime {
     const query=String(args.query||'').trim().toLowerCase();
     // Query the larger bounded tree before filtering; a compact reply must not
     // prevent discovery of controls late in a real application's hierarchy.
-    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(args.native_snapshot_budget_ms?{time_budget_ms:args.native_snapshot_budget_ms}:{})})).result;
+    // Recompute after grant/identity work so it cannot leave the native walk
+    // with a budget calculated before a slow permission or app check.
+    const walkBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
+    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})})).result;
     const nodes=queryNodes(tree.nodes,query);
     const rowLimit=Math.min(args.max_nodes||80,500);
     // This marks known loss, not proof that every visual error is accessible.
@@ -342,20 +345,19 @@ export class Runtime {
     const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget;let latest,observations=0;
     const observe=async options=>{observations++;return this.observe(options);};
     const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
-    const snapshotBudget=()=>Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(until-performance.now())));
     do {
-      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
+      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=waitFailure(latest,args.abort_on);
       if(failure){
         if(args.with_image===false)return finish({matched:false,aborted:true,abort_match:failure,...latest});
-        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,max_nodes:500,native_snapshot_budget_ms:snapshotBudget()})});
+        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,max_nodes:500,native_snapshot_deadline:until})});
       }
       if(tree.includes(args.until.toLowerCase())){
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
         this.frames.delete(latest.metadata.observation_id);
-        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
+        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
         const verifiedFailure=waitFailure(verified,args.abort_on);
         if(verifiedFailure)return finish({matched:false,aborted:true,abort_match:verifiedFailure,...verified});
@@ -374,7 +376,7 @@ export class Runtime {
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
-    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_budget_ms:snapshotBudget(),...(args.abort_on?.length?{max_nodes:500}:{})});
+    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
     const finalFailure=waitFailure(final,args.abort_on);
     if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
     return finish({matched:false,timed_out:true,...final});
@@ -393,7 +395,7 @@ export class Runtime {
     const until=performance.now()+budget;
     do {
       this.check();
-      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_budget_ms:Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(until-performance.now())))});
+      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_deadline:until});
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}

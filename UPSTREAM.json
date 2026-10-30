@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "d1d38e2197fb69a6256ca37fff90a6c456dea14908c04d1f70a9e3d07a3ebf1b"
+      "sha256": "b260d1764736e2c51288ae94c392cb6a6059be0f78f64dc51acb1ab0d9786ae4"
     },
     {
       "path": "server/mcp.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "aa29dafa18c6a3874acd24f30b038a17da67f0c711c5e44c9760cf83adf76b32"
+      "sha256": "c5e42787527a386ae85957e446d75f54cde6730753f66b8d2913acbf27240a40"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "543be2a4a7c507f8c98aa6916a0b9ac3f73c27e9e52eb93fea7a102c611d1f8f"
+      "sha256": "41abf8585d63d590a0fd68ec02c7eff0c39c41f7719291d7217e14906d59746b"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "292126648f63acd59b7ad0e2d259798809f3607c81c3f444f71fecdef9b74ec4"
+      "sha256": "57a86fcd1849bb2d1f389e684720d80a826fd1a934297ebf0751834d2ea85010"
     },
     {
       "path": "HANDOFF.md",
