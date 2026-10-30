@@ -51,6 +51,7 @@ function New-ComputerUseStaging {
             finally { $hasher.Dispose() }
             $candidates += 'D:\AntigravityComputerUseBootstrap-' + $sidHash
         }
+        $candidates += Join-Path ([Environment]::GetFolderPath('UserProfile')) '.gemini/AntigravityComputerUseBootstrap'
         $candidates += Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AntigravityComputerUseBootstrap'
         $rejected = @()
         foreach ($candidate in $candidates) {
