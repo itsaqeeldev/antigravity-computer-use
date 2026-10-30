@@ -124,6 +124,31 @@ func macContractTest() throws {
           !MacPanicMonitor.deadlineGraceElapsed(since: 100, now: 99) else {
         throw AxonError("contract_test_failed", "Watchdog expiry grace differs.")
     }
+    let readyPipe = Pipe()
+    DispatchQueue.global().async {
+        readyPipe.fileHandleForWriting.write(Data("{\"watchdog_".utf8))
+        Thread.sleep(forTimeInterval: 0.02)
+        readyPipe.fileHandleForWriting.write(Data("ready\":true}\n".utf8))
+        try? readyPipe.fileHandleForWriting.close()
+    }
+    guard MacWorkers.readReadyLine(readyPipe.fileHandleForReading) == "{\"watchdog_ready\":true}" else {
+        throw AxonError("contract_test_failed", "Fragmented watchdog readiness was not reassembled.")
+    }
+    guard MacWorkers.readyAcknowledged("{\"watchdog_ready\":true}"),
+          !MacWorkers.readyAcknowledged("{\"watchdog_ready\":false}"),
+          !MacWorkers.readyAcknowledged("{\"watchdog_ready\":1}"),
+          !MacWorkers.readyAcknowledged("{\"message\":\"watchdog_ready\"}"),
+          !MacWorkers.readyAcknowledged("not-json") else {
+        throw AxonError("contract_test_failed", "Invalid watchdog readiness was accepted.")
+    }
+    let oversizedReady = Pipe()
+    DispatchQueue.global().async {
+        oversizedReady.fileHandleForWriting.write(Data(repeating: 65, count: 8193))
+        try? oversizedReady.fileHandleForWriting.close()
+    }
+    guard MacWorkers.readReadyLine(oversizedReady.fileHandleForReading) == nil else {
+        throw AxonError("contract_test_failed", "Oversized watchdog readiness was accepted.")
+    }
     let text = "active|\(token)|\(MacFenceState.now + 10_000_000)|\(Data(grant.utf8).base64EncodedString())|\(MacDeadline.now + 1000)"
     let state = try MacFenceState(text)
     guard state.state == "active", state.token == token, state.grants.contains(grant), state.until > MacFenceState.now else {

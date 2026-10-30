@@ -1230,6 +1230,10 @@ waits a bounded time and retains an unreaped child in the current guardian while
 keeping Stop latched. An isolated native contract fixture exercises successful
 termination; Mac compilation, unconfirmed termination across guardian restart,
 and physical Stop/permission tests remain pending.
+Watchdog readiness now reads a bounded complete JSON line, validates its boolean
+acknowledgement and checks that the child remains alive. A headless Mac contract
+fixture fragments the line across writes and refuses malformed, numeric and
+oversized acknowledgements; its Mac CI result is pending.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

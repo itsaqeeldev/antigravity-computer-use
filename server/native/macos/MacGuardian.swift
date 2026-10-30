@@ -7,6 +7,26 @@ import Foundation
 
 enum MacWorkers {
     static var unreaped: Process?
+    static func readReadyLine(_ handle: FileHandle) -> String? {
+        var bytes = Data()
+        while bytes.count <= 8192 {
+            let part = handle.availableData
+            if part.isEmpty { return nil }
+            bytes.append(part)
+            if let end = bytes.firstIndex(of: 10) {
+                guard end <= 8192 else { return nil }
+                return String(data: bytes[..<end], encoding: .utf8)
+            }
+        }
+        return nil
+    }
+    static func readyAcknowledged(_ line: String?) -> Bool {
+        guard let data = line?.data(using:.utf8),
+              let value = (try? JSONSerialization.jsonObject(with:data)) as? [String: Any],
+              let ready = value["watchdog_ready"] as? NSNumber,
+              CFGetTypeID(ready) == CFBooleanGetTypeID() else { return false }
+        return ready.boolValue
+    }
     static func terminateBeforeRetry(_ child: Process, expectedBirth: String?, timeout: TimeInterval = 2) -> Bool {
         if child.isRunning {
             let pid = child.processIdentifier
@@ -36,8 +56,9 @@ enum MacWorkers {
             throw AxonError("stop_monitor_cleanup_unconfirmed", "Cannot establish the Stop monitor identity. Control stays stopped; inspect locally before retrying.")
         }
         let ready = DispatchSemaphore(value:0); var line: String?
-        DispatchQueue.global().async { line = String(data:output.fileHandleForReading.availableData,encoding:.utf8); ready.signal() }
-        guard ready.wait(timeout:.now()+5) == .success, line?.contains("watchdog_ready") == true else {
+        DispatchQueue.global().async { line = readReadyLine(output.fileHandleForReading); ready.signal() }
+        let signaled = ready.wait(timeout:.now()+5) == .success
+        guard signaled, readyAcknowledged(line), child.isRunning else {
             guard terminateBeforeRetry(child, expectedBirth: birth) else {
                 unreaped = child
                 MacFence.emergency("watchdog_start_cleanup_unconfirmed")
