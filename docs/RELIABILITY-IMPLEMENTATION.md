@@ -1434,10 +1434,11 @@ cause is not established and the rerun does not prove it cannot recur. Five
 skips reflect the project-local ACL boundary; no skipped check is a pass.
 When a task is recovered after a controller restart, `ready` now reports prior
 input cleanup as the next step before suggesting human re-arm or opening a new
-guardian. Isolated lifecycle tests cover stopped, paused and idle states. This
-is a guidance and startup guard only: the separately invoked human launcher can
-still open native controls, and it does not resolve issue #26's native durable
-acknowledgement or prove that old workers have exited.
+guardian. The explicit controls command also refuses a recovered task, an
+unconfirmed native Stop, or failed Stop persistence before starting controls.
+Isolated lifecycle and direct-service tests cover these paths. An already running
+native guardian still requires its own durable re-arm fence; these changes do not
+resolve issue #26's acknowledgement protocol or prove old workers have exited.
 Driver fixture and IPC/batch regression coverage does not establish physical
 Stop behavior or real-app delivery; those acceptance checks remain pending.
 If cleanup itself fails after a submitted action, the response now retains both

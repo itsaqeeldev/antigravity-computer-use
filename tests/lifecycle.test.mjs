@@ -115,6 +115,14 @@ test('ready prioritizes previous input cleanup over re-arm without starting cont
  const r=fixture();let requests=0;r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>{requests++;return {state:'idle',controls_visible:true};};
  for(const state of ['idle','paused','stopped']){r.state=state;const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_prior_input_cleanup');assert.equal(ready.error.code,'recovered_cleanup_unverified');assert.equal(ready.replay_allowed,false);assert.equal(r.taskOpen,true);assert.equal(requests,0);}
 });
+test('explicit controls refuse unverified restart and Stop failures before starting guardian',async()=>{
+ const r=fixture();let requests=0;r.guardian.request=async()=>{requests++;return {controls_visible:true};};
+ r.recoveredTask=true;await assert.rejects(r.showControls(),e=>e.code==='recovered_cleanup_unverified');
+ r.recoveredTask=false;r.state='stopped';r.lastControlReason='guardian_stop_unconfirmed';await assert.rejects(r.showControls(),e=>e.code==='guardian_stop_unconfirmed');
+ r.lastControlReason='stop_persistence_failed';await assert.rejects(r.showControls(),e=>e.code==='stop_persistence_failed');
+ r.lastControlReason='guard_persistence_failed';await assert.rejects(r.showControls(),e=>e.code==='guard_persistence_failed');assert.equal(requests,0);
+ r.lastControlReason='persisted_emergency_stop';assert.equal((await r.showControls()).controls_visible,true);assert.equal(requests,1);assert.equal(r.state,'stopped');
+});
 test('ready reports unconfirmed cleanup instead of asking for repeated re-arm',async()=>{
  const r=fixture();r.state='stopped';r.lastControlReason='input_cleanup_failed';const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_input_cleanup');assert.equal(r.state,'stopped');
 });

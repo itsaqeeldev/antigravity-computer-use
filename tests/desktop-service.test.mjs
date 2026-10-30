@@ -116,6 +116,7 @@ test('direct IPC refuses replay and unverified cleanup after task recovery',asyn
  const send=(command,args={})=>request(session,command,args,5000,'standalone');
  try{
   const ready=await send('ready');assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_prior_input_cleanup');assert.equal(ready.error.code,'recovered_cleanup_unverified');assert.equal(ready.recovered_task,true);assert.equal(ready.replay_allowed,false);assert.equal(guardianRequests,0);
+  const controls=await send('controls');assert.equal(controls.error.code,'recovered_cleanup_unverified');assert.equal(controls.next_action,'inspect_prior_input_cleanup');assert.equal(guardianRequests,0);
   const result=await send('click',{hwnd:1,observation_id:'old',index:1,reason:'Do not replay'});assert.equal(result.error.code,'recovered_task_requires_end');assert.equal(result.replay_allowed,false);assert.equal(nativeCalls,0);
   assert.equal((await send('prepare_update')).prepared,false);
   const ended=await send('end');assert.equal(ended.error.code,'recovered_cleanup_unverified');assert.equal(ended.next_action,'inspect_prior_input_cleanup');assert.equal(cleanups,1);assert.equal((await send('status')).recovered_task,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,true);
