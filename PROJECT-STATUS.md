@@ -1,4 +1,16 @@
-# Current qualification status — 29 October 2026
+# Current qualification status — 30 October 2026
+
+## Mac covering-window repair integrated — 30 October 2026
+
+Mac PR #27 (`1765d9a`) was reviewed and integrated into
+`codex/review-intel-mac` at `b804420`. The repair excludes macOS Dock and
+Window Server background records from the covering-window check, while still
+refusing overlapping application windows. The shared local suite is green at
+434 passed, 0 failed, 11 explicit ACL skips; provenance verifies 175/175
+recorded files. GitHub source, macOS ARM and macOS Intel checks are running for
+this exact head. The device report is useful evidence, but physical held-input
+Esc/re-arm, a second complete on-device task, production signing and
+Gatekeeper/update transport remain release gates.
 
 ## Candidate installation and Antigravity smoke — 30 October 2026
 

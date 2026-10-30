@@ -55,7 +55,8 @@ the signed updater.
 
 Updated **30 October 2026**, Asia/Karachi. Published track: **v0.3.0-beta.2**,
 Windows x64 prerelease. Development work is on `codex/review-intel-mac`;
-check its current commit and CI before using any checkpoint below.
+the current reviewed head is `b804420` (Mac covering-window repair from PR #27).
+Check its current commit and CI before using any checkpoint below.
 
 ## Current reliability and Mac qualification handoff
 
@@ -88,13 +89,17 @@ An earlier Flash trial took 605,626 ms, used 21 calls and failed exact Unicode;
 later matched Notepad trials passed the Unicode comparison but did not qualify
 the full Upscaly workflow. See `docs/PERFORMANCE.md` for both results.
 
-An Intel Mac device report and repair were submitted in PRs #4 and #5 and
-integrated for review; their limits and tested identities are in
-[Mac qualification](docs/MACOS-QUALIFICATION.md). They do not qualify current
-interactive behavior or a production update. An active Upscaly repair session is
-preparing to use the same desktop controller; do not interrupt it. Preserve
-human-only checks and use [the Mac-agent handoff](docs/MAC-QUALIFICATION-PROMPT.md)
-for the next device run. Keep the goal open until acceptance and release delivery
+An Intel Mac device report and the covering-window repair were submitted in
+PR #27 and integrated at `b804420`; its Windows source, macOS ARM and macOS
+Intel CI jobs pass. The on-device report records discovery, AX snapshots,
+activation, sensitive timeout and Stop persistence on the candidate. Its
+physical held-input Esc/re-arm, second complete task, production signing and
+Gatekeeper/update transport limits remain explicit in
+[Mac qualification](docs/MACOS-QUALIFICATION.md). The Windows installation is
+still the earlier Stop-marker build and is not claimed equivalent to this new
+source head. Preserve human-only checks and use
+[the Mac-agent handoff](docs/MAC-QUALIFICATION-PROMPT.md) for any refreshed
+device run. Keep the goal open until the remaining acceptance and release gates
 are verified.
 
 ## Historical checkpoints
