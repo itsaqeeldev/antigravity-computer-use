@@ -211,6 +211,22 @@ func macContractTest() throws {
     }
     try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed","Empty input cleanup failed.") }
+    try MacInputLedger.save(["keys":[42],"buttons":[0]])
+    guard !MacInputLedger.recover(location: { nil }),
+          let retainedKeys = try MacInputLedger.read()["keys"] as? [Int], retainedKeys == [42],
+          let retainedButtons = try MacInputLedger.read()["buttons"] as? [Int], retainedButtons == [0] else {
+        throw AxonError("contract_test_failed", "Missing cursor location did not retain the complete input journal.")
+    }
+    try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
+    // Only test denial when the OS really reports it; do not synthesize
+    // permission or post desktop events from a headless qualification run.
+    if !CGPreflightPostEventAccess() {
+        try MacInputLedger.save(["keys":[Int](),"buttons":[0]])
+        guard !MacInputLedger.recover(), let buttons = try MacInputLedger.read()["buttons"] as? [Int], buttons == [0] else {
+            throw AxonError("contract_test_failed","Denied cleanup lost the held-button journal.")
+        }
+        try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
+    }
     try MacInputLedger.withLock {
         guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Concurrent input cleanup bypassed the held lock.") }
     }

@@ -366,25 +366,34 @@ enum MacInputLedger {
         } else { return }
         try save(value)
     }
-    static func recover() -> Bool {
+    static func recover(location: () -> CGPoint? = { CGEvent(source: nil)?.location }) -> Bool {
         do {
-            return try withLock { try recoverLocked() }
+            return try withLock { try recoverLocked(location: location) }
         } catch { return false }
     }
-    private static func recoverLocked() throws -> Bool {
+    private static func recoverLocked(location: () -> CGPoint?) throws -> Bool {
             let value = try read()
             if (value["keys"] as! [Int]).isEmpty && (value["buttons"] as! [Int]).isEmpty { return true }
+            let buttons = value["buttons"] as! [Int]
+            // Resolve before posting any release, including key-up events.
+            // A missing location retains the entire journal unchanged.
+            let position = buttons.isEmpty ? nil : location()
+            if !buttons.isEmpty && position == nil { return false }
             guard CGPreflightPostEventAccess() else { return false }
             let source = CGEventSource(stateID: .hidSystemState)
             for key in value["keys"] as! [Int] {
                 guard let event = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(key), keyDown: false) else { return false }
                 markedEvent(event)?.post(tap: .cghidEventTap)
             }
-            let position = CGEvent(source: nil)?.location ?? .zero
-            for button in value["buttons"] as! [Int] {
-                guard let event = CGEvent(mouseEventSource: source, mouseType: button == 0 ? .leftMouseUp : button == 1 ? .rightMouseUp : .otherMouseUp,
-                                          mouseCursorPosition: position, mouseButton: CGMouseButton(rawValue: UInt32(button))!) else { return false }
-                markedEvent(event)?.post(tap: .cghidEventTap)
+            if !buttons.isEmpty {
+                // Never invent a screen position for a release: an up event at
+                // (0, 0) could affect the wrong window on a different display.
+                guard let position = position else { return false }
+                for button in buttons {
+                    guard let event = CGEvent(mouseEventSource: source, mouseType: button == 0 ? .leftMouseUp : button == 1 ? .rightMouseUp : .otherMouseUp,
+                                              mouseCursorPosition: position, mouseButton: CGMouseButton(rawValue: UInt32(button))!) else { return false }
+                    markedEvent(event)?.post(tap: .cghidEventTap)
+                }
             }
             try save(["keys": [Int](), "buttons": [Int]()]); return true
     }

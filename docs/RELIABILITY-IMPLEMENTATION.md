@@ -1310,6 +1310,14 @@ Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or
 prove delivery to a target application. See [CGEventPost](https://developer.apple.com/documentation/coregraphics/cgevent/post(tap:))
 and [event-source state](https://developer.apple.com/documentation/coregraphics/cgeventsourcestateid).
+If cursor position is unavailable during Mac mouse-button cleanup, the native
+helper now retains the ledger and reports failure rather than inventing (0, 0).
+The native contract fixture supplies a missing location and checks that both
+keys and buttons remain journaled without posting any event. Real Mac cleanup
+and actual release delivery still require device qualification.
+The native contract test also checks that a held-button journal is retained
+when macOS actually reports post-event access denied; that conditional headless
+check sends no events and is separate from the missing-position fixture.
 The current native recovery still clears a nonempty journal after posting
 release events; that is a best-effort cleanup, not a verified release. Do not
 use it as evidence for physical Mac acceptance or safe recovered-task End.
