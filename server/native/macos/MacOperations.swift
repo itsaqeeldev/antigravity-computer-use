@@ -39,6 +39,8 @@ func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
     for candidate in windows {
         let owner = (candidate[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value ?? -1
         if guardianAlive && owner == guardian { continue } // only this runtime's native click-through chrome
+        let ownerName = candidate[kCGWindowOwnerName as String] as? String ?? ""
+        if ownerName == "Dock" || ownerName == "Window Server" { continue }
         guard (candidate[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 0 > 0,
               let bounds = candidate[kCGWindowBounds as String] as? [String:Any],
               let boundsRect = CGRect(dictionaryRepresentation: bounds as CFDictionary), boundsRect.contains(point) else { continue }
