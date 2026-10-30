@@ -64,10 +64,14 @@ These common command shapes are complete; use them directly without schema setup
 - Clicks move the real animated pointer by default, including named/index targets. They retain observation-scoped resolution and native ownership and visibility checks. Use `--physical false` only when an accessible control requires a semantic action; it may leave the pointer stationary. `set_value`, invoke and other semantic actions need not move it. Do not claim pointer movement for a semantic action.
 - Combine predictable steps in one bounded `run` with 1–8 `--step` groups. The runtime observes between steps, resolves names from fresh state, and stops on the first failure. Do not guess future indexes or pixel positions across layout changes. Root owner/frame/reason precede the first group. The last step returns an image by default; use `--no-image` explicitly when appropriate.
 
+Examples only: replace handles, frames, indexes, names and paths with values
+from the current task and its fresh observation.
+
 ```powershell
 {{DESKTOP_COMMAND}} click --hwnd 123 --observation-id FRAME --name Settings --role Button --risk routine --reason 'Open observed settings' --max-nodes 500
 {{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Choose observed settings' --step click --name JPEG --role Button --risk routine --step click --name 'Close settings' --role Button --risk routine
 {{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Import the sample' --step click --index 7 --risk routine --step file_dialog --path 'D:\Samples\cat.jpg' --action open --entry-method clipboard --settle-ms 600
+{{DESKTOP_COMMAND}} run --hwnd 123 --observation-id FRAME --reason 'Save the document' --step click --index 8 --risk routine --step file_dialog --path 'D:\Samples\result.txt' --action save --entry-method clipboard --settle-ms 600
 {{DESKTOP_COMMAND}} set_value --hwnd 123 --observation-id FRAME --index 9 --text 'Sample' --risk routine --reason 'Set the observed field'
 ```
 

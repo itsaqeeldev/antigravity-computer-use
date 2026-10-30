@@ -336,7 +336,7 @@
     },
     {
       "path": "tests/arguments.test.mjs",
-      "sha256": "31e9f692042134fbb8a3ce36ca7f530aa45e69c9a5d34b33e8a54c0baef0171a"
+      "sha256": "54b4f26ea6c7a04a05775be5bf4bd3cd44361019330ec232c3d03c2bf3bf12be"
     },
     {
       "path": "tests/receipts.test.mjs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "b6cdbcc57fbf6b9ea7b24bb0734145bd4531c837f94a639de59ca2d59faf1a9f"
+      "sha256": "65b217b6e4b0447e84186bd6f02010d4aff44c215fecca18436cfed5aa364f43"
     },
     {
       "path": "HANDOFF.md",
@@ -604,7 +604,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "968c055e10204170e2acb4a86111095aed41cd0b2e83617b57c9021b2c586a5c"
+      "sha256": "b66d4e1dc6e739a11532e6ffbbf3b5eb1d35f83571687acd8631b3715b5753fa"
     },
     {
       "path": "docs/MACOS.md",

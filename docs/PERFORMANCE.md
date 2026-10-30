@@ -37,6 +37,12 @@ controller service 505.85 ms and median inter-call gap 8,823 ms; Flash reports
 sequence gaps, but start at sequence 3 and 9 respectively, so missing earlier
 receipts cannot be ruled out from these files alone. These are historical
 different-model runs, not a speed improvement measurement.
+In those receipts, the gap before `file_dialog` was 19.1 seconds after a
+Sonnet batch and 14.2 seconds after a Flash click. These gaps include all host
+work between calls; they do not identify model reasoning or prove that batching
+would remove them. The skill now shows the already-supported observed Save plus
+file-dialog batch, which still stops on failure and requires output verification.
+It needs a matched real-host benchmark before claiming any savings.
 
 Use a real app task in Antigravity and preserve its exact build, model, input,
 settings, prompt start time and final task receipt ID. Save all local test

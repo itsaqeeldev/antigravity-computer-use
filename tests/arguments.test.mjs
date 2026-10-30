@@ -55,6 +55,8 @@ const describe=name=>({inputSchema:TOOLS.find(t=>t.name==='computer_'+name).inpu
 test('named batch groups need no plan file and retain fresh-frame and explicit image boundaries',()=>{
  const a=parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','Import owned image','--step','click','--index','7','--risk','routine','--step','file_dialog','--path','D:/cat.png','--action','open','--entry-method','clipboard'],describe,{read(){throw Error('No file should be read');}});
  validate('computer_run',a);assert.equal(a.steps.length,2);assert.equal(a.steps[0].observe.with_image,false);assert.equal(a.steps[1].observe.with_image,true);assert.equal(a.steps[1].entry_method,'clipboard');
+ const save=parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','Save document','--step','click','--index','8','--risk','routine','--step','file_dialog','--path','D:/result.txt','--action','save','--entry-method','clipboard','--settle-ms','600'],describe);
+ validate('computer_run',save);assert.equal(save.steps[1].action,'save');assert.equal(save.steps[1].entry_method,'clipboard');
  for(const tail of [['--step'],['--step','click','--hwnd','999'],['--step','click','--confirmed','true']])assert.throws(()=>parseRunArguments(batchSchema,['--hwnd','123','--observation-id','f','--reason','No partial dispatch',...tail],describe));
  assert.throws(()=>parseRunArguments(batchSchema,['--steps','[]','--step','click','--index','7'],describe),/Do not mix/);
  assert.throws(()=>parseRunArguments(batchSchema,Array.from({length:9},()=>['--step','key','--keys','tab']).flat(),describe),/at most eight/);
