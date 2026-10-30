@@ -399,7 +399,16 @@ namespace Axon {
                 Emit(new {ev="state",state="stopped",reason="guard_persistence_failed",custom_cursor=CursorSafety.Applied});return;
             }
             RefreshHud();
-            if (state != "active") { CursorSafety.Restore(); StopWorkers(); ControlFence.Recover(); Overlay.HideAll(); }
+            if (state != "active") {
+                // Missing or failed ledgers must not interrupt the remaining
+                // cleanup or leave the guardian claiming an idle/paused state.
+                GuardCleanup.Run(CursorSafety.Restore,StopWorkers,ControlFence.Recover,Overlay.HideAll);
+                if(InputLedger.HasHeld()) {
+                    state="stopped";grants.Clear();ControlFence.LatchStop();reason="input_cleanup_failed";
+                    try {WriteState();}catch {reason="guard_persistence_failed";}
+                    try {RefreshHud();}catch {}
+                }
+            }
             else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
             if(updateVisibility) {
                 if(state=="active"||state=="paused")ShowControls(0);
@@ -411,7 +420,7 @@ namespace Axon {
         void Emergency(string reason="request") {
             // Hook thread invalidates the native fence BEFORE waiting for the UI thread.
             state="stopped"; ControlFence.LatchStop(); try { WriteState(); } catch { }
-            StopWorkers(); ControlFence.Recover(); Emit(new { ev="state", state="stopped", reason=reason });
+            GuardCleanup.Run(StopWorkers,ControlFence.Recover); Emit(new { ev="state", state="stopped", reason=reason });
             long emergencyEpoch=Interlocked.Increment(ref visibilityEpoch);
             MethodInvoker cleanup=delegate { if(activePrompt!=null) activePrompt.Close(); grants.Clear(); SetState("stopped",null,Interlocked.Read(ref visibilityEpoch)==emergencyEpoch); };
             try {if(InvokeRequired)BeginInvoke(cleanup);else cleanup();} catch { }

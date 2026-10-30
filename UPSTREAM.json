@@ -60,7 +60,7 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "778ec0c21383d26c2c5779ec05de285d059c70c88efdd19bc2743772db3026c3",
+      "local_sha256": "f89d17de47484ea446412bc78dd438bba88cc5d463c83279311b9fc16ccc6e66",
       "modified": true
     },
     {
@@ -215,6 +215,30 @@
   ],
   "authored_files": [
     {
+      "path": "tests/guardian-integration.mjs",
+      "sha256": "a2f133633e88d3a44d9596915e82f16a3167fda43f0cfae64f5e53e37704c8fd"
+    },
+    {
+      "path": "tests/native-integration.mjs",
+      "sha256": "a7d12f5e7feb98ad9f715a04d3aca3554e812955239121b08f2ac6d220710f4d"
+    },
+    {
+      "path": "tests/cursor-recovery.mjs",
+      "sha256": "1a7c84765574ccf0e51398c248766e4634a059dc4223bcfd3101fbf35b64f54c"
+    },
+    {
+      "path": "tests/physical-escape.mjs",
+      "sha256": "886e9c2f258ae76984d1e11bf19dc314a18cfb9a93adb19b030463a9d7a647b6"
+    },
+    {
+      "path": "tests/InputLedgerTests.cs",
+      "sha256": "2a0cb85046a425421106ed7f82856ad7d67d2b94c8b01c4b9544679401acbe86"
+    },
+    {
+      "path": "tests/input-ledger.test.mjs",
+      "sha256": "6a884596c684ccbff10412a4dde995a95c1bbde66091dbf6c74d3b13a85ae684"
+    },
+    {
       "path": "tests/NativeWatchdogMetadataTests.cs",
       "sha256": "cd03152a9e5d8292fa6edff603dc7daa67b162ef4a9cdfcb9160c3968f5b7c77"
     },
@@ -228,11 +252,11 @@
     },
     {
       "path": "tests/recording-visuals-live.mjs",
-      "sha256": "4d787902ce877b5b0a7acf46497d67541fc397d9a7aa66c1ecc055ec1ffd9165"
+      "sha256": "bc20f0c7a296cbfb6940f86d9ac4979a9ff7f2fef986b80d135525c90878e786"
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "8d5c62599ce1880a243981c5cad5aebe222534e6915e6625eb621628510e5eb2"
+      "sha256": "0841d0bf2060d9dbec17b9559ed43172f4e36ad6dd18aabb43ab74d0f99ca875"
     },
     {
       "path": "server/mcp.mjs",
@@ -244,7 +268,7 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "8fc75911b0e225448d1f3fe5f20e5f30dfee0faba52067ca695811cccd1bc615"
+      "sha256": "6e185bd3b9b8226056e618c8989e3acab4fec8faf210eeae4aa159b1235b0457"
     },
     {
       "path": "server/native/CursorSafety.cs",
@@ -256,7 +280,7 @@
     },
     {
       "path": "server/native/InputLedger.cs",
-      "sha256": "c5e513c23ad8dc97f3789b294bab2ebbd8a8eec0f2efbd1b54986ef4469ceab6"
+      "sha256": "7b15df6310042371913d05c238a2874e3d6274189d317c4df656f27229768b10"
     },
     {
       "path": "server/native/CursorMotion.cs",
@@ -472,7 +496,7 @@
     },
     {
       "path": "tests/guardian-visibility.mjs",
-      "sha256": "f27c68b15cc5ddf48031470be13aeae84580c8c643f32415a6dccbb78b241825"
+      "sha256": "e84e4869af528b801b48b0f696077c21d400d8d45b03c0ad8757c4d7d4fe80d9"
     },
     {
       "path": "docs/CLAUDE-CODE-HANDOFF-PROMPT.md",
@@ -544,15 +568,15 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "44028689d1523644967cb74a00eefe43820f5bcb5026bb02f230a26c3f2daea1"
+      "sha256": "a13451aea4900b283756346f192748f2c12b842a06c18887772250005439d8be"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
-      "sha256": "26422d807b453662b19e1675a946fe81ced35e3edd0847a2c0f467fc1ae74b52"
+      "sha256": "00c2a92794a77f2173eb0d0c10f20928b59a658abd495e1748f82992b40fd8d2"
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "bcaac5ff13e80d30ca632ad6b9a79500fabfa39a7b14559f0877e5bb48e2e195"
+      "sha256": "4b7910a287be2c5e89dc3a0c3d5996c15aa770a2c7ba84dffcba39d7a53dc85e"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -580,7 +604,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "b9900f84b8d0315366653039b35bd3df85995866aa025fe2ff2e3c1d888ab5c3"
+      "sha256": "968c055e10204170e2acb4a86111095aed41cd0b2e83617b57c9021b2c586a5c"
     },
     {
       "path": "docs/MACOS.md",
@@ -620,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "fa88ecbbe722bb440e661c4459729068c1f7579b451954ce769633fde8c188df"
+      "sha256": "b5e16525b03e5ba56e0a93af3e66215d996f1a3193c09998f6606e0dc09d4a8d"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -636,7 +660,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "7d8a5f17fbaa75c69c70a904dbce908fb5241d14f1ee1ad04296391bce914ad6"
+      "sha256": "722ad2540c31bae5e14131767a6afa9d3ba2ca285ead343903723ff1d4f2aacc"
     },
     {
       "path": "server/native/GuardCleanup.cs",
@@ -688,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "756a285209839eb95ac6ad648438187a1b351c480b0f7ae6f45dd562781a6690"
+      "sha256": "6bf81fbda1731129c1271ae6701e1abc9c8d3b688ca44acce13486c7dabdd7aa"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

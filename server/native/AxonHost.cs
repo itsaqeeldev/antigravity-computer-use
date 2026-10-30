@@ -450,7 +450,7 @@ namespace Axon
             if(argv.Length==2 && argv[0]=="--visual-preview") { SetDpiAwareness();DesktopVisuals.Export(argv[1]);return 0; }
             if (Array.IndexOf(argv, "--guardian") >= 0) SetDpiAwareness();
             if (Array.IndexOf(argv, "--guardian") >= 0) { int code=0; var ui=new System.Threading.Thread(delegate(){ code=Guardian.Run(); }); ui.SetApartmentState(System.Threading.ApartmentState.STA); ui.Start(); ui.Join(); return code; }
-            if (Array.IndexOf(argv, "--release-inputs") >= 0) { ControlFence.Recover(); return InputLedger.HasHeld()?2:0; }
+            if (Array.IndexOf(argv, "--release-inputs") >= 0) { try { ControlFence.Recover(); return InputLedger.HasHeld()?2:0; } catch { return 2; } }
             if(argv.Length==1 && argv[0]=="--desktop-context") {Console.Out.WriteLine(new JavaScriptSerializer().Serialize(DesktopContext.Inspect()));return 0;}
             ControlFence.WatchParent();
             // Build-time warm-up: touch the expensive machinery once so the

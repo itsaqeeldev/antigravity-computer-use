@@ -3,10 +3,10 @@ import {testDirectory} from './paths.mjs';
 // It only authorizes its own throwaway WinForms target. No production auto-approval mode exists.
 import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import assert from 'node:assert/strict';
 import {Driver} from '../server/driver.mjs';
-const evidence=testDirectory('native-evidence');fs.mkdirSync(evidence,{recursive:true});
+const evidence=fs.mkdtempSync(path.join(testDirectory('native-evidence'),'run-'));
 const guard=path.join(evidence,'fixture.state');const token='native-fixture-'+process.pid;
 const deadline=(BigInt(Date.now()+60000)*10000n+621355968000000000n).toString();
-fs.writeFileSync(guard,'idle||0|');
+fs.writeFileSync(guard,'idle||0|');fs.writeFileSync(guard+'.inputs','');
 const fixture=spawn('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.resolve('tools/make-target.ps1')],{windowsHide:false,stdio:['ignore','pipe','pipe']});
 const info=await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('Fixture did not start')),15000);createInterface({input:fixture.stdout}).on('line',l=>{try{const v=JSON.parse(l);if(v.title){clearTimeout(t);resolve(v);}}catch{}});fixture.stderr.on('data',d=>process.stderr.write(d));});
 const d=new Driver({env:{AGCU_GUARD_FILE:guard,AGCU_PARENT_PID:String(process.pid),AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'}});

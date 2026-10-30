@@ -9,7 +9,7 @@ const results=[];
 for(const latched of [false,true]){
  const folder=path.join(dir,latched?'latched':'idle');fs.mkdirSync(folder);
  const guard=path.join(folder,'guard.state'),latch=path.join(folder,'emergency.stop');
- fs.writeFileSync(guard,'idle||0|');if(latched)fs.writeFileSync(latch,'owner-stop');
+ fs.writeFileSync(guard,'idle||0|');fs.writeFileSync(guard+'.inputs','');if(latched)fs.writeFileSync(latch,'owner-stop');
  const g=new Guardian({AGCU_GUARD_FILE:guard,AGCU_STOP_LATCH:latch,AGCU_PARENT_PID:String(process.pid),AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off'});
  const state=latched?'stopped':'idle';
  const status=()=>g.request({op:'visual_status'});

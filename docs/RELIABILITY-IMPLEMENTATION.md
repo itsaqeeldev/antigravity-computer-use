@@ -975,6 +975,16 @@ Task startup now creates and flushes its own empty native input ledger before
 dispatch, so a pointer-only task can leave verifiable empty evidence. An
 existing nonempty, malformed or linked ledger is refused and never overwritten.
 The tests use inert ledger contents; real pointer-only crash recovery is pending.
+Native cleanup no longer treats a missing ledger as empty on Windows or Mac.
+The passive runtime initializes its new guard's ledger before human controls
+can start, and a missing ledger causes cleanup to fail closed. A compiled
+Windows helper test checks the missing-ledger exit without sending input; Mac's
+native contract check covers the same refusal when its fixture starts empty.
+When native cleanup fails, both guardian implementations now retain Stop and
+continue other cleanup rather than reporting idle or aborting the remaining
+cleanup sequence. `ready` reports `inspect_input_cleanup` instead of repeatedly
+requesting re-arm. These are source and isolated-test results; actual guardian
+UI, physical release and Mac interaction on this change remain unqualified.
 On 30 October, a fresh Windows candidate built from `b1a0d7b` had build ID
 `727d06b5186a68518a4e5d4b6640b579715662e6f8827949ea0d3246bfcc2759` and all
 109 payload hashes matched. The isolated fresh-install and signed-update check

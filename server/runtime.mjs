@@ -22,6 +22,17 @@ import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
 const persistenceFailure=reason=>['stop_persistence_failed','guard_persistence_failed'].includes(reason);
+function initializeInputLedger(guardFile){
+  const ledger=guardFile+'.inputs';let fd;
+  try{fd=fs.openSync(ledger,'wx',0o600);fs.writeFileSync(fd,process.platform==='darwin'?'{"keys":[],"buttons":[]}':'');fs.fsyncSync(fd);}
+  catch(error){
+    if(error.code!=='EEXIST')throw error;const info=fs.lstatSync(ledger);if(!info.isFile()||info.isSymbolicLink()||info.size>65536)throw error;
+    const content=fs.readFileSync(ledger,'utf8');
+    if(process.platform==='darwin'){const value=JSON.parse(content);if(!Array.isArray(value?.keys)||!Array.isArray(value?.buttons)||value.keys.length||value.buttons.length)throw error;}
+    else if(content!=='')throw error;
+    const existing=fs.openSync(ledger,'r+');try{fs.fsyncSync(existing);}finally{fs.closeSync(existing);}
+  }finally{if(fd!==undefined)fs.closeSync(fd);}
+}
 export function savedTakeoverMode(file,fallback){
   try {const mode=JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,'')).takeover_mode;if(['manual','smart'].includes(mode))return mode;}catch{}
   return fallback;
@@ -83,6 +94,9 @@ export class Runtime {
     const prior=this.taskFile?readTaskRecord(this.taskFile):{open:false,guard:null};const priorTask=prior.open;
     this.guardFile=path.join(dataDir(),`guard-${process.pid}-${randomUUID()}.state`);
     fs.writeFileSync(this.guardFile,'idle||0|',{mode:0o600});
+    // Human controls may start before an agent calls ready. Ensure their native
+    // cleanup checks have an explicit empty ledger even in a passive session.
+    if(!driver&&!guardian)initializeInputLedger(this.guardFile);
     const env={AGCU_GUARD_FILE:this.guardFile,AGCU_CONTRACT_FILE:fileURLToPath(new URL('./control-contract.json',import.meta.url)),AGCU_STOP_LATCH:this.latchFile||'',AGCU_PARENT_PID:String(process.pid),AGCU_PERMISSION_MODE:permissionMode,AGCU_TAKEOVER_MODE:takeoverMode,AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off',CU_MODE:'take'};
     this.driver=driver||new Driver({env,onEvent:event=>{if(event.event==='input_cleanup_failed')this.stop().catch(()=>{});}});this.guardian=guardian||new Guardian(env);
     this.sessions=sessions||new Sessions({sessionId:randomUUID(),onInputLeaseLost:()=>this.stop().catch(()=>{})});this.sessions.register();
@@ -122,16 +136,7 @@ export class Runtime {
       if(this.taskFile){
         // An empty native ledger is evidence that a task that only moved the
         // pointer has no recorded held inputs. Never overwrite an existing one.
-        const ledger=this.guardFile+'.inputs';let fd;
-        try{fd=fs.openSync(ledger,'wx',0o600);fs.writeFileSync(fd,process.platform==='darwin'?'{"keys":[],"buttons":[]}':'');fs.fsyncSync(fd);}
-        catch(error){
-          if(error.code!=='EEXIST')throw error;const info=fs.lstatSync(ledger);if(!info.isFile()||info.isSymbolicLink()||info.size>65536)throw error;
-          const content=fs.readFileSync(ledger,'utf8');
-          if(process.platform==='darwin'){const value=JSON.parse(content);if(!Array.isArray(value?.keys)||!Array.isArray(value?.buttons)||value.keys.length||value.buttons.length)throw error;}
-          else if(content!=='')throw error;
-          const existing=fs.openSync(ledger,'r+');try{fs.fsyncSync(existing);}finally{fs.closeSync(existing);}
-        }
-        finally{if(fd!==undefined)fs.closeSync(fd);}
+        initializeInputLedger(this.guardFile);
         writeAtomicJSON(this.taskFile,{schema:1,open:true,guard:path.basename(this.guardFile),children:this.dispatchChildren,dispatched:this.dispatchStarted,watchdogs_complete:this.watchdogsComplete});
       }
       this.taskDurable=true;
@@ -171,7 +176,7 @@ export class Runtime {
       const visible=controls.controls_visible===true;
       if(!visible)throw Object.assign(Error('Local controls did not report a visible bar.'),{code:'guardian_controls_not_visible'});
       return {...this.status(),update_notice:updateNotice(dataDir()),ready:visible&&this.state!=='stopped'&&this.state!=='paused'&&!this.recoveredTask,controls_visible:visible,desktop_context:controls.desktop_context,guardian_running:!!this.guardian.proc,guardian_exit:this.guardian.lastExit??null,
-        next_action:this.state==='stopped'?'awaiting_human_rearm':this.state==='paused'?'awaiting_human_resume':this.recoveredTask?'inspect_recovered_task':'discover_or_launch'};
+        next_action:this.state==='stopped'?(this.lastControlReason==='input_cleanup_failed'||this.driver?.inputMayBeHeld===true?'inspect_input_cleanup':'awaiting_human_rearm'):this.state==='paused'?'awaiting_human_resume':this.recoveredTask?'inspect_recovered_task':'discover_or_launch'};
     }catch(error){this.recoveryVisibility=controls?.controls_visible===false?false:null;this.recoveryFailure={code:error.code||'guardian_unavailable',message:error.code==='desktop_context_unavailable'?'Start the installed local launcher on the visible desktop. No desktop was switched and Stop remains latched.':'Local controls failed to start. Run diagnostics; do not repeat launch commands.'};return unavailable();}
   }
   enforceStopLatch(){

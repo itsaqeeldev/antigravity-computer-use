@@ -1,7 +1,7 @@
 import {testDirectory} from './paths.mjs';
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';import assert from 'node:assert/strict';
 import {Guardian} from '../server/guardian.mjs';import {Driver} from '../server/driver.mjs';
-const dir=testDirectory('guardian-test');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');
+const dir=fs.mkdtempSync(path.join(testDirectory('guardian-test'),'run-'));const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');fs.writeFileSync(file+'.inputs','');
 const env={AGCU_GUARD_FILE:file,AGCU_PARENT_PID:String(process.pid),AGCU_REAL_CURSOR:'1',CU_OVERLAY:'off',CU_PRESENCE:'off'};
 const g=new Guardian(env);const d=new Driver({env});
 try{

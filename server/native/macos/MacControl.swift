@@ -232,7 +232,7 @@ enum MacFence {
 enum MacInputLedger {
     static var path: String { MacFence.file + ".inputs" }
     static func read() throws -> [String: Any] {
-        if !FileManager.default.fileExists(atPath: path) { return ["keys": [Int](), "buttons": [Int]()] }
+        guard !MacFence.file.isEmpty, FileManager.default.fileExists(atPath: path) else { throw AxonError("input_cleanup_failed", "The input ledger is missing; cleanup cannot be confirmed.") }
         let info = try MacPrivateStorage.info(path)
         guard info.st_uid == getuid(), info.st_mode & S_IFMT == S_IFREG else { throw AxonError("input_cleanup_failed", "The input ledger is not trusted.") }
         guard let value = try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: path))) as? [String: Any],

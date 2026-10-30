@@ -40,6 +40,18 @@ test('task startup creates an empty ledger and never overwrites held input evide
   assert.throws(()=>r.beginTask(),e=>e.code==='task_state_write_failed');assert.equal(fs.readFileSync(ledger,'utf8'),held);assert.equal(r.status().task_open,true);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('passive production runtime initializes its ledger without starting controls',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-passive-ledger-'));const previous={data:process.env.AGCU_DATA_DIR,plugin:process.env.CU_PLUGIN_DATA,claude:process.env.CLAUDE_PLUGIN_DATA};let runtime;
+ try{
+  try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+  process.env.AGCU_DATA_DIR=dir;delete process.env.CU_PLUGIN_DATA;delete process.env.CLAUDE_PLUGIN_DATA;
+  runtime=new Runtime();assert.equal(runtime.state,'idle');assert.equal(runtime.guardian.proc,undefined);const data=fs.readFileSync(runtime.guardFile+'.inputs','utf8');
+  if(process.platform==='darwin')assert.deepEqual(JSON.parse(data),{keys:[],buttons:[]});else assert.equal(data,'');
+  await runtime.close();runtime=null;
+ }finally{
+  if(runtime)await runtime.close();for(const [name,value] of [['AGCU_DATA_DIR',previous.data],['CU_PLUGIN_DATA',previous.plugin],['CLAUDE_PLUGIN_DATA',previous.claude]]){if(value===undefined)delete process.env[name];else process.env[name]=value;}fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
 test('recovered End closes only after old Windows ledger and native processes verify',{skip:process.platform!=='win32'},async t=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'verified-prior-')),file=path.join(dir,'task-state.json'),guard='guard-2147483647-12345678-1234-1234-1234-123456789abc.state';
  try{
@@ -103,6 +115,9 @@ test('ready exposes recovery guidance without clearing a restarted task or Stop'
  const r=fixture();r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>({state:'idle',controls_visible:true});
  const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_recovered_task');assert.equal(r.taskOpen,true);
  r.guardian.request=async()=>({state:'stopped',controls_visible:true});const stopped=await r.ready();assert.equal(stopped.next_action,'awaiting_human_rearm');assert.equal(stopped.recovered_task,true);
+});
+test('ready reports unconfirmed cleanup instead of asking for repeated re-arm',async()=>{
+ const r=fixture();r.state='stopped';r.lastControlReason='input_cleanup_failed';const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_input_cleanup');assert.equal(r.state,'stopped');
 });
 test('task reservation remains open after actual controller process termination',{timeout:30000},async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-crash-')),file=path.join(dir,'task-state.json');

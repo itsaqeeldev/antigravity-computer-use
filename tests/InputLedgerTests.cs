@@ -18,6 +18,8 @@ internal static class InputLedgerTests {
  static int count;static void Check(bool v,string m){if(!v)throw new Exception(m);count++;Console.WriteLine("PASS "+m);}
  static int Main(string[] args){try {
   ControlFence.FileName=Path.Combine(args[0],"journal.state");File.Delete(ControlFence.FileName+".inputs");
+  bool missingRefused=false;try{InputLedger.Recover();}catch(IOException){missingRefused=true;}Check(missingRefused&&InputLedger.HasHeld()&&Native.sent.Count==0,"missing ledger cannot confirm cleanup or send input");
+  File.WriteAllText(ControlFence.FileName+".inputs","");
   InputLedger.Recover();Check(Native.sent.Count==0,"idle recovery sends no unrelated key or mouse releases");
   InputLedger.Send(new[]{Native.KeyInput(0x11,0,0),Native.MouseInput(2,0)});Native.sent.Clear();InputLedger.Recover();
   Check(Native.sent.Count==2&&Native.sent[0].u.ki.wVk==0x11&&Native.sent[1].u.mi.dwFlags==4,"recovers only owned Ctrl and left button");

@@ -144,13 +144,18 @@ final class MacGuardian: NSObject {
     }
     func set(_ next: String, reason: String = "") {
         if next == "active" && (!MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) || state == "stopped") { return }
+        var effectiveReason = reason
         state = next
         if next == "stopped" || next == "idle" { grants.removeAll() }
         do { try writeState() } catch { state = "stopped"; MacFence.emergency("state_write_failed") }
-        if state != "active" { macKillWorkers(); _ = MacInputLedger.recover(); visuals.releaseCursor() }
+        if state != "active" {
+            macKillWorkers()
+            if !MacInputLedger.recover() { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }
+            visuals.releaseCursor()
+        }
         if state == "idle" { visuals.hide() }
         else { visuals.show(state); controlsUntil = state == "stopped" ? Date().addingTimeInterval(8) : .distantFuture }
-        emit(["ev": "state", "state": state, "reason": reason, "custom_cursor": visuals.cursorApplied])
+        emit(["ev": "state", "state": state, "reason": effectiveReason, "custom_cursor": visuals.cursorApplied])
     }
     func stop(_ reason: String) { MacFence.emergency(reason); set("stopped", reason: reason) }
     func humanToggle() {

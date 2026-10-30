@@ -19,7 +19,7 @@ namespace Axon {
         static bool Enter(Mutex mutex) {
             try {return mutex.WaitOne(2000);}catch(AbandonedMutexException){return true;}
         }
-        static HashSet<string> Read() {return File.Exists(FileName)?new HashSet<string>(File.ReadAllLines(FileName)):new HashSet<string>();}
+        static HashSet<string> Read() {return new HashSet<string>(File.ReadAllLines(FileName));}
         static void Save(HashSet<string> held) {
             string temp=FileName+"."+System.Diagnostics.Process.GetCurrentProcess().Id+".tmp";
             // Flush before injection: a hard-killed worker must leave a record.
@@ -75,7 +75,7 @@ namespace Axon {
             }
         }
         internal static bool HasHeld() {
-            if(String.IsNullOrEmpty(ControlFence.FileName))return false;
+            if(String.IsNullOrEmpty(ControlFence.FileName))return true;
             try {using(Mutex mutex=OpenMutex()) {
                 if(!Enter(mutex))return true;
                 try {return Read().Count!=0;}finally {mutex.ReleaseMutex();}

@@ -26,6 +26,7 @@ export function recoveryAdvice(result){
  if(code==='recovered_task_requires_end')return {next_action:'inspect_recovered_task',replay_allowed:false};
  if(['recovered_cleanup_unverified','input_lease_stale'].includes(code))return {next_action:'inspect_prior_input_cleanup',replay_allowed:false};
  if(['stop_persistence_failed','guard_persistence_failed'].includes(code))return {next_action:'inspect_stop_persistence_without_restart',replay_allowed:false};
+ if(code==='input_cleanup_failed')return {next_action:'inspect_input_cleanup',replay_allowed:false};
  if(['permission_denied','approval_timeout','confirmation_required'].includes(code))return {next_action:'await_user_decision',replay_allowed:false};
  if(['control_stopped','control_inactive'].includes(code))return {next_action:'inspect_status_then_human_controls',replay_allowed:false};
  return {next_action:'inspect_diagnostics',replay_allowed:false};

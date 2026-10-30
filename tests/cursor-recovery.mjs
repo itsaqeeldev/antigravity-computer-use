@@ -2,12 +2,12 @@ import {testDirectory} from './paths.mjs';
 // Native cursor lifecycle/crash tests. No app grants, pointer movement or clicks.
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
 import {Guardian} from '../server/guardian.mjs';import {Driver} from '../server/driver.mjs';import {ensureHost} from '../server/build.mjs';
-const dir=testDirectory('cursor-recovery');fs.mkdirSync(dir,{recursive:true});const exe=ensureHost().exe;
+const dir=fs.mkdtempSync(path.join(testDirectory('cursor-recovery'),'run-'));const exe=ensureHost().exe;
 const delay=ms=>new Promise(r=>setTimeout(r,ms));const checks=[];const record={passed:false,app_grants:0};
 function probe(name,role=32512){const f=path.join(dir,name+'.png');const p=spawnSync(exe,['--cursor-probe',f,String(role)],{windowsHide:true,encoding:'utf8'});assert.equal(p.status,0,p.stdout+p.stderr);return fs.readFileSync(f);}
 async function waitFor(predicate){for(let i=0;i<40;i++){if(predicate())return;await delay(100);}assert.fail('Native recovery timeout');}
 async function session(name){
- const file=path.join(dir,name+'.state');fs.writeFileSync(file,'idle||0|');
+ const file=path.join(dir,name+'.state');fs.writeFileSync(file,'idle||0|');fs.writeFileSync(file+'.inputs','');
  const env={AGCU_GUARD_FILE:file,AGCU_PARENT_PID:String(process.pid),CU_OVERLAY:'off',CU_PRESENCE:'off'};
  const g=new Guardian(env),d=new Driver({env});await g.start();await d.start();g.send({op:'attach',pid:d.info.pid});
  return {g,d,file,worker:d.info.pid};

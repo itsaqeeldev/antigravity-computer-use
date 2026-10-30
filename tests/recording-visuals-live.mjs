@@ -5,10 +5,10 @@ import path from 'node:path';
 import {Guardian} from '../server/guardian.mjs';
 import {testDirectory} from './paths.mjs';
 
-const root=testDirectory('recording-visuals');
+const root=fs.mkdtempSync(path.join(testDirectory('recording-visuals'),'run-'));
 for(const enabled of [false,true]) {
   const dir=path.join(root,String(enabled));fs.mkdirSync(dir,{recursive:true});
-  const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');
+  const file=path.join(dir,'guard.state');fs.writeFileSync(file,'idle||0|');fs.writeFileSync(file+'.inputs','');
   fs.writeFileSync(path.join(dir,'control-preferences.json'),JSON.stringify({takeover_mode:'manual',record_visuals:enabled}));
   const g=new Guardian({AGCU_GUARD_FILE:file,AGCU_PARENT_PID:String(process.pid),AGCU_REAL_CURSOR:'1'});
   try {
