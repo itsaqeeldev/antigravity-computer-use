@@ -31,6 +31,13 @@ before/after speed improvement; neither establishes Upscaly performance or
 affected-PC recovery. Private summaries and receipts remain under
 `.localdata/real-model-qualification-20261029/reviewed-paired/`.
 
+Reanalysis with the corrected median calculation reports Sonnet median
+controller service 505.85 ms and median inter-call gap 8,823 ms; Flash reports
+314.5 ms and 7,167.65 ms. The retained intervals contain no internal receipt
+sequence gaps, but start at sequence 3 and 9 respectively, so missing earlier
+receipts cannot be ruled out from these files alone. These are historical
+different-model runs, not a speed improvement measurement.
+
 Use a real app task in Antigravity and preserve its exact build, model, input,
 settings, prompt start time and final task receipt ID. Save all local test
 artifacts under the checkout's ignored `.localdata/` directory. Keep hardware,
