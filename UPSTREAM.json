@@ -296,7 +296,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "745933cf9809a6550b2efc1ad8df5674e7d7b68adaf0d2d0bdd593fd74cf71d9"
+      "sha256": "ea9111fc5ea3c397491f7190a25a0fc872528d751c73f5b15e461dd008bc53ee"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "39cd56baa44b43e5c339d37bb49068da2a43f24cbdfb4c89401c631bafd35bf2"
+      "sha256": "1410a1cd0ae3741b2651e0cf358150d8645839a98dbb5c651d9261a5d86c2d12"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -368,7 +368,7 @@
     },
     {
       "path": "tests/core.test.mjs",
-      "sha256": "a001cca1b47000236804b4fa0e8dd54a2683ca3296cd3f4830eabe5b63493d91"
+      "sha256": "a58f01b62e6137dff7222a912eafdd13512c115cd6557812dda0c40bffa765a6"
     },
     {
       "path": "tests/workflow.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "1cca5dadbe152e939e04a86901f8b7a8aea14dbd9a5d907c2babb456ece4eb1a"
+      "sha256": "6e345ecb12e1f6bd9f3d0d97f28245de7a6e81114a66cc38e4326063f02c091f"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

@@ -111,8 +111,24 @@ export async function call(r,name,a){
   const completed=[];let last=null;let observation=a.observation_id;
   for(let i=0;i<plan.length;i++){
    const {kind,n,args,framed}=plan[i];
-   try{last=await call(r,n,framed?{...args,observation_id:observation}:args);completed.push({index:i,kind,ok:true});if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};if(n==='computer_wait'&&!last.matched){completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};}if(n==='computer_wait_change'&&!last.changed){completed.pop();return {...last,ok:false,verification_error:{code:'wait_change_timeout',message:'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};}observation=last.metadata?.observation_id;}
-   catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
+   try{
+    last=await call(r,n,framed?{...args,observation_id:observation}:args);
+    if(!last||typeof last!=='object'||Array.isArray(last))return {ok:false,delivery_unknown:true,error:{code:'input_outcome_unknown',message:'The step returned no usable result. Inspect the app; do not replay it.'},completed,failed_index:i,skipped:plan.length-i-1,observe_before_continuing:true};
+    if(last.ok===false){
+     const error=last.error&&typeof last.error==='object'&&!Array.isArray(last.error)&&typeof last.error.code==='string'
+      ?last.error:{code:'batch_step_failed',message:'The step reported failure. Inspect the app before continuing.'};
+     return {...last,ok:false,error,completed,failed_index:i,skipped:plan.length-i-1,observe_before_continuing:true};
+    }
+    completed.push({index:i,kind,ok:true});
+    if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};
+    if(n==='computer_wait'&&!last.matched){
+     completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
+    }
+    if(n==='computer_wait_change'&&!last.changed){
+     completed.pop();return {...last,ok:false,verification_error:{code:'wait_change_timeout',message:'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
+    }
+    observation=last.metadata?.observation_id;
+   }catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
  }

@@ -1171,6 +1171,14 @@ single-link, file-identity and bounded-read checks. A hard-linked empty ledger
 is refused in local regression tests. This does not qualify actual watchdog
 cleanup or physical crash recovery, which remain open under issue #9.
 
+Issue #15 tracks a defensive batch protocol gap: explicit failed return values
+and malformed step results were not handled like thrown failures. The candidate
+stops before later input, preserves delivery evidence, and labels malformed
+results as unknown delivery. Local mocked regressions do not establish a real
+native failure or complete native batch qualification. An IPC regression also
+checks that a failure without an error object receives explicit no-replay
+guidance when the step reports completed input.
+
 Issue #13 records that the listener's idle timer could clear an open task's
 grants and frames or shut down a paused task during a long decision gap. The
 timer now defers both policies for open or paused tasks. Isolated IPC tests

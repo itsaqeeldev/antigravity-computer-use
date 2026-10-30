@@ -73,6 +73,16 @@ test('batch stops on failure and never runs later actions',async()=>{
  assert.equal(n,2);assert.equal(result.completed.length,1);assert.equal(result.skipped,1);
  assert.equal(result.ok,false);assert.equal(result.error.message,'denied');
 });
+test('a returned failed step stops the batch and preserves possible input evidence',async()=>{
+ let calls=0;const r={async action(){calls++;return {ok:false,input_completed:true,error:{code:'input_outcome_unknown'},delivery_unknown:true};}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
+ assert.equal(calls,1);assert.equal(result.ok,false);assert.equal(result.input_completed,true);assert.equal(result.delivery_unknown,true);assert.equal(result.failed_index,0);assert.equal(result.skipped,1);assert.deepEqual(result.completed,[]);
+});
+test('a malformed step result stops the batch with unknown delivery',async()=>{
+ let calls=0;const r={async action(){calls++;return null;}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'fresh',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
+ assert.equal(calls,1);assert.equal(result.delivery_unknown,true);assert.equal(result.error.code,'input_outcome_unknown');assert.equal(result.skipped,1);
+});
 
 test('batch preflight rejects invalid later steps and frame overrides before any input',async()=>{
  let delivered=0;const r={async action(){delivered++;}};

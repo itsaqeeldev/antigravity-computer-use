@@ -296,6 +296,16 @@ test('direct IPC batches use a fresh change-wait frame without replaying prior a
   assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'click',frame:'changed'}]);assert(!runtime.frames.has('post-action'));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('a returned batch failure gets explicit no-replay guidance over IPC',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-batch-failure-'));let calls=0;
+ const runtime={status:()=>({state:'active'}),async action(){calls++;return {ok:false,input_completed:true};},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const result=await request(session,'run',{hwnd:1,observation_id:'frame',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]});
+  assert.equal(calls,1);assert.equal(result.ok,false);assert.equal(result.input_completed,true);assert.equal(result.error.code,'batch_step_failed');
+  assert.equal(result.next_action,'inspect_effect_without_replay');assert.equal(result.replay_allowed,false);assert.equal(result.skipped,1);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 
 test('direct IPC accepts bounded feedback without desktop input or arbitrary task content',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-feedback-ipc-'));const original=Incidents.prototype.recordSerialized;let recorded;
