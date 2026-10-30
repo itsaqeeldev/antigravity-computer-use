@@ -84,6 +84,10 @@ async function updateLocked(target,command,{fetcher,adapters}){
     if(path.dirname(path.dirname(resolved))!==path.join(target,'backups')||path.basename(resolved)!=='rollback.json'||seen.has(key))throw Error('update_recovery_journal_invalid');seen.add(key);}
   };
   if(command==='check'){
+   // A new check supersedes the prior offer, even if network, signature or
+   // staging fails. Keep old staged bytes for diagnosis but never apply them
+   // after an unsuccessful check.
+   save({...state,available:false,attempt_at:Date.now()});
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
    const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await response.json();
@@ -146,7 +150,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    if(serviceRunning)shutdownVerified(installed);safeToUnlock=false;const fence=await acquireController();try{for(const file of [...state.rollback].reverse())await runRollback(file,fence);}finally{await fence?.release();}
    const restored=passiveRecord(JSON.parse(fs.readFileSync(path.join(target,'installation.json'))));startVerified(restored,'update_rollback_health_failed');save({...state,available:false,rollback:[]});safeToUnlock=true;return {rolled_back:true};
   }
-  if(!state.staged||!state.envelope)throw Error('update_not_staged');
+  if(state.available!==true||!state.staged||!state.envelope)throw Error('update_not_staged');
   const m=verifyRelease(Buffer.from(state.envelope.manifest,'base64'),state.envelope.signature,fs.readFileSync(adapters.keyFile||path.join(root,'release-public-key.pem')),{channel:settings.channel});
   if(path.dirname(state.staged)!==path.join(target,'updates'))throw Error('update_stage_outside_installation');
   storage('verify-tree',target);verifyStaged(state.staged,m);

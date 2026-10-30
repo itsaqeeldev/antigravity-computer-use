@@ -1353,3 +1353,7 @@ interactive update acceptance remain pending.
 The locally built Windows candidate also passed the new inventory preflight
 across 110 packaged files (build `1aadd80279beb51e60016f8fc9a8f7f66b3dfdd80a8c88c6810fdb21ecea8b82`).
 That check did not sign, publish or install the candidate.
+Starting a new manual or scheduled update check now clears the previous offer
+before network or staging work; applying requires an explicitly available
+offer. A failed check retains prior stage files for inspection but cannot apply
+them. Offline and insufficient-space paths are covered by transaction fixtures.

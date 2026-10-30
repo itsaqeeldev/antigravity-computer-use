@@ -43,6 +43,23 @@ test('signed payload with conflicting bundle inventory is refused before shutdow
   assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available!==true,true);
  }finally{f.cleanup();}
 });
+test('failed manual check cannot apply a previously staged offer',async()=>{
+ const f=fixture();try{
+  await update(f.target,'check',f);assert.equal((await update(f.target,'status',f)).available,true);
+  await assert.rejects(update(f.target,'check',{...f,fetcher:async()=>{throw Error('offline');}}),/offline/);
+  assert.equal((await update(f.target,'status',f)).available,false);
+  await assert.rejects(update(f.target,'apply',f),/update_not_staged/);assert(!f.calls.includes('shutdown'));
+ }finally{f.cleanup();}
+});
+test('a new check invalidates the prior offer durably before network work',async()=>{
+ const f=fixture();let entered,release;const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
+ try{
+  await update(f.target,'check',f);const old=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));assert.equal(old.available,true);
+  const checking=update(f.target,'check',{...f,fetcher:async()=>{entered();await gate;throw Error('offline');}});const failure=assert.rejects(checking,/offline/);await started;
+  const saved=JSON.parse(fs.readFileSync(path.join(f.target,'update-state.json')));assert.equal(saved.available,false);assert.equal(saved.staged,old.staged);assert(fs.existsSync(old.staged));
+  release();await failure;assert(!f.calls.includes('shutdown'));
+ }finally{release();f.cleanup();}
+});
 test('signed full-bundle update preserves settings and Stop, then rollback restores old pins',async()=>{
  const f=fixture();try{
   const config=path.join(f.home,'.gemini/config/config.json');const before=JSON.parse(fs.readFileSync(config));before.unrelated={keep:true};fs.writeFileSync(config,JSON.stringify(before));
@@ -262,7 +279,7 @@ test('updating does not re-enable an explicitly disabled Sidecar',async()=>{
  const f=fixture();try{const config=path.join(f.home,'.gemini/config/config.json');const saved=JSON.parse(fs.readFileSync(config));saved.sidecars['antigravity-computer-use'].enabled=false;fs.writeFileSync(config,JSON.stringify(saved));await update(f.target,'check',f);assert((await update(f.target,'apply',f)).applied);assert.equal(JSON.parse(fs.readFileSync(config)).sidecars['antigravity-computer-use'].enabled,false);}finally{f.cleanup();}
 });
 test('insufficient staging space refuses before payload transfer or service shutdown',async()=>{
- const f=fixture();try{f.adapters.diskInfo=()=>({bavail:1,bsize:1});await assert.rejects(update(f.target,'check',f),/update_insufficient_space/);assert.equal(f.fetches(),2);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available,undefined);}finally{f.cleanup();}
+ const f=fixture();try{f.adapters.diskInfo=()=>({bavail:1,bsize:1});await assert.rejects(update(f.target,'check',f),/update_insufficient_space/);assert.equal(f.fetches(),2);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available,false);}finally{f.cleanup();}
 });
 test('overlapping scheduled workers cannot overwrite state or duplicate the daily check',async()=>{
  const f=fixture();try{
