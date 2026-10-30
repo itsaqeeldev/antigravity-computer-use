@@ -1,5 +1,15 @@
 # Measuring desktop task latency
 
+## Text-only timeout observation
+
+When a text-only wait exhausts its polling budget without a match, it now
+returns the last observed frame instead of starting another capture. An inert
+probe with a 100 ms budget and a 250 ms observation went from 525 ms with two
+observations to 259 ms with one. This is a single synthetic failure-path probe,
+not an Antigravity task benchmark. Image-requested waits and success/failure
+verification retain their capture behavior. An in-flight observation can still
+overrun the budget; the hard-deadline work in issue #25 remains open.
+
 ## 30 October 2026: post-action settle investigation
 
 On installed build `6822e63c59dff126e76b6ed2a8413fffc62dcc5b0c15aae716e45e6a4125b052`,

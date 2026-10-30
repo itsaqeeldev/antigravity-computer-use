@@ -112,6 +112,19 @@ test('wait reports a known failure first appearing in its final timeout observat
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',abort_on:['Failed'],timeout_ms:100});
  assert.equal(result.matched,false);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.metadata.observation_id,'v2');assert(!frames.has('v1'));
 });
+test('text-only timeout returns the last observed frame without a second slow capture',async()=>{
+ let reads=0;const frames=new Map();
+ const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:'Loading'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
+ assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(frames.has('v1'));
+});
+test('a text-only timeout in a real batch never sends the next action',async()=>{
+ let reads=0,inputs=0;const frames=new Map();
+ const runtime={frames,check(){},async action(){inputs++;return {};},async observe(){const id='v'+(++reads);frames.set(id,{});await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:'Loading'}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'wait',until:'Ready',timeout_ms:100,with_image:false},{kind:'click',name:'Publish'}]));
+ assert.equal(result.verification_error.code,'wait_condition_timeout');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert.equal(inputs,0);
+});
 
 test('wait_change compares the original view and returns a fresh usable observation',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);

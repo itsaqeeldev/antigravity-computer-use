@@ -346,6 +346,10 @@ export class Runtime {
         this.frames.delete(verified.metadata.observation_id);
         if(performance.now()>=until)break;
       } else {
+        // A text-only timeout already has an observation to return. Starting
+        // a second potentially slow capture after the budget is exhausted can
+        // add latency without changing the fact that the wait must stop.
+        if(args.with_image===false&&performance.now()>=until)return {matched:false,timed_out:true,...latest};
         this.frames.delete(latest.metadata.observation_id);
         if(performance.now()>=until)break;
       }

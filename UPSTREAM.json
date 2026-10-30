@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "fadb6a39372b890d7ae5280a0f952d23cef052b10b1eeb3f354a1f59e6fccdb2"
+      "sha256": "b3d0ff856ac042d42a6bfb63d990bff287bfe5b696cd8e1c60c6b30b3f97f4f1"
     },
     {
       "path": "server/mcp.mjs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "d334e607d73512aef751f06ddb5ca86eda114edd5be8a45890d2daec8dcc1280"
+      "sha256": "e4d83fff29812b63b96b1638cc76f214aca43692d4260719145e61e9bb5d52b8"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "e7acc7d5672aa8c4578a371a8c88105371929d1df97ad5fb9a9ce9b4767b210b"
+      "sha256": "d870fd61c370ba28874ab1110849805d6a4c0debd09831c8210372c02eb9b9b4"
     },
     {
       "path": "HANDOFF.md",
