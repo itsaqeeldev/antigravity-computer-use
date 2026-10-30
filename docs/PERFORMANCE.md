@@ -45,6 +45,9 @@ status response. Later diagnostic polls are excluded. The report separates
 controller execution, inter-call gaps and verification errors. Gaps include
 host/model reasoning, terminal startup, image inspection and file tools; they
 are not a measurement of model reasoning alone.
+`missing_sequences` counts gaps between included receipt IDs. A nonzero value
+means the trace cannot establish complete controller-call coverage; investigate
+rotation, failed receipt writes or other calls before using it for comparison.
 
 Verify exported bytes and actual native-engine completion separately. An app
 can fail while every controller call succeeds. Failed exports do not qualify

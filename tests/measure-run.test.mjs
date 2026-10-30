@@ -13,3 +13,14 @@ test('missing boundary and invalid durations refuse rather than emit misleading 
  assert.throws(()=>measureRun([record('10.1',1,-1)],{pid:10,since,through:'10.1'}),/duration/);
  assert.throws(()=>measureRun([],{pid:10,since:'invalid',through:'10.1'}));
 });
+test('even-length timing samples use the midpoint of the two central values',()=>{
+ const result=measureRun([record('10.1',1,100),record('10.2',3,300),record('10.3',7,500)],{pid:10,since,through:'10.3'});
+ assert.equal(result.median_service_ms,300);assert.equal(result.median_gap_ms,2800);
+ const pair=measureRun([record('10.1',1,100),record('10.2',3,300)],{pid:10,since,through:'10.2'});
+ assert.equal(pair.median_service_ms,200);
+});
+test('missing and duplicate receipt sequences cannot look like a complete trace',()=>{
+ const first=record('10.1',1),last=record('10.3',7);
+ assert.equal(measureRun([first,last],{pid:10,since,through:'10.3'}).missing_sequences,1);
+ assert.throws(()=>measureRun([first,{...first},last],{pid:10,since,through:'10.3'}),/Duplicate/);
+});

@@ -16,6 +16,9 @@ export function measureRun(records,{pid,since,through}){
  }).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
  if(!rows.length||!rows.some(row=>row.id===through))throw Error('Final task receipt is missing from this interval.');
  if(rows.some(row=>!Number.isFinite(row.elapsed_ms)||row.elapsed_ms<0))throw Error('Invalid controller duration in receipt.');
+ const sequences=rows.map(row=>Number(String(row.id).slice(prefix.length))).sort((a,b)=>a-b);
+ if(new Set(sequences).size!==sequences.length)throw Error('Duplicate controller receipt sequence in task interval.');
+ const missing_sequences=sequences.slice(1).reduce((total,n,i)=>total+Math.max(0,n-sequences[i]-1),0);
  const groups={},gaps=[];let end=started,overlapping=false;
  for(let i=0;i<rows.length;i++){
   const row=rows[i],at=Date.parse(row.at);
@@ -24,10 +27,10 @@ export function measureRun(records,{pid,since,through}){
   const group=groups[row.command]??={count:0,service_ms:0,tool_failures:0,verification_failures:0};
   group.count++;group.service_ms+=row.elapsed_ms;group.tool_failures+=row.ok===false?1:0;group.verification_failures+=row.verification_error?1:0;
  }
- const median=values=>values.length?values.toSorted((a,b)=>a-b)[Math.floor(values.length/2)]:null;
+ const median=values=>{if(!values.length)return null;const sorted=values.toSorted((a,b)=>a-b),mid=Math.floor(sorted.length/2);return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;};
  return {pid:String(pid),from:since,through,to:new Date(end).toISOString(),calls:rows.length,wall_ms:end-started,
   service_ms:rows.reduce((sum,row)=>sum+row.elapsed_ms,0),median_service_ms:median(rows.map(row=>row.elapsed_ms)),
-  median_gap_ms:median(gaps),max_gap_ms:gaps.length?Math.max(...gaps):null,overlapping_calls:overlapping,
+  median_gap_ms:median(gaps),max_gap_ms:gaps.length?Math.max(...gaps):null,overlapping_calls:overlapping,missing_sequences,
   tool_failures:rows.filter(row=>row.ok===false).length,verification_failures:rows.filter(row=>row.verification_error).length,groups,
   note:'Explicit task interval only. Wall time includes host/model/file/image tools. Verify the application and output independently; controller success is not application success.'};
 }

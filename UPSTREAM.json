@@ -480,15 +480,15 @@
     },
     {
       "path": "scripts/measure-run.mjs",
-      "sha256": "cd9f77df3527c9ef08bbdf20728000bea21848e620d8a72248d3915d7b370898"
+      "sha256": "6f401ffe5d80adcb1dbb9bece6e8396957cdcae9dd6e05f93c45eb40b3656025"
     },
     {
       "path": "tests/measure-run.test.mjs",
-      "sha256": "5049433c243c1349d4fbfa303c0d4c2c6f4b9e0d911b51abcc80840099ecd851"
+      "sha256": "ff56adc47afb201c4f339ba8773c2a14687c50635c6d9c067e9582431aaa0630"
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "90b3e1cd425ab1e1fe44e3ff17d066d08317bb8d1ca0048306f3c4a888eb738f"
+      "sha256": "dc208718ad2097527e628ec44d4a4e3f5b2ad079771ef143a93661d8b1803828"
     },
     {
       "path": "HANDOFF.md",
