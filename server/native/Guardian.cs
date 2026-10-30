@@ -130,8 +130,8 @@ namespace Axon {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
             string latch=Environment.GetEnvironmentVariable("AGCU_STOP_LATCH");
             if(!String.IsNullOrEmpty(latch)&&File.Exists(latch))throw new AxonError("control_stopped","Emergency Stop remains latched. Local human re-arm is required.",null);
-            string[] state;
-            try { state = File.ReadAllText(FileName).Split('|'); }
+            string[] state;string original;
+            try { original=File.ReadAllText(FileName);state = original.Split('|'); }
             catch { throw new AxonError("control_stopped", "Permission process is unavailable.", null); }
             long until;ulong bootUntil;
             if (state.Length < 5 || state[0] != "active" || state[1] != Token ||
@@ -139,13 +139,33 @@ namespace Axon {
                 !UInt64.TryParse(state[4],out bootUntil) || !NativeDeadline.Valid(bootUntil,NativeDeadline.GetTickCount64()))
                 throw new AxonError("control_stopped", "Control is paused, stopped or expired. Use the local controls.", null);
             CheckWatchdogIdentity(FileName);
+            // A Stop or state transition may occur while watchdog identity is
+            // being revalidated. Never use the earlier state after it changed.
+            try {
+                if(!GuardUnchanged(original,File.ReadAllText(FileName),!String.IsNullOrEmpty(latch)&&File.Exists(latch)))
+                    throw new AxonError("control_stopped","Control changed during watchdog verification. No further input is allowed.",null);
+            } catch(AxonError) { throw; }
+              catch { throw new AxonError("control_stopped","Control state is unavailable. No further input is allowed.",null); }
             if(!(bool)DesktopContext.Inspect()["interactive"])
                 throw new AxonError("desktop_context_unavailable","The input desktop changed. No further automation is allowed; return to the normal desktop and use local human controls.",null);
+        }
+        internal static bool GuardUnchanged(string before,string after,bool latched) {
+            return !latched&&before!=null&&String.Equals(before,after,StringComparison.Ordinal);
         }
         // The worker checks the independent watchdog's process identity itself;
         // stale metadata or an exited watchdog must never permit input.
         internal static void CheckWatchdogIdentity(string file) {
-            if(WatchdogIdentityProblem(file)!=null)throw new AxonError("stop_monitor_unavailable","Independent cleanup watchdog is unavailable. No further input is allowed.",null);
+            if(!ConfirmWatchdog(delegate {return WatchdogIdentityProblem(file);},delegate {Thread.Sleep(10);} ))
+                throw new AxonError("stop_monitor_unavailable","Independent cleanup watchdog is unavailable. No further input is allowed.",null);
+        }
+        internal static bool ConfirmWatchdog(Func<string> probe,Action wait) {
+            // Bounded revalidation absorbs a transient OS/process inspection
+            // failure without ever sending input on an unconfirmed identity.
+            for(int attempt=0;attempt<3;attempt++) {
+                if(probe()==null)return true;
+                if(attempt<2)wait();
+            }
+            return false;
         }
         internal static string WatchdogIdentityProblem(string file) {
             try {

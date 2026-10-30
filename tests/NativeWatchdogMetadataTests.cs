@@ -14,6 +14,14 @@ class NativeWatchdogMetadataTests {
             var write=type.GetMethod("WriteWatchdogRecord",BindingFlags.Static|BindingFlags.NonPublic);
             var check=host.GetType("Axon.ControlFence",true).GetMethod("CheckWatchdogIdentity",BindingFlags.Static|BindingFlags.NonPublic);
             var problem=host.GetType("Axon.ControlFence",true).GetMethod("WatchdogIdentityProblem",BindingFlags.Static|BindingFlags.NonPublic);
+            var unchanged=host.GetType("Axon.ControlFence",true).GetMethod("GuardUnchanged",BindingFlags.Static|BindingFlags.NonPublic);
+            Func<string,string,bool,bool> guardSame=delegate(string before,string after,bool latched){return (bool)unchanged.Invoke(null,new object[]{before,after,latched});};
+            if(!guardSame("active","active",false)||guardSame("active","stopped",false)||guardSame("active","active",true)||guardSame(null,null,false))throw new Exception("guard revalidation differs");
+            var confirm=host.GetType("Axon.ControlFence",true).GetMethod("ConfirmWatchdog",BindingFlags.Static|BindingFlags.NonPublic);
+            int probes=0,waits=0;Func<string> transient=delegate {probes++;return probes==1?"identity_unavailable":null;};Action wait=delegate {waits++;};
+            if(!(bool)confirm.Invoke(null,new object[]{transient,wait})||probes!=2||waits!=1)throw new Exception("transient identity revalidation differs");
+            probes=0;waits=0;Func<string> unavailable=delegate {probes++;return "identity_unavailable";};
+            if((bool)confirm.Invoke(null,new object[]{unavailable,wait})||probes!=3||waits!=2)throw new Exception("unavailable identity was accepted");
             var transition=host.GetType("Axon.Guardian",true).GetMethod("ResolveGuardState",BindingFlags.Static|BindingFlags.NonPublic);
             Func<string,long,long,bool,string> resolve=delegate(string state,long before,long after,bool latched){return (string)transition.Invoke(null,new object[]{state,before,after,latched});};
             if(resolve("idle",1,2,false)!="stopped"||resolve("active",1,1,true)!="stopped"||resolve("idle",2,2,false)!="idle"||resolve("stopped",1,2,false)!="stopped")throw new Exception("emergency stop transition lost");

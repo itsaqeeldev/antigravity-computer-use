@@ -1251,6 +1251,10 @@ test while the paired Windows run passed. The identity fixture now waits for
 its child to report readiness, and failed checks include a bounded reason code
 in test diagnostics. Five local reruns passed; the CI root cause is not yet
 proven and the native guard has not been weakened.
+The native worker now makes at most three read-only identity checks before
+refusing an unavailable watcher, then rechecks the guard and Stop latch before
+continuing. Isolated policy tests do not prove atomicity between that recheck
+and the eventual input; physical Stop and concurrent-race checks remain open.
 
 Issue #21 tracks a Stop racing with guardian state publication. A Windows
 candidate checks a Stop generation and latch during publication; the Mac
