@@ -1236,6 +1236,11 @@ checks after this change; the earlier run took 23.1 ms. These are not
 end-to-end action latency. Lost arm acknowledgements, cosmetic
 failure, actual held-input crashes and physical Stop still need native/real-app
 qualification before issue #19 can close.
+Windows CI run `40989217268` at `a252658` failed the native watchdog identity
+test while the paired Windows run passed. The identity fixture now waits for
+its child to report readiness, and failed checks include a bounded reason code
+in test diagnostics. Five local reruns passed; the CI root cause is not yet
+proven and the native guard has not been weakened.
 
 Issue #21 tracks a Stop racing with guardian state publication. A Windows
 candidate checks a Stop generation and latch during publication; the Mac

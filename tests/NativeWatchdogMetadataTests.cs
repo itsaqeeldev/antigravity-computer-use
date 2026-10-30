@@ -3,15 +3,17 @@ using System.IO;
 using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 // Exercise the real metadata writer without creating a guardian or sending input.
 class NativeWatchdogMetadataTests {
     static int Main(string[] args) {
-        if(args.Length==1&&args[0]=="--hold") { Thread.Sleep(30000);return 0; }
+        if(args.Length==1&&args[0]=="--hold") { Console.WriteLine("ready");Console.Out.Flush();Thread.Sleep(30000);return 0; }
         try {
             var host=Assembly.LoadFrom(args[0]);var type=host.GetType("Axon.CursorSafety",true);
             var write=type.GetMethod("WriteWatchdogRecord",BindingFlags.Static|BindingFlags.NonPublic);
             var check=host.GetType("Axon.ControlFence",true).GetMethod("CheckWatchdogIdentity",BindingFlags.Static|BindingFlags.NonPublic);
+            var problem=host.GetType("Axon.ControlFence",true).GetMethod("WatchdogIdentityProblem",BindingFlags.Static|BindingFlags.NonPublic);
             var transition=host.GetType("Axon.Guardian",true).GetMethod("ResolveGuardState",BindingFlags.Static|BindingFlags.NonPublic);
             Func<string,long,long,bool,string> resolve=delegate(string state,long before,long after,bool latched){return (string)transition.Invoke(null,new object[]{state,before,after,latched});};
             if(resolve("idle",1,2,false)!="stopped"||resolve("active",1,1,true)!="stopped"||resolve("idle",2,2,false)!="idle"||resolve("stopped",1,2,false)!="stopped")throw new Exception("emergency stop transition lost");
@@ -50,13 +52,17 @@ class NativeWatchdogMetadataTests {
             Action fenceMustRefuse=delegate { bool failed=false;try{nativeCheck.Invoke(null,null);}catch(TargetInvocationException){failed=true;}if(!failed)throw new Exception("unbounded active state accepted"); };
             File.WriteAllText(guard,"active|fixture|"+DateTime.UtcNow.AddMinutes(5).Ticks+"|");fenceMustRefuse();
             File.WriteAllText(guard,"active|fixture|"+DateTime.UtcNow.AddMinutes(5).Ticks+"||0");fenceMustRefuse();
-            var info=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,"--hold");info.UseShellExecute=false;info.CreateNoWindow=true;
+            var info=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,"--hold");info.UseShellExecute=false;info.CreateNoWindow=true;info.RedirectStandardOutput=true;
             using(Process child=Process.Start(info)) {
                 try {
+                    var ready=Task.Factory.StartNew(delegate{return child.StandardOutput.ReadLine();});
+                    if(!ready.Wait(5000)||ready.Result!="ready")throw new Exception("identity fixture did not report ready");
                     long born=child.StartTime.ToUniversalTime().Ticks;
                     File.WriteAllText(guard+".watchdog",child.Id+"|"+(born+1));mustRefuse();
-                    File.WriteAllText(guard+".watchdog",child.Id+"|"+born);check.Invoke(null,new object[]{guard});
-                    var timing=Stopwatch.StartNew();for(int i=0;i<100;i++)check.Invoke(null,new object[]{guard});timing.Stop();
+                    File.WriteAllText(guard+".watchdog",child.Id+"|"+born);
+                    string why=(string)problem.Invoke(null,new object[]{guard});if(why!=null)throw new Exception("valid child rejected: "+why);
+                    check.Invoke(null,new object[]{guard});
+                    var timing=Stopwatch.StartNew();for(int i=0;i<100;i++)try{check.Invoke(null,new object[]{guard});}catch(TargetInvocationException){throw new Exception("valid child rejected during sample "+i+": "+((string)problem.Invoke(null,new object[]{guard})??"transient"));}timing.Stop();
                     Console.WriteLine("100 watchdog identity checks (ms): "+timing.Elapsed.TotalMilliseconds.ToString("F1"));
                     child.Kill();child.WaitForExit();mustRefuse();
                 }finally{if(!child.HasExited){child.Kill();child.WaitForExit();}}

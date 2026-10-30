@@ -145,20 +145,26 @@ namespace Axon {
         // The worker checks the independent watchdog's process identity itself;
         // stale metadata or an exited watchdog must never permit input.
         internal static void CheckWatchdogIdentity(string file) {
+            if(WatchdogIdentityProblem(file)!=null)throw new AxonError("stop_monitor_unavailable","Independent cleanup watchdog is unavailable. No further input is allowed.",null);
+        }
+        internal static string WatchdogIdentityProblem(string file) {
             try {
                 string marker=file+".watchdog";FileAttributes attributes=File.GetAttributes(marker);
-                if((attributes&(FileAttributes.ReparsePoint|FileAttributes.Directory))!=0)throw new Exception();
+                if((attributes&(FileAttributes.ReparsePoint|FileAttributes.Directory))!=0)return "marker_type";
                 byte[] bytes=new byte[129];int used=0;
                 using(var stream=new FileStream(marker,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) {
                     int n;while(used<bytes.Length&&(n=stream.Read(bytes,used,bytes.Length-used))>0)used+=n;
                 }
-                if(used>128)throw new Exception();
+                if(used>128)return "marker_too_large";
                 string[] watcher=new UTF8Encoding(false,true).GetString(bytes,0,used).Split('|');int pid;long started;
-                if(watcher.Length!=2||!Int32.TryParse(watcher[0],out pid)||pid<=0||!Int64.TryParse(watcher[1],out started)||started<=0)throw new Exception();
+                if(watcher.Length!=2||!Int32.TryParse(watcher[0],out pid)||pid<=0||!Int64.TryParse(watcher[1],out started)||started<=0)return "marker_invalid";
                 using(Process p=Process.GetProcessById(pid)) {
-                    if(p.HasExited||p.StartTime.ToUniversalTime().Ticks!=started||!String.Equals(p.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))throw new Exception();
+                    if(p.HasExited)return "process_exited";
+                    if(p.StartTime.ToUniversalTime().Ticks!=started)return "birth_mismatch";
+                    if(!String.Equals(p.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))return "image_mismatch";
                 }
-            } catch { throw new AxonError("stop_monitor_unavailable","Independent cleanup watchdog is unavailable. No further input is allowed.",null); }
+                return null;
+            } catch { return "identity_unavailable"; }
         }
         internal static void Before(string op, Dictionary<string, object> a, string label, bool readOnly=false) {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
