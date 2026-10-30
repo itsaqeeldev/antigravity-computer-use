@@ -2,15 +2,14 @@
 
 ## Mac covering-window repair integrated — 30 October 2026
 
-Mac PR #27 (`1765d9a`) was reviewed and integrated into
-`codex/review-intel-mac` at `b804420`; current reviewed head is `793da95`. The repair excludes macOS Dock and
-Window Server background records from the covering-window check, while still
-refusing overlapping application windows. The shared local suite is green at
-434 passed, 0 failed, 11 explicit ACL skips; provenance verifies 175/175
-recorded files. GitHub source, macOS ARM and macOS Intel checks pass for this
-exact head. The device report is useful evidence, but physical held-input
-Esc/re-arm, a second complete on-device task, production signing and
-Gatekeeper/update transport remain release gates.
+Mac PR #27’s covering-window repair and PR #28’s standalone file-dialog repair
+are integrated at `d4c8903`/`0fc1dd3`. The Intel Mac report records real
+permissions, animated pointer actions, Unicode byte/code-point matching,
+physical Stop persistence, human re-arm and a second Calculator task. The
+shared local suite remains green at 446 total, 435 passed, 0 failed, 11
+explicit ACL skips; provenance verifies 175/175 recorded files. Remaining Mac
+gates are external-display/sleep/permission-revocation checks, production
+signing, Gatekeeper and published-update transport.
 
 The maintainer-only signed candidate workflow [41031566735](https://github.com/shayann07/antigravity-computer-use/actions/runs/41031566735)
 also passed on this exact head. It produced verified Windows x64, macOS ARM64

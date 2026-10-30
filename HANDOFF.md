@@ -84,18 +84,20 @@ applicable acceptance gates pass. Verify identities again before any live work.
 Outstanding: affected-PC recovery ([issue #3](https://github.com/shayann07/antigravity-computer-use/issues/3)),
 actual affected-PC/fresh-install tasks and matched Flash/Sonnet Upscaly speed
 ([issue #2](https://github.com/shayann07/antigravity-computer-use/issues/2)),
-physical queued/held-input Stop/re-arm, real Intel Mac report, native Windows
-update/OS permission qualification, interruption and published-release transport.
+Windows human re-arm and second task, Mac external-display/sleep/permission
+checks, native Windows update/OS permission qualification, interruption and
+published-release transport.
 An earlier Flash trial took 605,626 ms, used 21 calls and failed exact Unicode;
 later matched Notepad trials passed the Unicode comparison but did not qualify
 the full Upscaly workflow. See `docs/PERFORMANCE.md` for both results.
 
-An Intel Mac device report and the covering-window repair were submitted in
-PR #27 and integrated at `b804420`; current head `793da95` passes Windows
-source, macOS ARM and macOS Intel CI. The on-device report records discovery, AX snapshots,
-activation, sensitive timeout and Stop persistence on the candidate. Its
-physical held-input Esc/re-arm, second complete task, production signing and
-Gatekeeper/update transport limits remain explicit in
+Intel Mac qualification and the covering-window repair are now represented by
+PR #28 and integrated at `d4c8903` with provenance follow-up `0fc1dd3`. The
+Mac report records discovery, permissions, animated pointer actions, Unicode
+save/reopen verification, physical Stop persistence, human re-arm and a second
+Calculator task. The standalone Open/Save panel repair is included. Remaining
+Mac limits are external mixed-DPI displays, sleep/wake, permission revocation,
+production signing and Gatekeeper/update transport; see
 [Mac qualification](docs/MACOS-QUALIFICATION.md). The Windows installation is
 still the earlier Stop-marker build and is not claimed equivalent to this new
 source head. Preserve human-only checks and use
