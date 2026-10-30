@@ -132,19 +132,31 @@ namespace Axon {
             Label(g,detail,9,FontStyle.Regular,Color.FromArgb(240,243,246),new RectangleF(28,6,238,40));
             Rectangle hot=hover==1?ToggleRect:hover==2?StopRect:ModeRect;
             if(hover!=0)using(GraphicsPath r=Overlay.RoundRect(hot,16))using(LinearGradientBrush b=new LinearGradientBrush(hot,hover==2?Color.FromArgb(114,107,52,65):Color.FromArgb(86,90,113,137),hover==2?Color.FromArgb(72,59,31,42):Color.FromArgb(54,45,61,78),90f))g.FillPath(b,r);
-            using(Pen icon=new Pen(Color.FromArgb(232,239,245),1.8f)) {
-                icon.StartCap=icon.EndCap=LineCap.Round;icon.LineJoin=LineJoin.Round;
-                // Hand-drawn settings sliders: the icon describes the menu's job.
-                g.DrawLine(icon,286,19,306,19);g.DrawLine(icon,286,26,306,26);g.DrawLine(icon,286,33,306,33);
-                using(SolidBrush knob=new SolidBrush(Color.FromArgb(232,239,245))) {g.FillEllipse(knob,291,16,6,6);g.FillEllipse(knob,300,23,6,6);g.FillEllipse(knob,294,30,6,6);}
-                if(state=="active"){g.DrawLine(icon,339,18,339,34);g.DrawLine(icon,349,18,349,34);}
-                else {using(GraphicsPath play=new GraphicsPath()){play.AddLine(337,17,352,26);play.AddLine(352,26,337,35);play.CloseFigure();g.FillPath(Brushes.White,play);}}
+            // Phosphor fill-weight geometry: solid shapes, no outline strokes.
+            using(SolidBrush icon=new SolidBrush(Color.FromArgb(232,239,245))) {
+                using(GraphicsPath slider=Overlay.RoundRect(new RectangleF(286,17,22,4),2))g.FillPath(icon,slider);
+                using(GraphicsPath slider=Overlay.RoundRect(new RectangleF(286,24,22,4),2))g.FillPath(icon,slider);
+                using(GraphicsPath slider=Overlay.RoundRect(new RectangleF(286,31,22,4),2))g.FillPath(icon,slider);
+                g.FillEllipse(icon,291,15,8,8);g.FillEllipse(icon,300,22,8,8);g.FillEllipse(icon,294,29,8,8);
+                if(state=="active") {
+                    using(GraphicsPath pause=Overlay.RoundRect(new RectangleF(339,17,6,18),2))g.FillPath(icon,pause);
+                    using(GraphicsPath pause=Overlay.RoundRect(new RectangleF(348,17,6,18),2))g.FillPath(icon,pause);
+                } else {
+                    using(GraphicsPath play=new GraphicsPath()){play.AddLine(337,16,354,26);play.AddLine(354,26,337,36);play.CloseFigure();g.FillPath(icon,play);}
+                }
             }
             using(Pen divider=new Pen(Color.FromArgb(52,210,222,234),1))g.DrawLine(divider,366,16,366,36);
             if(state=="stopped") {
-                using(Pen close=new Pen(Color.FromArgb(224,232,239),1.8f)){close.StartCap=close.EndCap=LineCap.Round;g.DrawLine(close,392,20,404,32);g.DrawLine(close,404,20,392,32);}
+                using(SolidBrush close=new SolidBrush(Color.FromArgb(224,232,239))) {
+                    using(GraphicsPath slash=IconSlash(392,20,404,32,3.2f))g.FillPath(close,slash);
+                    using(GraphicsPath slash=IconSlash(404,20,392,32,3.2f))g.FillPath(close,slash);
+                }
             } else using(GraphicsPath stop=Overlay.RoundRect(new RectangleF(392,20,12,12),2)){using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(248,159,165):Color.FromArgb(224,232,239)))g.FillPath(b,stop);}
             Label(g,state=="stopped"?"Hide":"Stop",8.5f,FontStyle.Regular,Color.FromArgb(222,230,237),new RectangleF(412,7,50,38));
+        }
+        static GraphicsPath IconSlash(float x1,float y1,float x2,float y2,float width) {
+            float dx=x2-x1,dy=y2-y1,len=(float)Math.Sqrt(dx*dx+dy*dy);float nx=-dy/len*width*.5f,ny=dx/len*width*.5f;
+            GraphicsPath p=new GraphicsPath();p.AddPolygon(new[]{new PointF(x1+nx,y1+ny),new PointF(x2+nx,y2+ny),new PointF(x2-nx,y2-ny),new PointF(x1-nx,y1-ny)});return p;
         }
         internal static void Export(string directory) {
             Directory.CreateDirectory(directory);
