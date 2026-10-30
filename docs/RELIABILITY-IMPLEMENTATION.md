@@ -1322,3 +1322,7 @@ observations retain their specific transport errors. This also covers launch,
 open, close and clipboard operations. Input cleanup still runs independently.
 Driver fixture and IPC/batch regression coverage does not establish physical
 Stop behavior or real-app delivery; those acceptance checks remain pending.
+If cleanup itself fails after a submitted action, the response now retains both
+the `input_cleanup_failed` stop reason and `delivery_unknown`. Direct and batch
+IPC tests verify that remaining actions do not run and recovery guidance keeps
+the cleanup failure visible. This remains simulated transport coverage.

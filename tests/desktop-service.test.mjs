@@ -306,6 +306,18 @@ test('a returned batch failure gets explicit no-replay guidance over IPC',async(
   assert.equal(result.next_action,'inspect_effect_without_replay');assert.equal(result.replay_allowed,false);assert.equal(result.skipped,1);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('cleanup failure with uncertain delivery survives direct and batch IPC',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-cleanup-unknown-'));let calls=0;
+ const runtime={status:()=>({state:'stopped'}),async action(){calls++;throw Object.assign(Error('Cleanup unconfirmed'),{code:'input_cleanup_failed',delivery_unknown:true});},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  for(const [command,args] of [['key',{hwnd:1,observation_id:'frame',reason:'test',keys:'tab'}],['run',{hwnd:1,observation_id:'frame',reason:'test',steps:[{kind:'key',keys:'tab'},{kind:'key',keys:'enter'}]}]]){
+   const result=await request(session,command,args);assert.equal(result.ok,false);assert.equal(result.error.code,'input_cleanup_failed');assert.equal(result.delivery_unknown,true);assert.equal(result.replay_allowed,false);assert.equal(result.next_action,'inspect_input_cleanup');
+   if(command==='run')assert.equal(result.skipped,1);
+  }
+  assert.equal(calls,2);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 
 test('direct IPC accepts bounded feedback without desktop input or arbitrary task content',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-feedback-ipc-'));const original=Incidents.prototype.recordSerialized;let recorded;

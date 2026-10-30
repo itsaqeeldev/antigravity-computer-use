@@ -27,6 +27,7 @@ export function priorWindowsCleanupVerified(directory,record,{platform=process.p
 }
 export function recoveryAdvice(result){
  const code=result.error?.code||result.verification_error?.code;
+ if(code==='input_cleanup_failed')return {next_action:'inspect_input_cleanup',replay_allowed:false};
  if(result.delivery_unknown===true||result.input_completed===true&&code||code==='input_outcome_unknown')return {next_action:'inspect_effect_without_replay',replay_allowed:false};
  if(['stale_observation','element_stale','window_moved','no_image','control_changed','focus_changed'].includes(code))return {next_action:'observe_again',replay_allowed:false};
  if(code==='window_minimized')return {next_action:'focus_target_then_observe',replay_allowed:false};
@@ -37,7 +38,6 @@ export function recoveryAdvice(result){
  if(code==='session_limit')return {next_action:'end_owned_task_then_reauthorize',replay_allowed:false};
  if(['recovered_cleanup_unverified','input_lease_stale'].includes(code))return {next_action:'inspect_prior_input_cleanup',replay_allowed:false};
  if(['stop_persistence_failed','guard_persistence_failed'].includes(code))return {next_action:'inspect_stop_persistence_without_restart',replay_allowed:false};
- if(code==='input_cleanup_failed')return {next_action:'inspect_input_cleanup',replay_allowed:false};
  if(['permission_denied','approval_timeout','confirmation_required'].includes(code))return {next_action:'await_user_decision',replay_allowed:false};
  if(['control_stopped','control_inactive'].includes(code))return {next_action:'inspect_status_then_human_controls',replay_allowed:false};
  return {next_action:'inspect_diagnostics',replay_allowed:false};

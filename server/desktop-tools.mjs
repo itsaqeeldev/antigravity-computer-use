@@ -128,7 +128,7 @@ export async function call(r,name,a){
      completed.pop();return {...last,ok:false,verification_error:{code:'wait_change_timeout',message:'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
     }
     observation=last.metadata?.observation_id;
-   }catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
+   }catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.delivery_unknown===true||e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
  }

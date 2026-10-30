@@ -155,7 +155,14 @@ export class Driver {
     } else {
       const e = msg.error || {};
       const error=new HostError(e.code || 'host_error', e.message || 'Unknown host error', e.hint);
-      if(entry.input) this.abort().then(()=>entry.reject(error),cleanupError=>entry.reject(cleanupError));
+      // Cleanup failure and uncertain action delivery can both be true. Keep
+      // the cleanup error so the controller remains stopped, and carry the
+      // delivery uncertainty separately to prevent an automatic replay.
+      if(entry.effectful&&error.code==='input_cleanup_failed')error.delivery_unknown=true;
+      if(entry.input) this.abort().then(()=>entry.reject(error),cleanupError=>{
+        if(entry.effectful)cleanupError.delivery_unknown=true;
+        entry.reject(cleanupError);
+      });
       else entry.reject(error);
     }
   }

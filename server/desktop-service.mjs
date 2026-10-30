@@ -136,7 +136,7 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
           queueIncident(name,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,...(error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));queueIncident(ticket?.command,result);if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(error.delivery_unknown===true||error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));queueIncident(ticket?.command,result);if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

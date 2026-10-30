@@ -108,6 +108,13 @@ test('failed file-picker keyboard input requests held-input cleanup before rejec
  await assert.rejects(Driver.prototype.call.call(driver,'file_dialog',{}),error=>error.code==='input_rejected');
  assert.equal(recoveries,1);assert.equal(driver.pending.size,0);
 });
+test('a failed cleanup preserves both the stop reason and uncertain delivery',async()=>{
+ for(const nativeCode of ['input_outcome_unknown','input_cleanup_failed']){
+  const driver=new Driver();driver.info={};driver.proc={stdin:{write(payload){const {id}=JSON.parse(payload);driver._onLine(JSON.stringify({id,ok:false,error:{code:nativeCode,message:'Native operation failed'}}));}}};
+  driver.abort=async()=>{throw Object.assign(Error('Cleanup unconfirmed'),{code:'input_cleanup_failed'});};
+  await assert.rejects(driver.call('click',{}),e=>e.code==='input_cleanup_failed'&&e.delivery_unknown===true);
+ }
+});
 
 test('window-free clipboard action registers its restarted worker and binds its epoch before approval',async()=>{
  const events=[];const r={generation:1,deadline:Date.now()+10000,remaining:10,check(){},stamp(){return {};},
