@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "2946ea6838954e57bf18c2d0837ee626e3a0266511ac56f1dc067e199da1b02f"
+      "sha256": "fadb6a39372b890d7ae5280a0f952d23cef052b10b1eeb3f354a1f59e6fccdb2"
     },
     {
       "path": "server/mcp.mjs",
@@ -344,7 +344,7 @@
     },
     {
       "path": "tests/launch-observe.test.mjs",
-      "sha256": "51a77722978a81ded310669ebc7f71f298ff316bd2476426a76444e343da0f5c"
+      "sha256": "cd42f582f0ccfc0bf1f134c7a701957ddf09edc11c413ec08fc4bbd11e77c600"
     },
     {
       "path": "scripts/install.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "dbe3a8c093a9654f1523e9443a8263473db321a699b4cf3b46567af4d0960960"
+      "sha256": "e63412ec5d47e539746f39ab0403c6e1703f42659a3b443303c58033eccdaac5"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

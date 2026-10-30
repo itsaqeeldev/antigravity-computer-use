@@ -1357,3 +1357,8 @@ Starting a new manual or scheduled update check now clears the previous offer
 before network or staging work; applying requires an explicitly available
 offer. A failed check retains prior stage files for inspection but cannot apply
 them. Offline and insufficient-space paths are covered by transaction fixtures.
+
+Post-launch window discovery now measures its eight-second polling limit with
+the monotonic clock, so a backwards wall-clock adjustment does not extend the
+wait or invite a duplicate launch. The test uses an inert driver and simulated
+clock change; it does not qualify suspend/resume or live app launch behavior.

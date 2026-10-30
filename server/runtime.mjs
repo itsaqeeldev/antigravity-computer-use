@@ -443,7 +443,7 @@ export class Runtime {
     const generation=this.generation;
     try {
       if(!Number.isSafeInteger(result.pid)||result.pid<=0)throw Object.assign(Error('Launcher returned no PID. Discover apps without relaunching.'),{code:'launch_pid_unavailable'});
-      const until=Date.now()+8000;
+      const until=performance.now()+8000;
       do {
         this.check();if(generation!==this.generation)fail('control_changed','Control changed after launch.');
         const windows=(await this.driver.call('list_apps',{})).result.windows;
@@ -458,7 +458,7 @@ export class Runtime {
         let alive=true;try{process.kill(result.pid,0);}catch(error){if(error.code==='ESRCH')alive=false;}
         if(!alive)return {...result,input_completed:true,observe_pending:true,launcher_exited:true,observation_hint:'The starter process exited, possibly after handing off. Discover apps and observe the intended window; do not relaunch.'};
         await new Promise(resolve=>setTimeout(resolve,200));
-      }while(Date.now()<until);
+      }while(performance.now()<until);
       this.check();
       return {...result,input_completed:true,observe_pending:true,observation_hint:'No unambiguous visible window matched the launched PID and executable within8seconds. Discover apps; do not relaunch.'};
     }catch(error){return {...result,input_completed:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message}};}

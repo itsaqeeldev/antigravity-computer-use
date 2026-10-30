@@ -71,3 +71,10 @@ test('an exited starter returns pending promptly without guessing a handoff or r
  const started=Date.now(),result=await Runtime.prototype.launch.call(r,{app,observe:true,reason:'Owned exited starter'});
  assert.equal(result.launcher_exited,true);assert.equal(result.observe_pending,true);assert.equal(result.input_completed,true);assert(Date.now()-started<2000,'Do not wait out8seconds after definite starter exit');assert.deepEqual(counts(),{launches:1,observations:0});
 });
+test('launch discovery remains bounded if the wall clock moves backwards',async()=>{
+ const {r,counts}=harness([]),original=r.driver.call,realDate=Date.now,ownNow=Object.getOwnPropertyDescriptor(performance,'now');let checks=0;
+ r.driver.call=async(op,args)=>{const reply=await original(op,args);if(op==='launch')reply.result.pid=process.pid;if(op==='list_apps')Date.now=()=>1;return reply;};
+ Object.defineProperty(performance,'now',{configurable:true,value:()=>checks++?9000:0});
+ try{const result=await Runtime.prototype.launch.call(r,{app,observe:true,reason:'Clock change'});assert.equal(result.observe_pending,true);assert.equal(result.input_completed,true);assert.equal(counts().launches,1);}
+ finally{Date.now=realDate;if(ownNow)Object.defineProperty(performance,'now',ownNow);else delete performance.now;}
+});
