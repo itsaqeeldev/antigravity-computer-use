@@ -21,8 +21,9 @@ over the user's current Windows build.
 Windows physical Stop qualification now passes on the installed `b8d1ad5…`
 build. Antigravity recorded a real held Notepad drag interrupted by physical
 Esc, persisted Stop, cleaned the held-input ledger, skipped queued actions,
-refused a post-Stop snapshot and rejected software resume. Human Re-arm and a
-second complete task without restarting Antigravity remain open.
+refused a post-Stop snapshot and rejected software resume. The human then
+re-armed locally; receipt `5944.430` verified a second Notepad task and
+`5944.431` ended cleanly at idle without restarting Antigravity.
 
 ## Candidate installation and Antigravity smoke — 30 October 2026
 

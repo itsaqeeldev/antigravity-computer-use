@@ -127,8 +127,11 @@ mouse button was held. Receipt `5944.101` and the private record
 `control_reason: escape`, a persisted `emergency.stop` marker, a clean native
 held-input ledger, three skipped queued actions, a refused post-Stop snapshot,
 and `human_resume_required` with `replay_allowed: false`. This clears the
-physical Stop/cleanup boundary for that installed build. Human Re-arm and the
-second complete task without restarting Antigravity are still pending.
+physical Stop/cleanup boundary for that installed build. The human then clicked
+Re-arm (`control_reason: human_resume`); receipt `5944.430` verified a second
+Notepad task, and `5944.431` ended cleanly at idle without restarting
+Antigravity. The Windows Stop/re-arm/second-task gate is passed for this
+installed build.
 
 ## Mac permission-mode repair — 30 October 2026
 
