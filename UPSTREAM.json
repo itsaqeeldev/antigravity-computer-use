@@ -292,7 +292,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "5cba8fbb653f1fe41a92dc2c307cbb027058694f0ce27f82f6b36291936511f8"
+      "sha256": "5fd081e06237709ddafbca8e061bf53b637029b0a6e155973cd1ebb2181d69e9"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "da66f9a0d2aa719153479e36450bb9405f48b0359d05c34fb6c7c29212133825"
+      "sha256": "fe484dd43bf2024c6f3cac6a5d9e1abd83fa45b952fa2e276b3003081b5ec791"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "3f667d13a6735f6f2887228d3dd16d15e83347b5b8f4e6ff64734457f8844e6d"
+      "sha256": "dba6838cff8d1d0b5d36cfb4f18ca60008cb6bd18650d49ed9dff0b9f0f4a7b3"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

@@ -198,6 +198,15 @@ test('foreign build or policy cannot end or shut down an open task, but can stop
   open=false;assert.equal((await send('shutdown','older-build','standalone')).closed,true);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('foreign shutdown is refused while any operation is in flight',{timeout:30000},async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-foreign-busy-'));let release,entered,closes=0;
+ const started=new Promise(resolve=>entered=resolve);
+ const runtime={permissionMode:'host-managed',guardian:{},driver:{info:{},async call(){entered();await new Promise(resolve=>release=resolve);return {result:{windows:[]}};}},status:()=>({state:'idle',task_open:false,permission_mode:'host-managed'}),async close(){closes++;}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));let pending;
+ const foreign=()=>new Promise((resolve,reject)=>{const socket=net.createConnection(session.pipe);socket.setEncoding('utf8');let data='';socket.on('error',reject);socket.on('data',x=>data+=x);socket.on('end',()=>resolve(JSON.parse(data)));socket.on('connect',()=>socket.write(JSON.stringify({secret:session.secret,command:'shutdown',expected_build_id:'older-build',expected_permission_mode:'host-managed',args:{}})+'\n'));});
+ let timer;try{pending=request(session,'apps',{},15000,'host-managed');pending.catch(()=>{});await Promise.race([started,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Discovery fixture did not enter')),8000);})]);clearTimeout(timer);assert.equal((await foreign()).error.code,'version_mismatch');assert.equal(closes,0);release();await pending;pending=null;}
+ finally{clearTimeout(timer);if(release)release();if(pending)await Promise.allSettled([pending]);await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('diagnostic persistence does not delay an error reply and shutdown waits for it',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-async-incident-'));let release,started;const gate=new Promise(r=>release=r),entered=new Promise(r=>started=r),original=Incidents.prototype.recordSerialized;
  Incidents.prototype.recordSerialized=async()=>{started();await gate;};
