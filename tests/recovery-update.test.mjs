@@ -9,6 +9,10 @@ test('session budget exhaustion gives bounded recovery without replay',()=>{
  assert.deepEqual(recoveryAdvice({input_completed:true,verification_error:{code:'session_limit'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});
  assert.deepEqual(recoveryAdvice({delivery_unknown:true,error:{code:'session_limit'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});
 });
+test('a busy input fence asks for a fresh observation rather than replay',()=>{
+ assert.deepEqual(recoveryAdvice({error:{code:'another_session_busy'}}),{next_action:'wait_for_controller_then_observe',replay_allowed:false});
+ assert.deepEqual(recoveryAdvice({delivery_unknown:true,error:{code:'another_session_busy'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});
+});
 test('prior Windows cleanup requires dead recorded processes and an empty exact ledger',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'prior-ledger-')),guard='guard-101-12345678-1234-1234-1234-123456789abc.state',file=path.join(dir,guard);
  const record={guard,children:[102,103,104,105],dispatched:true,watchdogs_complete:true},dead=()=>{throw Object.assign(Error('gone'),{code:'ESRCH'});};

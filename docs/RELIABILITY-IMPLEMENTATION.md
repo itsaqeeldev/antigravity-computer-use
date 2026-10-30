@@ -1193,6 +1193,10 @@ these cases. Launches also now check and consume the same budget, including
 rechecking after waiting for the fence; local mock tests cover successful,
 rejected and unknown-delivery launches. Real concurrent-host qualification
 remains pending.
+For `another_session_busy`, the direct response now directs the agent to wait
+for the other controller and obtain a fresh observation rather than replaying a
+possibly consumed frame. Unknown delivery still takes precedence. This is
+guidance only and does not resolve shared Sidecar conversation ownership.
 
 Issue #13 records that the listener's idle timer could clear an open task's
 grants and frames or shut down a paused task during a long decision gap. The

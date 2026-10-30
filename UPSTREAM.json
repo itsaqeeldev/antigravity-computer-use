@@ -476,7 +476,7 @@
     },
     {
       "path": "skills/computer-use/references/recovery.md",
-      "sha256": "60217572e9b16890513c5d2c97cf5904d3b14969f94770c7414eda3784c1a596"
+      "sha256": "363e9933718fd42cdf8691fd3b75b604c36262ed287d4f98eb9dbe1061464d4c"
     },
     {
       "path": "scripts/measure-run.mjs",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "eeb552dd5e6e879f5258c6fc53016e69d4ce32c2193bdad133bef56d23e4b51e"
+      "sha256": "74d96e91a60065cd6353316b17e951a99c6d500fed2b02261952083b44879299"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "f10c3afa71ff795d61782b3e1539f771f44e1e68450700dd0e513d5ef2db0848"
+      "sha256": "a62ecba5a7a7c1852f2d5daa755e710bb77ddb0cce16dcdcbf0799c30b17cb1c"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "ec5cfc4c4ef54960e50a6bee7c70d74f0bf08a068060a8f7293fdff481a39020"
+      "sha256": "2d2163705db76fd37b0e58783f73648393a4a20329f8bef749546083d5a2ce7b"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",
