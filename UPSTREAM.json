@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "d5560b2677197e2458fcbc1312e56b92d921948bd2496e3d18796288e7df2245"
+      "sha256": "f35810a6e089e52d21b062ad030631b50739024d59edd7b6d81582a6f0a299c3"
     },
     {
       "path": "server/mcp.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "c792784ebd4719ef2b3a54c09a19cac4749b295a3063957a3bc6b30549d1d54a"
+      "sha256": "b1a19e65ed8e5b85202b7bbfb1eac6ecf6b00d02927b53bcca52d77a76dd8b33"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e9f0660aa3fafc6b80764b42008b31e364b65a9f5ae45bc18981189a76628ff6"
+      "sha256": "d6648e96eab36cb8e97138c06e9cefab4ee9f3669969092689e804f381e48f97"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

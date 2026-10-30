@@ -303,10 +303,13 @@ export class Runtime {
     }
     this.check();if(generation!==this.generation)fail('control_changed','Control state changed; observe again.');
     if(w&&appKey(await this.app(w.hwnd))!==appKey(w))fail('identity_changed','Approved process identity changed.');
-    this.remaining--;
     const result=await this.sessions.withInput(op,{hwnd:w?.hwnd,title:w?.title},async()=>{
       this.check();if(generation!==this.generation)fail('control_changed','Cancelled before execution.');
+      if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
       Runtime.prototype.recordDispatch.call(this);
+      // Count an attempted dispatch, including uncertain delivery, but not a
+      // rejected lease or a cancellation that never reached the native worker.
+      this.remaining--;
       this.guardian.send({op:'activity',action:op});
       const result=(await this.driver.call(op,payload)).result;
       if(op==='click'&&payload.physical)this.guardian.send({op:'activity',action:op,click_feedback:true});

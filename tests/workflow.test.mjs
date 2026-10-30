@@ -99,6 +99,34 @@ test('window-free clipboard action registers its restarted worker and binds its 
   driver:{epoch:2,info:{pid:42},async start(){},async call(op,args){if(op==='authorize')return {result:{sensitive:true}};assert.equal(op,'clipboard');assert.equal(args.__worker_epoch,2);return {result:{has_text:false}};}}};
  const result=await Runtime.prototype.action.call(r,'clipboard',{reason:'Explicit clipboard read'});assert.equal(result.input_completed,true);
 });
+test('an unavailable input fence does not spend the native action budget',async()=>{
+ let sent=0;const r={generation:1,deadline:Date.now()+10000,remaining:1,check(){},stamp(){return{};},guardian:{send(){}},
+  driver:{epoch:1,info:{pid:42},async start(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};sent++;}},
+  sessions:{async withInput(){throw Object.assign(Error('busy'),{code:'another_session_busy'});}}};
+ await assert.rejects(Runtime.prototype.action.call(r,'clipboard',{reason:'Read clipboard'}),e=>e.code==='another_session_busy');
+ assert.equal(r.remaining,1);assert.equal(sent,0);
+});
+test('an action queued behind the fence rechecks its budget before dispatch',async()=>{
+ let sent=0;const r={generation:1,deadline:Date.now()+10000,remaining:1,check(){},stamp(){return{};},guardian:{send(){}},
+  driver:{epoch:1,info:{pid:42},async start(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};sent++;}},
+  sessions:{async withInput(_op,_target,run){r.remaining=0;return run();}}};
+ await assert.rejects(Runtime.prototype.action.call(r,'clipboard',{reason:'Read clipboard'}),e=>e.code==='session_limit');
+ assert.equal(r.remaining,0);assert.equal(sent,0);
+});
+test('an action whose session expires while queued never reaches the native worker',async()=>{
+ let sent=0;const r={generation:1,deadline:Date.now()+10000,remaining:1,check(){},stamp(){return{};},guardian:{send(){}},
+  driver:{epoch:1,info:{pid:42},async start(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};sent++;}},
+  sessions:{async withInput(_op,_target,run){r.deadline=Date.now()-1;return run();}}};
+ await assert.rejects(Runtime.prototype.action.call(r,'clipboard',{reason:'Read clipboard'}),e=>e.code==='session_limit');
+ assert.equal(r.remaining,1);assert.equal(sent,0);
+});
+test('uncertain native delivery still spends one action',async()=>{
+ let sent=0;const r={generation:1,deadline:Date.now()+10000,remaining:1,check(){},stamp(){return{};},guardian:{send(){}},
+  driver:{epoch:1,info:{pid:42},async start(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};sent++;throw Object.assign(Error('unknown'),{code:'input_outcome_unknown'});}},
+  sessions:{async withInput(_op,_target,run){return run();}}};
+ await assert.rejects(Runtime.prototype.action.call(r,'clipboard',{reason:'Read clipboard'}),e=>e.code==='input_outcome_unknown');
+ assert.equal(r.remaining,0);assert.equal(sent,1);
+});
 test('status fallback reads the same persisted takeover preference as the native UI',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'mode-'));const file=path.join(dir,'control-preferences.json');
  try {
