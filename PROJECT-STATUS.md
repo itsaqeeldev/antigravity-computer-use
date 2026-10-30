@@ -25,6 +25,13 @@ refused a post-Stop snapshot and rejected software resume. The human then
 re-armed locally; receipt `5944.430` verified a second Notepad task and
 `5944.431` ended cleanly at idle without restarting Antigravity.
 
+The same installed build also completed a fresh stable Upscaly 1.0.9 run after
+recovering from a genuine GPU OOM at AUTO tile. Selecting the RTX 3050 and
+256px tile produced verified native-AI PNG and JPG outputs at 2800×4496; both
+were independently hashed and the app reported completion. The PNG has a
+native `realesrgan-ncnn-vulkan` witness; the JPG process witness remains
+pending. Evidence is retained under `.localdata/current-upscaly-20261030/`.
+
 ## Candidate installation and Antigravity smoke — 30 October 2026
 
 Candidate source `89b355e` is installed at `D:\AntigravityComputerUse-ed035f9812`

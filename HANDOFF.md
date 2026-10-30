@@ -143,6 +143,26 @@ physical Esc, the native HUD latch and human-only re-arm remain independent of
 that permission mode. The Mac agent verified TextEdit and Calculator in
 host-managed mode with no repeated permission popups.
 
+## Current Windows Upscaly qualification — 30 October 2026
+
+The installed Stop-marker build `b8d1ad5…` ran the stable Upscaly 1.0.9
+executable against the requested portrait through the native controller. The
+first genuine AI attempt failed closed when the app reported GPU out-of-memory
+at AUTO tile; no output was accepted. The controller then selected the NVIDIA
+RTX 3050 and a bounded 256px tile, reran the same native RealESRGAN Ultra 4×
+job, and verified both formats in the app:
+
+- PNG: 2800×4496 RGB, SHA-256
+  `f846a3934a00d603a7fcf0b840d70f63ced0621148acdbd0ced2170710de05a4`.
+- JPG: 2800×4496 RGB, SHA-256
+  `7c9724e61e8808f17ab3752b1bf957ab385264769569fd65a614115ce19daff6`.
+
+The PNG engine witness recorded `realesrgan-ncnn-vulkan.exe` with GPU `-g 1`
+and scale `-s 4`; the JPG retry was visually completed with the same selected
+GPU/tile settings, but its separate process witness was not captured. Evidence
+is under `.localdata/current-upscaly-20261030/`; the owned app was closed and
+the controller ended idle without restarting Antigravity.
+
 ## Historical checkpoints
 
 ## 28 October stable Upscaly demo and remaining problems
