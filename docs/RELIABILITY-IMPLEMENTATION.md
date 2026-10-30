@@ -1,5 +1,12 @@
 # Reliability and updates implementation log
 
+On 30 October the local Windows source suite at `8811630` passed 430 tests,
+with 11 explicit skips and no failures (`node --test --test-concurrency=4
+tests/*.test.mjs`); provenance checked 175 recorded files without mismatches.
+This source result does not qualify physical Stop, native pipe loss, Mac
+hardware, real Antigravity workflows, or production updates. Issue #26 remains
+open. Mac CI for the preceding pushed revision was still running at this check.
+
 The Stop candidate now persists its latch and aborts the driver even if the
 guardian pipe throws. It retains an unconfirmed-delivery state across repeated
 Stop attempts and refuses automatic recovery; an absent passive guardian does
