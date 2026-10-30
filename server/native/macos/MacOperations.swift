@@ -186,7 +186,7 @@ func macContractTest() throws {
         throw AxonError("contract_test_failed", "Native input-lock holder did not start.")
     }
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup overlapped another process's input lock.") }
-    kill(holder.processIdentifier, SIGKILL); holder.waitUntilExit()
+    guard MacWorkers.terminateBeforeRetry(holder, expectedBirth: try macProcessStart(holder.processIdentifier)) else { throw AxonError("contract_test_failed", "Lock-holder exit was not confirmed.") }
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup did not recover after lock-owner death.") }
     // Replacing the private root while its original inode is locked must not
     // let a contender acquire a different directory lock and claim cleanup.

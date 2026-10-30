@@ -1224,6 +1224,12 @@ unreadable state; it does not yet prove cleanup if the guardian writes idle and
 then stalls. Its startup now refuses if watchdog identity cannot be written and
 flushed. Mac compilation/CI for these changes is pending. Do not install or
 release this partial change.
+Issue #22 tracks Mac watchdog startup returning before a timed-out child exited.
+The pending candidate records the child's birth identity, requests termination,
+waits a bounded time and retains an unreaped child in the current guardian while
+keeping Stop latched. An isolated native contract fixture exercises successful
+termination; Mac compilation, unconfirmed termination across guardian restart,
+and physical Stop/permission tests remain pending.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

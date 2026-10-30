@@ -6,15 +6,43 @@ import Darwin
 import Foundation
 
 enum MacWorkers {
+    static var unreaped: Process?
+    static func terminateBeforeRetry(_ child: Process, expectedBirth: String?, timeout: TimeInterval = 2) -> Bool {
+        if child.isRunning {
+            let pid = child.processIdentifier
+            guard let birth = expectedBirth, (try? macProcessStart(pid)) == birth else { return false }
+            _ = kill(pid, SIGKILL)
+        }
+        let until = ProcessInfo.processInfo.systemUptime + max(0, timeout)
+        while child.isRunning && ProcessInfo.processInfo.systemUptime < until { Thread.sleep(forTimeInterval: 0.005) }
+        guard !child.isRunning else { return false }
+        child.waitUntilExit(); return true
+    }
     static func start(_ args: [String]) throws -> Process {
+        if let prior = unreaped {
+            guard !prior.isRunning else {
+                MacFence.emergency("watchdog_start_cleanup_unconfirmed")
+                throw AxonError("stop_monitor_cleanup_unconfirmed", "A prior Stop monitor may still be running. Control stays stopped; inspect locally before retrying.")
+            }
+            prior.waitUntilExit(); unreaped = nil
+        }
         let child = Process(); child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
         child.arguments = args; child.environment = ProcessInfo.processInfo.environment
         let output = Pipe(); child.standardOutput = output; child.standardError = FileHandle.standardError
         try child.run()
+        let birth = try? macProcessStart(child.processIdentifier)
+        if birth == nil {
+            if !terminateBeforeRetry(child, expectedBirth: nil) { unreaped = child; MacFence.emergency("watchdog_start_cleanup_unconfirmed") }
+            throw AxonError("stop_monitor_cleanup_unconfirmed", "Cannot establish the Stop monitor identity. Control stays stopped; inspect locally before retrying.")
+        }
         let ready = DispatchSemaphore(value:0); var line: String?
         DispatchQueue.global().async { line = String(data:output.fileHandleForReading.availableData,encoding:.utf8); ready.signal() }
         guard ready.wait(timeout:.now()+5) == .success, line?.contains("watchdog_ready") == true else {
-            if child.isRunning { child.terminate() }
+            guard terminateBeforeRetry(child, expectedBirth: birth) else {
+                unreaped = child
+                MacFence.emergency("watchdog_start_cleanup_unconfirmed")
+                throw AxonError("stop_monitor_cleanup_unconfirmed", "A prior Stop monitor may still be running. Control stays stopped; inspect locally before retrying.")
+            }
             throw AxonError("stop_monitor_unavailable", "Independent Stop monitoring did not start. Check Input Monitoring permission.")
         }
         return child
