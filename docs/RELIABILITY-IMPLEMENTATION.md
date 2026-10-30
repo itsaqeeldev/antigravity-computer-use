@@ -870,6 +870,13 @@ An additional real process-death fixture confirms that the next session refuses
 the dead owner's metadata, and can proceed only after its internal verified
 cleanup path clears the matching record under the native fence. The fixture's
 action sends no desktop input.
+Apple Silicon CI run `40978321714` failed the same-process fence contention
+test with `input_lease_unavailable`; its log did not preserve the underlying
+native refusal. The runtime now retains that cause internally for diagnostics
+without putting raw paths or messages into incident reports. The separate-process
+contention and crash fixtures passed in that run. The cause and corrected
+cross-platform result remain to be established; earlier green runs do not erase
+this failure.
 An authenticated direct IPC integration test also routes an inert operation
 through the real Runtime, task record and native fence. A competing native
 lease is refused while dispatch is in progress, and End closes the task. The

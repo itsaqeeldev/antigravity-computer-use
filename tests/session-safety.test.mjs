@@ -48,7 +48,7 @@ test('native input fences prevent independent sessions from overlapping',{timeou
  try{
   try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
   const one=new Sessions({dir}),two=new Sessions({dir,acquireInputLease:async folder=>{try{return await acquireServiceLease(folder);}catch(error){if(error.code==='service_already_running')secondBlocked();throw error;}}});let secondRan=false;
-  first=one.withInput('click',null,async()=>{firstEntered();await gate;return {ok:true};});await entered;
+  first=one.withInput('click',null,async()=>{firstEntered();await gate;return {ok:true};});await Promise.race([entered,first.then(()=>{throw Error('First action ended before its barrier');})]);
   second=two.withInput('click',null,async()=>{secondRan=true;return {ok:true};},{waitMs:10000});await Promise.race([blocked,second.then(()=>{throw Error('Second action completed before first released');})]);assert.equal(secondRan,false);releaseFirst();await first;await second;assert.equal(secondRan,true);
  }finally{releaseFirst();await Promise.allSettled([first,second].filter(Boolean));fs.rmSync(dir,{recursive:true,force:true});}
 });

@@ -263,7 +263,7 @@ export class Sessions {
       let fence;
       while(!fence){
         try{fence=await this.acquireInputLease(this.inputFence);}
-        catch(error){if(error.code!=='service_already_running'){const failure=new Error('Cannot acquire the native input fence; no action was sent.');failure.code='input_lease_unavailable';throw failure;}if(this.monotonic()>=deadline)throw new LeaseBusy(readJson(this.lease));await this.sleep(POLL_MS);waited+=POLL_MS;}
+        catch(error){if(error.code!=='service_already_running'){const failure=new Error('Cannot acquire the native input fence; no action was sent.');failure.code='input_lease_unavailable';failure.cause=error;throw failure;}if(this.monotonic()>=deadline)throw new LeaseBusy(readJson(this.lease));await this.sleep(POLL_MS);waited+=POLL_MS;}
       }
       fence.once?.('lost',()=>{try{this.onInputLeaseLost?.();}catch{}});
       let dispatched=false;
