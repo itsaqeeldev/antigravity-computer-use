@@ -44,13 +44,20 @@ function Assert-ComputerUsePath {
 function New-ComputerUseStaging {
     param([string]$CacheDirectory)
     if (!$CacheDirectory) {
+        $candidates = @()
         if (Test-Path -LiteralPath 'D:\') {
             $hasher = [Security.Cryptography.SHA256]::Create()
             try { $sidHash = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes([Security.Principal.WindowsIdentity]::GetCurrent().User.Value))).Replace('-', '').ToLowerInvariant().Substring(0, 10) }
             finally { $hasher.Dispose() }
-            $CacheDirectory = 'D:\AntigravityComputerUseBootstrap-' + $sidHash
+            $candidates += 'D:\AntigravityComputerUseBootstrap-' + $sidHash
         }
-        if (!$CacheDirectory) { $CacheDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AntigravityComputerUseBootstrap' }
+        $candidates += Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'AntigravityComputerUseBootstrap'
+        $rejected = @()
+        foreach ($candidate in $candidates) {
+            try { Assert-ComputerUsePath $candidate; $CacheDirectory = $candidate; break }
+            catch { $rejected += ($candidate + ': ' + $_.Exception.Message) }
+        }
+        if (!$CacheDirectory) { throw ('No private download cache is available. ' + ($rejected -join ' | ')) }
     }
     $cache = [IO.Path]::GetFullPath($CacheDirectory)
     if ($cache.TrimEnd('\') -eq [IO.Path]::GetPathRoot($cache).TrimEnd('\')) { throw 'A drive root cannot be the download cache.' }
