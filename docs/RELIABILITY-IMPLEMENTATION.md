@@ -7,6 +7,9 @@ not need to be launched merely to latch Stop. Simulated tests cover pipe loss,
 latch-write failure, repeat attempts and passive Stop. An accepted pipe write
 is still not a native Stop acknowledgement, and real pipe loss, restart and
 physical re-arm remain unqualified.
+An uncorrelated delayed `stopped` event no longer clears the in-memory
+unconfirmed-delivery state; a simulated stale-event regression covers this.
+No current protocol response proves which Stop a native event acknowledges.
 
 On 30 October the local Windows source suite at `c0b95e2` passed 426 tests,
 with 11 explicit skips and no failures (`node --test --test-concurrency=4

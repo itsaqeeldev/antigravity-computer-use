@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "077dc24d45fd83fdac658ad5019961fb7e7d6a8fcdfee159ed5f42db7d7a725e"
+      "sha256": "22750e8469ede343f074678657742028d2c506d93b19378d4220f00a19e65472"
     },
     {
       "path": "server/mcp.mjs",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "d20f73050b824997316c95d87cba8f5cad9ba08e0dca02d4b6e6cc7655308e3f"
+      "sha256": "2f8ed41d94c71c745ca55506759a94caa4fecaa0ceaa3cb5be1bcd8283d0cb32"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "84eec8182782796115f924a718a82fd59b99afed7f089f84d76b9521d617044d"
+      "sha256": "7808bb0e522b877acc9b4472e3353f2c9bfcf03b89cae405326cce8f7268a4c5"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

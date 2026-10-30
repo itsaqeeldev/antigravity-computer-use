@@ -75,7 +75,7 @@ test('an unconfirmed guardian Stop invalidates runtime control and aborts its dr
   await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed');
   assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);
   const ready=await runtime.ready();assert.equal(ready.error.code,'guardian_stop_unconfirmed');assert.equal(ready.replay_allowed,false);
-  guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
+  guardian.emit('state','stopped','old_notification');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
  }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('Stop persists its latch and aborts input even if guardian delivery throws',async()=>{
