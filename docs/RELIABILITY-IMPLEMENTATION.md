@@ -960,6 +960,11 @@ watchdog metadata permanently marks that task's watchdog history incomplete,
 so recovered End refuses instead of trusting only the latest watchdog. Older
 records without this completeness marker also remain blocked.
 Fixture-level and native storage tests do not establish physical crash recovery.
+Windows watchdog identity publication now flushes a same-directory temporary
+file and atomically replaces the prior record. A test invokes the compiled
+native writer without desktop input and verifies that a locked failed
+replacement preserves the old record. This addresses incomplete reads; it does
+not prove physical cursor restoration or watchdog behavior after a real crash.
 A Windows cross-process regression now kills a task process and tracks three
 real inert child processes. End refuses while any recorded child remains alive
 or the prior ledger is nonempty, then succeeds once all have exited and a

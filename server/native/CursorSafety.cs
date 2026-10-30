@@ -33,6 +33,15 @@ namespace Axon {
         static readonly object gate=new object();
         internal static bool Applied { get { lock(gate)return applied; } }
         internal static int WatchdogPid {get {lock(gate)return watchdog!=null&&!watchdog.HasExited?watchdog.Id:0;}}
+        internal static void WriteWatchdogRecord(string file,int pid,long started) {
+            if(String.IsNullOrEmpty(file)||pid<=0||started<=0)throw new ArgumentException("Invalid watchdog identity.");
+            string temp=file+"."+Guid.NewGuid().ToString("N")+".tmp";
+            try {
+                byte[] bytes=System.Text.Encoding.UTF8.GetBytes(pid+"|"+started);
+                using(var stream=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){stream.Write(bytes,0,bytes.Length);stream.Flush(true);}
+                if(File.Exists(file))File.Replace(temp,file,null);else File.Move(temp,file);
+            } finally {try{if(File.Exists(temp))File.Delete(temp);}catch{}}
+        }
         static bool EnsureWatchdog() {
             if(watchdog!=null && !watchdog.HasExited)return true;
             ProcessStartInfo info=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,
@@ -45,7 +54,7 @@ namespace Axon {
             }
             // Recovery must be able to wait for this process to exit before
             // treating the old input ledger as final. Missing metadata fails closed.
-            try { File.WriteAllText(ControlFence.FileName+".watchdog",watchdog.Id+"|"+watchdog.StartTime.ToUniversalTime().Ticks); }
+            try { WriteWatchdogRecord(ControlFence.FileName+".watchdog",watchdog.Id,watchdog.StartTime.ToUniversalTime().Ticks); }
             catch { try {watchdog.Kill();}catch {}watchdog=null;return false; }
             return true;
         }

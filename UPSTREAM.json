@@ -215,6 +215,14 @@
   ],
   "authored_files": [
     {
+      "path": "tests/NativeWatchdogMetadataTests.cs",
+      "sha256": "cd03152a9e5d8292fa6edff603dc7daa67b162ef4a9cdfcb9160c3968f5b7c77"
+    },
+    {
+      "path": "tests/native-watchdog-metadata.test.mjs",
+      "sha256": "fdab03fe87eb3f895f0c6baca7e9a9fae3d31ed071256eaadf0b1fbda41bf4df"
+    },
+    {
       "path": "tests/session-safety.test.mjs",
       "sha256": "1ed92952e523f762464571042cde19279d4c2fd5193f221bc40659c066feb270"
     },
@@ -240,7 +248,7 @@
     },
     {
       "path": "server/native/CursorSafety.cs",
-      "sha256": "7ea60c645410dfe7f87be9e6dc14568c1089abce8bdc4cd9f47aeacaab21137f"
+      "sha256": "dd896cebb3605d8721656b3b48355a4a336451eb5d6e5964c312d7680a6167fb"
     },
     {
       "path": "server/native/DesktopVisuals.cs",
@@ -612,7 +620,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e52b0e8aac6ecdde26b87480151f87e5a38b29d2e3d220cf155104c8d7675e6f"
+      "sha256": "fa88ecbbe722bb440e661c4459729068c1f7579b451954ce769633fde8c188df"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
