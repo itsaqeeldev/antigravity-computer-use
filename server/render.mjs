@@ -432,7 +432,11 @@ export function renderSnapshot(snap, { textLimit = null, withRects = false, lean
   // any find or controls-only filter are gone - not the walk, where it used
   // to cut a page off before its first row (the browser's toolbar comes first).
   const cap = Number(maxRows) > 0 ? Number(maxRows) : 0;
-  const rows = cap && built.rows.length > cap ? built.rows.slice(0, cap) : built.rows;
+  const rows = cap && built.rows.length > cap
+    ? (cap >= 20
+        ? [...built.rows.slice(0, Math.ceil(cap * 0.6)), ...built.rows.slice(-(cap - Math.ceil(cap * 0.6)))]
+        : built.rows.slice(0, cap))
+    : built.rows;
   if (onCoverage) onCoverage({rowsOmitted: rows.length < built.rows.length});
 
   let count = `${rows.length} shown`;

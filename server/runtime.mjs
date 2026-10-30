@@ -354,7 +354,8 @@ export class Runtime {
       try {
         if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the screenshot could start. Inspect the app; do not replay prior input.');
         const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
-        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80},captureBudget!==null?{timeoutMs:captureBudget+1000}:undefined)).result;
+        const needsOcr=process.platform==='darwin'&&(nodes.length<=2||rendered.includes('BLIND TREE'));
+        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80,...(needsOcr?{ocr:true}:{})},captureBudget!==null?{timeoutMs:captureBudget+1000}:undefined)).result;
       }
       catch(error){
         if(['window_capture_unavailable','other_desktop','window_fullscreen','window_minimized','window_hidden','mac_permissions_required'].includes(error.code)){
@@ -364,6 +365,10 @@ export class Runtime {
       }
       finally { this.guardian.send({op:'capture_end'}); }
       if(image.capture==='screen_occluded')failWindowState('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.',true);
+      if(Array.isArray(image.screen_text)&&image.screen_text.length){
+        const ocrLines=image.screen_text.slice(0,40).map(item=>`  @${item.x},${item.y} ${JSON.stringify(item.text)}`).join('\n');
+        response.tree+=`\n\n[Screen text (OCR @x,y)]\n${ocrLines}`;
+      }
       response.image={...image};delete response.image.data;
     }
     failures.delete(handle);

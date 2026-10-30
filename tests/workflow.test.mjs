@@ -478,3 +478,32 @@ test('stale window handles and missing capture permissions classify precisely an
   return true;
  });
 });
+
+test('long web snapshots retain both top navigation and bottom composer controls and attach OCR when blind',async()=>{
+ const nodes=[
+  {i:0,depth:0,role:'Window',name:'Slack - Google Chrome'},
+  {i:1,depth:1,role:'Document',name:'Slack',text:'https://app.slack.com/client/T1/dms'},
+  ...Array.from({length:95},(_,idx)=>({i:idx+2,depth:2,role:'Text',name:`Message line ${idx+1}`})),
+  {i:97,depth:2,role:'Edit',name:'Message to Shayan',patterns:['Value']},
+  {i:98,depth:2,role:'Button',name:'Send now',patterns:['Invoke']}
+ ];
+ const r={generation:1,frames:new Map(),async grant(){return {hwnd:55,pid:90,started:'one',path:'/Applications/Google Chrome.app',rect:[0,0,1400,800]};},check(){},stamp(){return {};},
+  guardian:{send(){},async request(){}},driver:{epoch:1,async call(op){
+   if(op==='snapshot')return {result:{snapshot_id:'s-web',hwnd:55,title:'Slack - Google Chrome',web:true,nodes}};
+   return {result:{capture:'window',width:1400,height:800,source:[0,0,1400,800],data:'fixture'}};
+  }}};
+ const observed=await Runtime.prototype.observe.call(r,{hwnd:55,with_image:false});
+ assert.match(observed.metadata.tree,/Message line 1/);
+ assert.match(observed.metadata.tree,/\[97\].*Edit "Message to Shayan"/);
+ assert.match(observed.metadata.tree,/\[98\].*Button "Send now"/);
+ assert.equal(observed.metadata.tree_incomplete,true);
+
+ const blindRuntime={generation:1,frames:new Map(),async grant(){return {hwnd:56,pid:91,started:'one',path:'/Applications/Canvas.app',rect:[0,0,1200,700]};},check(){},stamp(){return {};},
+  guardian:{send(){},async request(){}},driver:{epoch:1,async call(op){
+   if(op==='snapshot')return {result:{snapshot_id:'s-blind',hwnd:56,title:'Canvas',nodes:[{i:0,depth:0,role:'Window',name:'Canvas'}]}};
+   return {result:{capture:'window',width:1200,height:700,source:[0,0,1200,700],data:'fixture',screen_text:[{text:'Message Shayan',x:610,y:650}]}};
+  }}};
+ const blindObs=await Runtime.prototype.observe.call(blindRuntime,{hwnd:56});
+ assert.match(blindObs.metadata.tree,/\[Screen text \(OCR @x,y\)\]/);
+ assert.match(blindObs.metadata.tree,/@610,650 "Message Shayan"/);
+});
