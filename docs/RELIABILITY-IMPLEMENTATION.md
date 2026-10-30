@@ -1,5 +1,18 @@
 # Reliability and updates implementation log
 
+On 30 October the final Intel Mac qualification and repair pass on
+`codex/argon-final-mac` (from `v0.3.0-beta.3` baseline `b33940c`) reproduced and
+repaired the macOS Chrome/Space window capture failure (`_AXUIElementGetWindow`
+direct `CGWindowID` resolution, browser/document title suffix matching, off-Space
+`WindowRegistry` retention, retired handle `identity_changed` classification,
+5-state deterministic Space/capture classification with 1 bounded recovery
+attempt before refusing repeated polling), updated `MacVisuals.swift` to use
+Apple's native `NSGlassEffectView` on macOS 26+ with pure filled Phosphor Icons
+(without status dots or strokes) and high-contrast crimson emergency tint, and
+added `priorMacCleanupVerified` for verified macOS recovered-task completion.
+See `docs/MACOS-QUALIFICATION.md` for live Chrome/Space/Full-Screen/Minimized/Hidden
+receipts (`34634.4`–`34634.24`) and remaining physical hardware boundaries.
+
 On 30 October the local Windows source suite at `8811630` passed 430 tests,
 with 11 explicit skips and no failures (`node --test --test-concurrency=4
 tests/*.test.mjs`); provenance checked 175 recorded files without mismatches.

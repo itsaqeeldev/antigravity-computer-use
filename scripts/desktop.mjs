@@ -42,14 +42,15 @@ export function briefReply(value){
  const out={...value};
  if(out.metadata){const m=out.metadata;delete out.metadata;out.observation_id=m.observation_id;out.hwnd=m.hwnd;out.tree=m.tree;}
  if(out.image){out.image={path:out.image.path,width:out.image.width,height:out.image.height};}
- if(out.windows)out.windows=out.windows.map(({hwnd,title,process,minimized,foreground})=>({hwnd,title,process,minimized,foreground}));
+ if(out.windows)out.windows=out.windows.map(({hwnd,title,process,minimized,hidden,fullscreen,other_desktop,foreground})=>({hwnd,title,process,minimized,...(hidden?{hidden:true}:{}),...(fullscreen?{fullscreen:true}:{}),...(other_desktop?{other_desktop:true}:{}),foreground}));
  return out;
 }
 let replyMode='json';
 const printReply=value=>console.log(encodeReply(replyMode==='brief'?briefReply(value):value));
 export function failureReply(error){
  const result={ok:false,error:{code:error.code||'refused',message:error.message},next_action:'inspect_diagnostics'};
- for(const field of ['delivery_unknown','observe_before_continuing','cancellation_requested'])if(error[field]===true)result[field]=true;
+ for(const field of ['delivery_unknown','observe_before_continuing','cancellation_requested','repeated_failure'])if(error[field]===true)result[field]=true;
+ if(Number.isSafeInteger(error.recovery_attempts_remaining))result.recovery_attempts_remaining=error.recovery_attempts_remaining;
  Object.assign(result,recoveryAdvice(result));
  return result;
 }

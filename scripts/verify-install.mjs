@@ -3,7 +3,7 @@ import {launcherSource,controllerStartSource,desktopCommand} from './install.mjs
 import {nativePlatform} from '../server/platform.mjs';
 import {storageOperation} from '../server/storage.mjs';
 import {SIDECAR_ID,sidecarDefinition} from './sidecar.mjs';
-const target=path.resolve(process.argv[2]||'D:/Tools/AntigravityComputerUse');
+const target=path.resolve(process.argv[2]||(process.platform==='darwin'?path.join(os.homedir(),'Library/Application Support/AntigravityComputerUse'):'D:/Tools/AntigravityComputerUse'));
 const platform=nativePlatform();
 const install=JSON.parse(fs.readFileSync(path.join(target,'installation.json')));
 const manifest=JSON.parse(fs.readFileSync(path.join(install.release,'bundle-manifest.json')));

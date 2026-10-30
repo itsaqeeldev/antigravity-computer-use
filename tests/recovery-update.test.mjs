@@ -3,7 +3,7 @@ import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server
 import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
 import {spawn,spawnSync} from 'node:child_process';
 import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERSION} from '../server/version.mjs';
-import {priorWindowsCleanupVerified,recoveryAdvice,safeWaitMetrics} from '../server/recovery.mjs';
+import {priorWindowsCleanupVerified,priorMacCleanupVerified,recoveryAdvice,safeWaitMetrics} from '../server/recovery.mjs';
 test('wait error metrics accept only numeric fields and discard other content',()=>{
  assert.deepEqual(safeWaitMetrics({elapsed_ms:123,observations:2,polling_budget_ms:1000,text:'private content'}),{elapsed_ms:123,observations:2,polling_budget_ms:1000});
  assert.equal(safeWaitMetrics({elapsed_ms:'private',observations:1,polling_budget_ms:1000}),undefined);
@@ -31,6 +31,19 @@ test('prior Windows cleanup requires dead recorded processes and an empty exact 
   if(process.platform!=='win32'){fs.unlinkSync(file+'.inputs');fs.symlinkSync(unrelated,file+'.inputs');assert.equal(verify(),false);fs.unlinkSync(file+'.inputs');fs.writeFileSync(file+'.inputs','');}
   fs.writeFileSync(file,'active|token|9|');assert.equal(verify(),false);fs.writeFileSync(file,'stopped||0|');
   fs.writeFileSync(file+'.watchdog','bad');assert.equal(verify(),false);fs.unlinkSync(file+'.watchdog');assert.equal(verify(),false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('prior macOS cleanup requires dead recorded processes and an empty JSON ledger',()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'prior-mac-ledger-')),guard='guard-101-12345678-1234-1234-1234-123456789abc.state',file=path.join(dir,guard);
+ const record={guard,children:[102,103,104],dispatched:true,watchdogs_complete:true},dead=()=>{throw Object.assign(Error('gone'),{code:'ESRCH'});};
+ try{
+  fs.writeFileSync(file,'stopped||0|');fs.writeFileSync(file+'.watchdog','104|1793377319.476463');fs.writeFileSync(file+'.inputs','{"buttons":[],"keys":[]}');
+  const verify=(r=record,probe=dead,platform='darwin')=>priorMacCleanupVerified(dir,r,{platform,probe});
+  assert.equal(verify(),true);assert.equal(verify(record,()=>{},'darwin'),false);assert.equal(verify(record,dead,'win32'),false);
+  for(const pid of [101,102,103,104])assert.equal(verify(record,n=>{if(n===pid)return;return dead();}),false);
+  fs.writeFileSync(file+'.inputs','{"buttons":[0],"keys":[]}');assert.equal(verify(),false);
+  fs.writeFileSync(file+'.inputs','{"buttons":[],"keys":[42]}');assert.equal(verify(),false);
+  fs.writeFileSync(file+'.inputs','');assert.equal(verify(),false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('native build preserves another compiler output and an older host',{skip:process.platform!=='win32',timeout:60000},()=>{

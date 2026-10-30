@@ -5,13 +5,121 @@ import CoreGraphics
 import Foundation
 import ScreenCaptureKit
 
+struct MacWindowDisposition: Equatable {
+    let minimized: Bool
+    let hidden: Bool
+    let fullscreen: Bool
+    let otherDesktop: Bool
+    let windowID: CGWindowID?
+    let errorCode: String?
+    let errorMessage: String?
+}
+
+func classifyMacWindowState(
+    hasScreenCapturePermission: Bool,
+    minimized: Bool,
+    hidden: Bool,
+    fullscreen: Bool,
+    onCurrentSpace: Bool,
+    onAnySpace: Bool,
+    windowID: CGWindowID? = nil
+) -> MacWindowDisposition {
+    let isOtherDesktop = !minimized && !hidden && !fullscreen && !onCurrentSpace && onAnySpace
+    if !hasScreenCapturePermission {
+        return MacWindowDisposition(
+            minimized: minimized, hidden: hidden, fullscreen: fullscreen, otherDesktop: isOtherDesktop, windowID: windowID,
+            errorCode: "mac_permissions_required",
+            errorMessage: "Screen Recording permission needs human setup in System Settings > Privacy & Security."
+        )
+    }
+    if minimized {
+        return MacWindowDisposition(
+            minimized: true, hidden: hidden, fullscreen: fullscreen, otherDesktop: false, windowID: windowID,
+            errorCode: "window_minimized",
+            errorMessage: "The approved window is minimized. Focus it once to restore it on the current Space, then observe again."
+        )
+    }
+    if hidden {
+        return MacWindowDisposition(
+            minimized: false, hidden: true, fullscreen: fullscreen, otherDesktop: false, windowID: windowID,
+            errorCode: "window_hidden",
+            errorMessage: "The approved application is hidden. Focus it once to unhide it on the current Space, then observe again."
+        )
+    }
+    if fullscreen {
+        return MacWindowDisposition(
+            minimized: false, hidden: false, fullscreen: true, otherDesktop: !onCurrentSpace, windowID: windowID,
+            errorCode: "window_fullscreen",
+            errorMessage: "The approved window is in macOS full-screen mode (a separate full-screen Space). Exit full-screen mode yourself to return the window to the normal Space, then observe again; no Space was switched."
+        )
+    }
+    if isOtherDesktop {
+        return MacWindowDisposition(
+            minimized: false, hidden: false, fullscreen: false, otherDesktop: true, windowID: windowID,
+            errorCode: "other_desktop",
+            errorMessage: "The approved window is on another macOS Mission Control Space. Move it to the current Space yourself, then observe again; no Space was switched."
+        )
+    }
+    if !onCurrentSpace {
+        return MacWindowDisposition(
+            minimized: false, hidden: false, fullscreen: false, otherDesktop: false, windowID: windowID,
+            errorCode: "window_capture_unavailable",
+            errorMessage: "The approved window is not unambiguously available on the current Space. No desktop fallback was captured."
+        )
+    }
+    return MacWindowDisposition(
+        minimized: false, hidden: false, fullscreen: false, otherDesktop: false, windowID: windowID,
+        errorCode: nil,
+        errorMessage: nil
+    )
+}
+
+func macInspectWindowState(
+    window: AXUIElement,
+    pid: pid_t,
+    title: String,
+    rect: [Int]?,
+    app: NSRunningApplication? = nil,
+    hasScreenCapturePermission: Bool = CGPreflightScreenCaptureAccess()
+) -> MacWindowDisposition {
+    let runningApp = app ?? NSRunningApplication(processIdentifier: pid)
+    let minimized = axBool(window, kAXMinimizedAttribute as String) ?? false
+    let hidden = runningApp?.isHidden ?? (axBool(AXUIElementCreateApplication(pid), kAXHiddenAttribute as String) ?? false)
+    let fullscreen = (axBool(window, "AXFullScreen") ?? false) || (axString(window, kAXSubroleAttribute as String) == "AXFullScreenWindow")
+    let onScreenID = windowNumber(window: window, pid: pid, title: title, rect: rect, onScreenOnly: true)
+    let anySpaceID = onScreenID ?? windowNumber(window: window, pid: pid, title: title, rect: rect, onScreenOnly: false)
+    let axDirectID = axWindowID(window)
+    let onAny = anySpaceID != nil || (axDirectID != 0 && rect != nil)
+    return classifyMacWindowState(
+        hasScreenCapturePermission: hasScreenCapturePermission,
+        minimized: minimized,
+        hidden: hidden,
+        fullscreen: fullscreen,
+        onCurrentSpace: onScreenID != nil,
+        onAnySpace: onAny,
+        windowID: onScreenID ?? anySpaceID ?? (axDirectID != 0 ? axDirectID : nil)
+    )
+}
+
 func macWindowIdentity(_ args: [String: Any]) throws -> [String: Any] {
     let (window, pid, title, handle) = try resolveWindow(args)
     var result = try macIdentity(pid)
     guard let rect = axRect(window) else { throw AxonError("window_rect_failed", "Window geometry is unavailable.") }
-    result.merge(["hwnd": handle, "title": title, "rect": rect, "root": handle, "owner": 0,
-                  "class": axString(window, kAXRoleAttribute as String) ?? "AXWindow",
-                  "visible": true, "overlay": false, "minimized": axBool(window, kAXMinimizedAttribute as String) ?? false]) { _, new in new }
+    let state = macInspectWindowState(window: window, pid: pid, title: title, rect: rect)
+    result.merge([
+        "hwnd": handle,
+        "title": title,
+        "rect": rect,
+        "root": handle,
+        "owner": 0,
+        "class": axString(window, kAXRoleAttribute as String) ?? "AXWindow",
+        "visible": !state.minimized && !state.hidden && !state.otherDesktop,
+        "overlay": false,
+        "minimized": state.minimized,
+        "hidden": state.hidden,
+        "fullscreen": state.fullscreen,
+        "other_desktop": state.otherDesktop,
+    ]) { _, new in new }
     return result
 }
 
@@ -27,11 +135,11 @@ func macCheckPoint(_ point: CGPoint) throws {
 }
 func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
     try macCheckPoint(point)
-    let (window, pid, _, _) = try resolveWindow(args)
+    let (window, pid, title, _) = try resolveWindow(args)
     guard let rect = axRect(window), CGRect(x: rect[0], y: rect[1], width: rect[2], height: rect[3]).contains(point) else {
         throw AxonError("bad_point", "Point is outside the approved window.")
     }
-    guard let expected = windowNumber(pid: pid, title: try resolveWindow(args).2, rect: rect),
+    guard let expected = windowNumber(window: window, pid: pid, title: title, rect: rect),
           let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { throw AxonError("obscured", "The target point cannot be verified.") }
     let guardianRecord = (try? String(contentsOfFile: MacFence.file + ".guardian", encoding: .utf8).split(separator:"|")) ?? []
     let guardian = guardianRecord.count == 2 ? Int32(guardianRecord[0]) : nil
@@ -54,19 +162,39 @@ func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
 
 func macBringToFront(_ args: [String: Any]) throws {
     let (window, pid, title, _) = try resolveWindow(args)
-    guard axBool(window, kAXMinimizedAttribute as String) != true,
-          windowNumber(pid: pid, title: title, rect: axRect(window)) != nil else {
-        throw AxonError("other_desktop", "Bring the approved window onto the current Space yourself. No Space was switched.")
+    let state = macInspectWindowState(window: window, pid: pid, title: title, rect: axRect(window))
+    if state.fullscreen {
+        throw AxonError("window_fullscreen", state.errorMessage ?? "The approved window is in macOS full-screen mode. Exit full-screen mode yourself; no Space was switched.")
     }
-    if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid {
+    if state.otherDesktop {
+        throw AxonError("other_desktop", state.errorMessage ?? "Bring the approved window onto the current Space yourself. No Space was switched.")
+    }
+    let app = NSRunningApplication(processIdentifier: pid)
+    let needsRestore = state.minimized || state.hidden
+    let needsFront = NSWorkspace.shared.frontmostApplication?.processIdentifier != pid || axBool(window, kAXMainAttribute as String) != true
+    if needsRestore || needsFront {
         try MacFence.dispatched()
-        guard NSRunningApplication(processIdentifier: pid)?.activate(options: []) == true else {
+        if state.hidden { _ = app?.unhide() }
+        if state.minimized { _ = AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse) }
+        guard app?.activate(options: []) == true else {
             throw AxonError("input_outcome_unknown", "Window activation was not confirmed. Observe before continuing.")
         }
+        _ = AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
         _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        Thread.sleep(forTimeInterval: 0.12)
+        let deadline = Date().addingTimeInterval(0.35)
+        while Date() < deadline {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
+               axBool(window, kAXMinimizedAttribute as String) != true,
+               app?.isHidden != true {
+                break
+            }
+            Thread.sleep(forTimeInterval: 0.03)
+        }
     }
     guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { throw AxonError("focus_changed", "The approved app did not become foreground.") }
+    guard windowNumber(window: window, pid: pid, title: title, rect: axRect(window), onScreenOnly: true) != nil else {
+        throw AxonError("other_desktop", "The approved window is not on the current Space after activation. Move it to the current Space yourself; no Space was switched.")
+    }
 }
 
 func macRole(_ role: String) -> String {
@@ -114,6 +242,51 @@ func macContractTest() throws {
           MacFence.resolvedState("active", latched: true) == "stopped",
           MacFence.resolvedState("idle", latched: false) == "idle" else {
         throw AxonError("contract_test_failed", "Latched Stop was lost during state resolution.")
+    }
+    guard macWindowTitleMatches(axTitle: "AGCU Test Page - Google Chrome - Profile 1", cgName: "AGCU Test Page"),
+          macWindowTitleMatches(axTitle: "Document — Edited", cgName: "Document"),
+          !macWindowTitleMatches(axTitle: "Window Alpha", cgName: "Window Beta") else {
+        throw AxonError("contract_test_failed", "Browser/document window title matching differs.")
+    }
+    let twinList: [[String: Any]] = [
+        [
+            kCGWindowNumber as String: NSNumber(value: 1001),
+            kCGWindowOwnerPID as String: NSNumber(value: 777),
+            kCGWindowLayer as String: NSNumber(value: 0),
+            kCGWindowName as String: "Report Draft",
+            kCGWindowBounds as String: ["X": NSNumber(value: 10), "Y": NSNumber(value: 20), "Width": NSNumber(value: 800), "Height": NSNumber(value: 600)],
+        ],
+        [
+            kCGWindowNumber as String: NSNumber(value: 1002),
+            kCGWindowOwnerPID as String: NSNumber(value: 777),
+            kCGWindowLayer as String: NSNumber(value: 0),
+            kCGWindowName as String: "Report Draft",
+            kCGWindowBounds as String: ["X": NSNumber(value: 10), "Y": NSNumber(value: 20), "Width": NSNumber(value: 800), "Height": NSNumber(value: 600)],
+        ],
+    ]
+    guard matchCGWindow(list: twinList, pid: 777, title: "Report Draft - Google Chrome - Profile", rect: [10, 20, 800, 600], directWindowID: 1002) == 1002,
+          matchCGWindow(list: twinList, pid: 777, title: "Report Draft", rect: [10, 20, 800, 600], directWindowID: 0) == nil,
+          matchCGWindow(list: [twinList[0]], pid: 777, title: "Report Draft - Google Chrome - Profile", rect: [10, 20, 800, 600], directWindowID: 0) == 1001 else {
+        throw AxonError("contract_test_failed", "Direct CGWindowID or browser-title disambiguation differs.")
+    }
+    guard classifyMacWindowState(hasScreenCapturePermission: false, minimized: false, hidden: false, fullscreen: false, onCurrentSpace: true, onAnySpace: true).errorCode == "mac_permissions_required",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: true, hidden: false, fullscreen: false, onCurrentSpace: false, onAnySpace: true).errorCode == "window_minimized",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: false, hidden: true, fullscreen: false, onCurrentSpace: false, onAnySpace: true).errorCode == "window_hidden",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: false, hidden: false, fullscreen: true, onCurrentSpace: false, onAnySpace: true).errorCode == "window_fullscreen",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: false, hidden: false, fullscreen: false, onCurrentSpace: false, onAnySpace: true).errorCode == "other_desktop",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: false, hidden: false, fullscreen: false, onCurrentSpace: false, onAnySpace: false).errorCode == "window_capture_unavailable",
+          classifyMacWindowState(hasScreenCapturePermission: true, minimized: false, hidden: false, fullscreen: false, onCurrentSpace: true, onAnySpace: true).errorCode == nil else {
+        throw AxonError("contract_test_failed", "macOS Space and window capture failure classification differs.")
+    }
+    let activeHud = MacVisuals.statePresentation(for: "active", latched: false)
+    let pausedHud = MacVisuals.statePresentation(for: "paused", latched: false)
+    let stoppedHud = MacVisuals.statePresentation(for: "stopped", latched: false)
+    let latchedHud = MacVisuals.statePresentation(for: "active", latched: true)
+    guard activeHud.title.contains("Working"), !activeHud.isEmergency,
+          pausedHud.title.contains("Paused"), !pausedHud.isEmergency,
+          stoppedHud.title == "Stopped · Re-arm required", stoppedHud.isEmergency, stoppedHud.minimumContrast >= 8.5,
+          latchedHud.resolvedState == "stopped", latchedHud.title == "Stopped · Re-arm required", latchedHud.isEmergency else {
+        throw AxonError("contract_test_failed", "Mac HUD state presentation or emergency contrast contract differs.")
     }
     let latchProbe = MacFence.file + ".latch-probe-" + UUID().uuidString
     defer { try? FileManager.default.removeItem(atPath: latchProbe) }
@@ -441,9 +614,22 @@ func macPaste(_ args: [String: Any]) throws -> [String: Any] {
 }
 
 func macFitWindow(_ args: [String: Any]) throws -> [String: Any] {
-    let (window, _, _, _) = try resolveWindow(args)
-    guard axBool(window, kAXMinimizedAttribute as String) != true, let r = axRect(window),
-          windowNumber(pid: try resolveWindow(args).1, title: try resolveWindow(args).2, rect: r) != nil else {
+    let (window, pid, title, _) = try resolveWindow(args)
+    let state = macInspectWindowState(window: window, pid: pid, title: title, rect: axRect(window))
+    if state.fullscreen {
+        throw AxonError("window_fullscreen", state.errorMessage ?? "Exit macOS full-screen mode yourself before fitting the window. No Space was switched.")
+    }
+    if state.otherDesktop {
+        throw AxonError("other_desktop", state.errorMessage ?? "Restore the app on the current Space yourself before fitting it. No Space was switched.")
+    }
+    if state.minimized || state.hidden {
+        try MacFence.dispatched()
+        if state.hidden { _ = NSRunningApplication(processIdentifier: pid)?.unhide() }
+        if state.minimized { _ = AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse) }
+        Thread.sleep(forTimeInterval: 0.15)
+    }
+    guard let r = axRect(window),
+          windowNumber(window: window, pid: pid, title: title, rect: r) != nil else {
         throw AxonError("other_desktop", "Restore the app on the current Space yourself before fitting it. No Space was switched.")
     }
     let current = CGRect(x: r[0], y: r[1], width: r[2], height: r[3])
@@ -453,7 +639,7 @@ func macFitWindow(_ args: [String: Any]) throws -> [String: Any] {
     var size = CGSize(width: min(current.width, screen.width), height: min(current.height, screen.height))
     var point = CGPoint(x: max(screen.minX, min(current.minX, screen.maxX-size.width)), y: max(screen.minY, min(current.minY, screen.maxY-size.height)))
     guard let sizeValue = AXValueCreate(.cgSize, &size), let pointValue = AXValueCreate(.cgPoint, &point) else { throw AxonError("window_geometry_failed", "Cannot represent window bounds.") }
-    try MacFence.dispatched()
+    if !MacFence.didDispatch { try MacFence.dispatched() }
     guard AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue) == .success,
           AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, pointValue) == .success else {
         throw AxonError("input_outcome_unknown", "The app did not confirm its new geometry. Observe before retrying.")
@@ -485,9 +671,15 @@ func macLaunch(_ args: [String: Any]) throws -> [String: Any] {
 }
 
 func macCapture(_ args: [String: Any]) throws -> [String: Any] {
-    guard CGPreflightScreenCaptureAccess() else { throw AxonError("mac_permissions_required", "Screen Recording permission needs human setup.") }
+    let hasPermission = CGPreflightScreenCaptureAccess()
+    guard hasPermission else { throw AxonError("mac_permissions_required", "Screen Recording permission needs human setup in System Settings > Privacy & Security.") }
     let (window, pid, title, _) = try resolveWindow(args)
-    guard let r = axRect(window), let number = windowNumber(pid: pid, title: title, rect: r) else {
+    let r = axRect(window)
+    let state = macInspectWindowState(window: window, pid: pid, title: title, rect: r, hasScreenCapturePermission: hasPermission)
+    if let code = state.errorCode, let message = state.errorMessage {
+        throw AxonError(code, message)
+    }
+    guard let r = r, let number = state.windowID else {
         throw AxonError("window_capture_unavailable", "The approved window is not unambiguously available on the current Space. No desktop fallback was captured.")
     }
     let signal = DispatchSemaphore(value: 0); var captured: CGImage?; var failure: Error?

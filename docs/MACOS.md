@@ -76,9 +76,37 @@ macOS may require new permission approval after an ad-hoc-signed update.
 ## Native behavior
 
 - Accessibility uses AXUIElement, reusing the attributed MIT Swift foundation.
-- ScreenCaptureKit captures only the unambiguously matched approved window;
-  there is no covering-desktop fallback. Coordinates retain native display
-  origins and screenshot-to-window scaling in the shared runtime.
+- ScreenCaptureKit captures only the unambiguously matched approved window
+  (binding `_AXUIElementGetWindow` directly to `CGWindowID` with browser/profile
+  title suffix matching and refusing ambiguous title-only selectors when multiple
+  windows share a title); there is no covering-desktop fallback. Coordinates
+  retain native display origins and screenshot-to-window scaling in the shared
+  runtime.
+- **macOS Space and capture classification & human recovery**: macOS
+  `kAXWindowsAttribute` and `CGWindowListCopyWindowInfo(.optionOnScreenOnly)`
+  only expose windows on the currently active Space, and macOS cannot safely
+  capture or focus a window on another Mission Control Space or full-screen Space
+  without switching Spaces. The adapter never switches Spaces automatically and
+  classifies window capture states deterministically with bounded recovery (at
+  most one recovery attempt per window before refusing repeated polling with
+  `repeated_failure: true` and `recovery_attempts_remaining: 0`):
+  - `other_desktop` (`next_action: "await_human_space_switch"`): Target window is
+    on another Mission Control Space. **Human recovery**: switch to that Space or
+    move the window to the current Space, then observe again.
+  - `window_fullscreen` (`next_action: "await_human_fullscreen_exit"`): Target
+    window is in macOS full-screen mode on a dedicated Space. **Human recovery**:
+    exit full-screen mode (green title-bar button or `Control+Command+F`), then
+    observe again.
+  - `window_minimized` / `window_hidden` (`next_action: "focus_target_then_observe"`,
+    `recovery_attempts_remaining: 1`): Target window is minimized to the Dock or
+    hidden (`Cmd+H`). One bounded `focus` attempt unminimizes/unhides it on the
+    current Space; repeated `snapshot` polling without recovery refuses with
+    `await_human_window_recovery`.
+  - `identity_changed` (`next_action: "discover_apps_then_observe"`): Target
+    window handle was closed or retired. Run `apps` to discover current windows.
+  - `mac_permissions_required` / `accessibility_denied`
+    (`next_action: "await_human_permission_grant"`): Screen Recording or
+    Accessibility permission is missing in System Settings.
 - Physical input uses marked CGEvents, eased real-pointer travel and ownership
   checks. Semantic actions do not invent mouse movement. Ambiguous provider
   failures return unknown delivery without a physical retry.
@@ -87,18 +115,30 @@ macOS may require new permission approval after an ad-hoc-signed update.
   the watchdog waits for their recorded identities and attempts to release
   journaled automation-held input. An unresponsive worker leaves cleanup
   unconfirmed and Stop latched. Stop persists across
-  restart; only the local human Re-arm control clears it. macOS event posting
-  does not acknowledge delivery: physical held-input cleanup remains unqualified.
+  restart; only the local human Re-arm control clears it. Prior macOS task
+  recovery verifies that parent, worker and watchdog PIDs have exited and the
+  JSON `.inputs` ledger (`{"buttons":[],"keys":[]}`) is empty before closing a
+  recovered task.
 - Input permission and point ownership are rechecked while dispatching native
   events. Errors attempt journaled input cleanup and preserve unknown delivery;
   detected cleanup failure latches Stop. Native headless refusal tests do not
   prove physical Esc or successful release at a target application.
 - Manual takeover is the default. Optional Smart mode ignores small motion and
   yields on deliberate input. Resume requires fresh observations.
-- AppKit renders the minimal bar, breathing edges and original arrow/text
-  pointer. End/Pause/Stop release the cursor and hide the active visuals. Native
-  screenshots omit the chrome. Actual appearance and crash restoration remain
-  interactive test requirements.
+- AppKit renders the HIG-aligned Liquid Glass control bar (`396×44` rounded
+  capsule using Apple's native `NSGlassEffectView` on macOS 26+ with
+  `NSVisualEffectView` fallback on macOS 14/15, pure filled Phosphor Icons
+  without status dots or strokes, and clear state labels for
+  `Working · Esc to stop`, `Paused · Resume or Esc`, and
+  `Stopped · Re-arm required`), breathing screen edges and original arrow/text
+  pointer. Emergency Stop uses a high-opacity crimson glass tint (`alpha = 0.88`,
+  `>= 8.5:1` contrast) so translucent material never obscures the stopped state.
+  Transitions use `0.16s` fade/scale motion and respect
+  `accessibilityDisplayShouldReduceMotion`. Controls support keyboard focus
+  (`Tab` loop, native focus ring mask, `Space`/`Return` activation and `Esc`
+  emergency Stop), while areas outside the control bar remain click-through.
+  End/Pause/Stop release the cursor, remove `.hud` bounds and hide active
+  visuals. Native screenshots omit the chrome.
 - POSIX ownership/mode checks, link refusal, extended-Allow-ACL refusal and an
   OS-held `flock` lease protect the data directory. Parent permissions are never
   modified. Directory or lease replacement invalidates control.

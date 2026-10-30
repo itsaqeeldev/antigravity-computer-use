@@ -267,6 +267,7 @@ func elementAt(_ x: Int, _ y: Int) -> AXUIElement? {
 
 final class WindowRegistry {
     private var entries: [Int: (el: AXUIElement, pid: pid_t)] = [:]
+    private var retired: Set<Int> = []
     // Seeded from this process's pid rather than starting at 1, so a handle
     // number minted by a host that has since restarted (a client's cached
     // hwnd, from before the restart) cannot coincide with one this process
@@ -287,13 +288,39 @@ final class WindowRegistry {
     func lookup(_ h: Int) -> (AXUIElement, pid_t)? {
         lock.lock(); defer { lock.unlock() }
         guard let e = entries[h] else { return nil }
-        if !axAlive(e.el) { entries.removeValue(forKey: h); return nil }
+        if !axAlive(e.el) {
+            entries.removeValue(forKey: h)
+            retired.insert(h)
+            return nil
+        }
         return (e.el, e.pid)
+    }
+
+    func isRetired(_ h: Int) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return retired.contains(h)
     }
 
     func prune() {
         lock.lock(); defer { lock.unlock() }
-        for (h, e) in entries where !axAlive(e.el) { entries.removeValue(forKey: h) }
+        for (h, e) in entries where !axAlive(e.el) {
+            entries.removeValue(forKey: h)
+            retired.insert(h)
+        }
+    }
+
+    func liveEntries() -> [(handle: Int, el: AXUIElement, pid: pid_t)] {
+        lock.lock(); defer { lock.unlock() }
+        var result: [(handle: Int, el: AXUIElement, pid: pid_t)] = []
+        for (h, e) in entries {
+            if axAlive(e.el) {
+                result.append((h, e.el, e.pid))
+            } else {
+                entries.removeValue(forKey: h)
+                retired.insert(h)
+            }
+        }
+        return result.sorted { $0.handle < $1.handle }
     }
 }
 
@@ -310,19 +337,33 @@ struct WindowInfo {
 
 func enumerateWindows() -> [WindowInfo] {
     var out: [WindowInfo] = []
+    var seenHandles: Set<Int> = []
+    var appsByPid: [pid_t: NSRunningApplication] = [:]
     for app in NSWorkspace.shared.runningApplications {
         guard app.activationPolicy == .regular, app.localizedName != nil else { continue }
         let pid = app.processIdentifier
+        appsByPid[pid] = app
         let axApp = AXUIElementCreateApplication(pid)
         guard let wins = axAttr(axApp, kAXWindowsAttribute as String) as? [AXUIElement] else { continue }
         let focusedRaw = axAttr(axApp, kAXFocusedWindowAttribute as String)
         for win in wins {
             let title = axString(win, kAXTitleAttribute as String) ?? ""
             let handle = registry.handle(for: win, pid: pid)
+            seenHandles.insert(handle)
             var focused = false
             if let f = focusedRaw, CFGetTypeID(f) == AXUIElementGetTypeID() { focused = CFEqual(f, win) }
             out.append(WindowInfo(el: win, pid: pid, title: title, handle: handle, app: app, focused: focused))
         }
+    }
+    // macOS kAXWindowsAttribute omits windows that are on an inactive Mission Control Space
+    // even while their AXUIElement handles remain alive. Include live registered windows so
+    // off-Space windows stay discoverable and classify as other_desktop instead of closed.
+    for entry in registry.liveEntries() where !seenHandles.contains(entry.handle) {
+        guard let app = appsByPid[entry.pid] ?? NSRunningApplication(processIdentifier: entry.pid),
+              !app.isTerminated,
+              axRect(entry.el) != nil else { continue }
+        let title = axString(entry.el, kAXTitleAttribute as String) ?? ""
+        out.append(WindowInfo(el: entry.el, pid: entry.pid, title: title, handle: entry.handle, app: app, focused: false))
     }
     return out
 }
@@ -403,7 +444,8 @@ func opListApps(_ a: [String: Any]) throws -> [String: Any] {
     var out: [[String: Any]] = []
     let front = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
     for w in enumerateWindows() {
-        let minimized = axBool(w.el, kAXMinimizedAttribute as String) ?? false
+        let rect = axRect(w.el)
+        let state = macInspectWindowState(window: w.el, pid: w.pid, title: w.title, rect: rect, app: w.app)
         out.append([
             "hwnd": w.handle,
             "pid": Int(w.pid),
@@ -411,9 +453,12 @@ func opListApps(_ a: [String: Any]) throws -> [String: Any] {
             "class": axString(w.el, kAXRoleAttribute as String) ?? "AXWindow",
             "process": w.app.localizedName ?? "",
             "path": (try macProcessPath(w.pid)),
-            "rect": axRect(w.el) as Any,
-            "minimized": minimized,
-            "foreground": w.focused && w.pid == front,
+            "rect": rect as Any,
+            "minimized": state.minimized,
+            "hidden": state.hidden,
+            "fullscreen": state.fullscreen,
+            "other_desktop": state.otherDesktop,
+            "foreground": w.focused && w.pid == front && !state.minimized && !state.hidden && !state.otherDesktop,
         ])
     }
     return ["windows": out, "dpi_mode": "native", "platform": "darwin"]
@@ -422,28 +467,39 @@ func opListApps(_ a: [String: Any]) throws -> [String: Any] {
 func resolveWindow(_ a: [String: Any]) throws -> (AXUIElement, pid_t, String, Int) {
     try requireTrust()
     let wantHandle = int(a["hwnd"], -1)
-    if wantHandle > 0, let hit = registry.lookup(wantHandle) {
-        return (hit.0, hit.1, axString(hit.0, kAXTitleAttribute as String) ?? "", wantHandle)
+    if wantHandle > 0 {
+        if let hit = registry.lookup(wantHandle) {
+            return (hit.0, hit.1, axString(hit.0, kAXTitleAttribute as String) ?? "", wantHandle)
+        }
+        if registry.isRetired(wantHandle) {
+            throw AxonError("identity_changed", "The target window handle is stale because the window closed or its identity changed. Run apps once to discover current windows; do not poll the stale handle.")
+        }
+        throw AxonError("window_not_found", "No window matched hwnd/title.",
+                        "Call list_apps and pass an hwnd from its result.")
     }
     // A handle is only ever minted by enumerateWindows(), so any hwnd the
     // caller could legitimately know about was already in the registry
-    // above; matching it again here by whatever number this fresh walk
-    // happens to hand out is how a stale handle from a host that has since
-    // restarted used to land on an unrelated window (registry.next now
-    // starts from a per-process base specifically to make that collision
-    // vanishingly unlikely too - this refusal is the other half of that
-    // fix). An unknown hwnd falls through to window_not_found below.
-    let wantTitle = str(a["title"])
-    var partial: (AXUIElement, pid_t, String, Int)? = nil
-    for w in enumerateWindows() {
-        if let t = wantTitle {
-            if w.title == t { return (w.el, w.pid, w.title, w.handle) }
-            if partial == nil && w.title.lowercased().contains(t.lowercased()) {
-                partial = (w.el, w.pid, w.title, w.handle)
-            }
+    // above; never fall back from an explicit hwnd to a title search.
+    if let wantTitle = str(a["title"]), !wantTitle.isEmpty {
+        let all = enumerateWindows()
+        let exact = all.filter { $0.title == wantTitle }
+        if exact.count == 1 {
+            let w = exact[0]
+            return (w.el, w.pid, w.title, w.handle)
+        }
+        if exact.count > 1 {
+            throw AxonError("ambiguous_selector", "Multiple windows share that exact title. Select a specific hwnd from apps.")
+        }
+        let lowered = wantTitle.lowercased()
+        let partial = all.filter { $0.title.lowercased().contains(lowered) }
+        if partial.count == 1 {
+            let w = partial[0]
+            return (w.el, w.pid, w.title, w.handle)
+        }
+        if partial.count > 1 {
+            throw AxonError("ambiguous_selector", "Multiple windows match that title. Select a specific hwnd from apps.")
         }
     }
-    if let p = partial { return p }
     throw AxonError("window_not_found", "No window matched hwnd/title.",
                     "Call list_apps and pass an hwnd from its result.")
 }
@@ -1096,21 +1152,69 @@ func opDescribe(_ a: [String: Any]) throws -> [String: Any] {
     }
 }
 
-// The CGWindowID that belongs to an AX window, by owner, title and bounds.
-// AX and the window server do not share ids, so this is a match, not a lookup.
-func windowNumber(pid: pid_t, title: String, rect: [Int]?) -> CGWindowID? {
-    guard let r = rect, r.count == 4,
-          let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return nil }
-    let matches = list.filter { w in
+@_silgen_name("_AXUIElementGetWindow")
+func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: UnsafeMutablePointer<CGWindowID>) -> AXError
+
+func axWindowID(_ window: AXUIElement?) -> CGWindowID {
+    guard let w = window else { return 0 }
+    var wid: CGWindowID = 0
+    return _AXUIElementGetWindow(w, &wid) == .success ? wid : 0
+}
+
+func macWindowTitleMatches(axTitle: String, cgName: String) -> Bool {
+    if cgName.isEmpty || axTitle.isEmpty || cgName == axTitle { return true }
+    // Browsers (e.g. Google Chrome) append " - <App> - <Profile>" or " — <App>"
+    // to the AXWindow title while setting kCGWindowName to only the tab title.
+    if axTitle.hasPrefix(cgName + " - ") || axTitle.hasPrefix(cgName + " — ") { return true }
+    if cgName.hasPrefix(axTitle + " - ") || cgName.hasPrefix(axTitle + " — ") { return true }
+    return false
+}
+
+func matchCGWindow(
+    list: [[String: Any]],
+    pid: pid_t,
+    title: String,
+    rect: [Int]?,
+    directWindowID: CGWindowID = 0
+) -> CGWindowID? {
+    if directWindowID != 0 {
+        if let hit = list.first(where: {
+            ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value == directWindowID &&
+            ($0[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid &&
+            (($0[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0) == 0
+        }) {
+            return (hit[kCGWindowNumber as String] as? NSNumber)?.uint32Value
+        }
+    }
+    guard let r = rect, r.count == 4 else { return nil }
+    let sameBounds = list.filter { w in
         guard (w[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid,
               (w[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
               let b = w[kCGWindowBounds as String] as? [String: Any] else { return false }
         let values = ["X", "Y", "Width", "Height"].map { (b[$0] as? NSNumber)?.intValue ?? Int.min }
-        let name = w[kCGWindowName as String] as? String ?? ""
-        return values == r && (name.isEmpty || title.isEmpty || name == title)
+        return values == r
     }
-    guard matches.count == 1 else { return nil }
-    return (matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value
+    let exact = sameBounds.filter { w in
+        let name = w[kCGWindowName as String] as? String ?? ""
+        return name == title
+    }
+    if exact.count == 1 {
+        return (exact[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value
+    }
+    let compatible = sameBounds.filter { w in
+        let name = w[kCGWindowName as String] as? String ?? ""
+        return macWindowTitleMatches(axTitle: title, cgName: name)
+    }
+    guard compatible.count == 1 else { return nil }
+    return (compatible[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value
+}
+
+// The CGWindowID that belongs to an AX window, verified by direct AX->CGWindowID
+// binding (with owner PID and layer 0 check) or unambiguous bounds+title match.
+func windowNumber(window: AXUIElement? = nil, pid: pid_t, title: String, rect: [Int]?, onScreenOnly: Bool = true) -> CGWindowID? {
+    let options: CGWindowListOption = onScreenOnly ? [.optionOnScreenOnly, .excludeDesktopElements] : [.excludeDesktopElements]
+    guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return nil }
+    return matchCGWindow(list: list, pid: pid, title: title, rect: rect, directWindowID: axWindowID(window))
 }
 
 func opScreenshot(_ a: [String: Any]) throws -> [String: Any] { return try macCapture(a) }

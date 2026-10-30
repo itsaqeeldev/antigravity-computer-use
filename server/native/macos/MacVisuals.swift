@@ -2,12 +2,152 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import QuartzCore
+
+enum MacPhosphorIcon: String, Equatable {
+    case dotsThreeFill = "dots-three-fill"
+    case pauseFill = "pause-fill"
+    case playFill = "play-fill"
+    case stopFill = "stop-fill"
+    case xFill = "x-fill"
+
+    // Pure filled Phosphor Icons (@phosphor-icons/core 256x256 viewBox), zero strokes.
+    func drawFilled(in rect: NSRect, color: NSColor) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        ctx.saveGState()
+        defer { ctx.restoreGState() }
+        color.setFill()
+        ctx.translateBy(x: rect.minX, y: rect.maxY)
+        ctx.scaleBy(x: rect.width / 256.0, y: -rect.height / 256.0)
+
+        switch self {
+        case .dotsThreeFill:
+            for cx: CGFloat in [60, 128, 196] {
+                NSBezierPath(ovalIn: NSRect(x: cx - 20, y: 108, width: 40, height: 40)).fill()
+            }
+        case .pauseFill:
+            NSBezierPath(roundedRect: NSRect(x: 48, y: 40, width: 56, height: 176), xRadius: 16, yRadius: 16).fill()
+            NSBezierPath(roundedRect: NSRect(x: 152, y: 40, width: 56, height: 176), xRadius: 16, yRadius: 16).fill()
+        case .playFill:
+            let p = NSBezierPath()
+            p.move(to: NSPoint(x: 72, y: 54))
+            p.curve(to: NSPoint(x: 96, y: 42), controlPoint1: NSPoint(x: 72, y: 40), controlPoint2: NSPoint(x: 84, y: 35))
+            p.line(to: NSPoint(x: 224, y: 114))
+            p.curve(to: NSPoint(x: 224, y: 142), controlPoint1: NSPoint(x: 236, y: 121), controlPoint2: NSPoint(x: 236, y: 135))
+            p.line(to: NSPoint(x: 96, y: 214))
+            p.curve(to: NSPoint(x: 72, y: 202), controlPoint1: NSPoint(x: 84, y: 221), controlPoint2: NSPoint(x: 72, y: 216))
+            p.close()
+            p.fill()
+        case .stopFill:
+            NSBezierPath(roundedRect: NSRect(x: 44, y: 44, width: 168, height: 168), xRadius: 24, yRadius: 24).fill()
+        case .xFill:
+            for angle: CGFloat in [.pi / 4.0, -.pi / 4.0] {
+                ctx.saveGState()
+                ctx.translateBy(x: 128, y: 128)
+                ctx.rotate(by: angle)
+                NSBezierPath(roundedRect: NSRect(x: -92, y: -14, width: 184, height: 28), xRadius: 14, yRadius: 14).fill()
+                ctx.restoreGState()
+            }
+        }
+    }
+}
+
+struct MacHudStatePresentation: Equatable {
+    let resolvedState: String
+    let title: String
+    let toggleTitle: String
+    let toggleSymbol: String
+    let toggleAccessibilityLabel: String
+    let stopTitle: String
+    let stopSymbol: String
+    let stopAccessibilityLabel: String
+    let isEmergency: Bool
+    let minimumContrast: Double
+}
+
+final class MacControlPanel: NSPanel {
+    var onEscape: (() -> Void)?
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    override func cancelOperation(_ sender: Any?) { onEscape?() }
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { onEscape?(); return }
+        super.keyDown(with: event)
+    }
+}
+
+final class MacHudButton: NSButton {
+    var isEmergencyAction = false
+    var isPrimaryRearm = false
+    var hudTitle: String = "" { didSet { needsDisplay = true } }
+    var hudIcon: MacPhosphorIcon = .dotsThreeFill { didSet { needsDisplay = true } }
+    var onEscape: (() -> Void)?
+    override var acceptsFirstResponder: Bool { true }
+    override var focusRingMaskBounds: NSRect { bounds.insetBy(dx: 1, dy: 1) }
+    override func drawFocusRingMask() {
+        let r = focusRingMaskBounds
+        NSBezierPath(roundedRect: r, xRadius: r.height / 2, yRadius: r.height / 2).fill()
+    }
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { onEscape?(); return }
+        if event.keyCode == 36 || event.keyCode == 49 {
+            performClick(self)
+            return
+        }
+        super.keyDown(with: event)
+    }
+    override func becomeFirstResponder() -> Bool {
+        let ok = super.becomeFirstResponder()
+        needsDisplay = true
+        return ok
+    }
+    override func resignFirstResponder() -> Bool {
+        let ok = super.resignFirstResponder()
+        needsDisplay = true
+        return ok
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        let pillRect = bounds.insetBy(dx: 1, dy: 1)
+        let pill = NSBezierPath(roundedRect: pillRect, xRadius: pillRect.height / 2, yRadius: pillRect.height / 2)
+        if isPrimaryRearm {
+            NSColor(calibratedRed: 0.94, green: 0.25, blue: 0.22, alpha: isHighlighted ? 0.96 : 0.86).setFill()
+        } else if isEmergencyAction {
+            NSColor(calibratedRed: 0.90, green: 0.22, blue: 0.21, alpha: isHighlighted ? 0.88 : 0.72).setFill()
+        } else {
+            NSColor(calibratedWhite: 1.0, alpha: isHighlighted ? 0.22 : 0.12).setFill()
+        }
+        pill.fill()
+
+        let fg = NSColor(calibratedWhite: 0.99, alpha: 1.0)
+        if hudTitle.isEmpty {
+            let iconSize: CGFloat = 15
+            let iconRect = NSRect(x: (bounds.width - iconSize) / 2, y: (bounds.height - iconSize) / 2, width: iconSize, height: iconSize)
+            hudIcon.drawFilled(in: iconRect, color: fg)
+        } else {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
+                .foregroundColor: fg
+            ]
+            let attrTitle = NSAttributedString(string: hudTitle, attributes: attrs)
+            let textSize = attrTitle.size()
+            let iconSize: CGFloat = 12.5
+            let gap: CGFloat = 6
+            let totalWidth = iconSize + gap + textSize.width
+            let startX = (bounds.width - totalWidth) / 2
+            let iconRect = NSRect(x: startX, y: (bounds.height - iconSize) / 2, width: iconSize, height: iconSize)
+            hudIcon.drawFilled(in: iconRect, color: fg)
+            attrTitle.draw(at: NSPoint(x: startX + iconSize + gap, y: (bounds.height - textSize.height) / 2))
+        }
+    }
+}
 
 final class MacVisuals: NSObject {
     var onToggle: (() -> Void)?, onStop: (() -> Void)?, onMode: ((String) -> Void)?
-    var panel: NSPanel?
+    var panel: MacControlPanel?
+    var rootView: NSView?
+    var contentContainer: NSView?
     var label = NSTextField(labelWithString: "")
-    var toggle = NSButton(), stop = NSButton(), more = NSButton()
+    var toggle = MacHudButton(), stop = MacHudButton(), more = MacHudButton()
     var rings: [NSPanel] = []
     var pointer: NSPanel?
     var hiddenDisplays: [CGDirectDisplayID] = []
@@ -16,36 +156,141 @@ final class MacVisuals: NSObject {
     let origin = ProcessInfo.processInfo.systemUptime
     var visible: Bool { panel?.isVisible == true }
     var cursorApplied: Bool { !hiddenDisplays.isEmpty }
+
+    static func statePresentation(for requested: String, latched: Bool = false) -> MacHudStatePresentation {
+        let effective = MacFence.resolvedState(requested, latched: latched)
+        switch effective {
+        case "active":
+            return MacHudStatePresentation(
+                resolvedState: "active",
+                title: "Working · Esc to stop",
+                toggleTitle: "",
+                toggleSymbol: MacPhosphorIcon.pauseFill.rawValue,
+                toggleAccessibilityLabel: "Pause computer use",
+                stopTitle: "Stop",
+                stopSymbol: MacPhosphorIcon.stopFill.rawValue,
+                stopAccessibilityLabel: "Stop computer use immediately",
+                isEmergency: false,
+                minimumContrast: 8.5
+            )
+        case "paused":
+            return MacHudStatePresentation(
+                resolvedState: "paused",
+                title: "Paused · Resume or Esc",
+                toggleTitle: "",
+                toggleSymbol: MacPhosphorIcon.playFill.rawValue,
+                toggleAccessibilityLabel: "Resume computer use",
+                stopTitle: "Stop",
+                stopSymbol: MacPhosphorIcon.stopFill.rawValue,
+                stopAccessibilityLabel: "Stop computer use immediately",
+                isEmergency: false,
+                minimumContrast: 8.5
+            )
+        case "stopped":
+            return MacHudStatePresentation(
+                resolvedState: "stopped",
+                title: "Stopped · Re-arm required",
+                toggleTitle: "Re-arm",
+                toggleSymbol: MacPhosphorIcon.playFill.rawValue,
+                toggleAccessibilityLabel: "Re-arm computer use",
+                stopTitle: "Hide",
+                stopSymbol: MacPhosphorIcon.xFill.rawValue,
+                stopAccessibilityLabel: "Dismiss stopped controls",
+                isEmergency: true,
+                minimumContrast: 9.2
+            )
+        default:
+            return MacHudStatePresentation(
+                resolvedState: "idle",
+                title: "Ready · awaiting a task",
+                toggleTitle: "",
+                toggleSymbol: MacPhosphorIcon.playFill.rawValue,
+                toggleAccessibilityLabel: "Start or resume computer use",
+                stopTitle: "Stop",
+                stopSymbol: MacPhosphorIcon.stopFill.rawValue,
+                stopAccessibilityLabel: "Stop computer use immediately",
+                isEmergency: false,
+                minimumContrast: 8.5
+            )
+        }
+    }
+
     func makePanel(_ frame: NSRect, clickThrough: Bool) -> NSPanel {
-        let p = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let p: NSPanel
+        if clickThrough {
+            p = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        } else {
+            let cp = MacControlPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            cp.onEscape = { [weak self] in self?.stopControl() }
+            p = cp
+        }
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = !clickThrough
         p.level = .statusBar; p.hidesOnDeactivate = false; p.ignoresMouseEvents = clickThrough
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         p.sharingType = .none; p.isReleasedWhenClosed = false
         return p
     }
+    func writeHudBounds(_ frame: NSRect) {
+        let quartzY = (NSScreen.screens.first?.frame.maxY ?? 0) - frame.maxY
+        if let bytes = try? JSONSerialization.data(withJSONObject: [frame.minX, quartzY, frame.width, frame.height]) {
+            try? bytes.write(to: URL(fileURLWithPath: MacFence.file + ".hud"), options: [.atomic]); chmod(MacFence.file + ".hud", 0o600)
+        }
+    }
     func build() {
         guard panel == nil else { return }
+        let barWidth: CGFloat = 396, barHeight: CGFloat = 44
         let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main!
-        let p = makePanel(NSRect(x: screen.frame.midX - 192, y: screen.frame.maxY - 62, width: 384, height: 44), clickThrough: false)
+        let p = makePanel(NSRect(x: screen.frame.midX - barWidth / 2, y: screen.frame.maxY - 62, width: barWidth, height: barHeight), clickThrough: false) as! MacControlPanel
         p.title = "Antigravity Computer Use"
-        let background = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 384, height: 44))
-        background.material = .hudWindow; background.blendingMode = .behindWindow; background.state = .active
-        background.wantsLayer = true; background.layer?.cornerRadius = 21; background.layer?.masksToBounds = true
-        background.appearance = NSAppearance(named: .darkAqua)
-        label.frame = NSRect(x: 16, y: 12, width: 196, height: 20); label.font = .systemFont(ofSize: 12.5)
-        label.textColor = NSColor(calibratedWhite: 0.91, alpha: 1); background.addSubview(label)
-        for (button, x, symbol, action) in [(more, 214.0, "ellipsis", #selector(menu)), (toggle, 254.0, "pause.fill", #selector(toggleControl)), (stop, 294.0, "stop.fill", #selector(stopControl))] {
-            button.frame = NSRect(x: x, y: 6, width: button === stop ? 78 : 32, height: 32)
-            button.target = self; button.action = action; button.isBordered = false
-            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-            button.contentTintColor = NSColor(calibratedWhite: 0.9, alpha: 1)
-            background.addSubview(button)
+        p.setAccessibilityRole(.toolbar)
+        p.setAccessibilityLabel("Antigravity Computer Use Controls")
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight))
+        container.autoresizingMask = [.width, .height]
+
+        let hostRoot: NSView
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight))
+            glass.style = .regular
+            glass.cornerRadius = barHeight / 2
+            glass.appearance = NSAppearance(named: .darkAqua)
+            glass.wantsLayer = true
+            glass.contentView = container
+            hostRoot = glass
+        } else {
+            let effect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: barWidth, height: barHeight))
+            effect.material = .hudWindow; effect.blendingMode = .behindWindow; effect.state = .active
+            effect.wantsLayer = true; effect.layer?.cornerRadius = barHeight / 2; effect.layer?.masksToBounds = true
+            effect.appearance = NSAppearance(named: .darkAqua)
+            effect.addSubview(container)
+            hostRoot = effect
         }
-        stop.title = " Stop"; stop.imagePosition = .imageLeading; stop.font = .systemFont(ofSize: 12)
+
+        label.frame = NSRect(x: 18, y: 12, width: 206, height: 20)
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = NSColor(calibratedWhite: 0.99, alpha: 1)
+        label.lineBreakMode = .byTruncatingTail
+        label.setAccessibilityIdentifier("hud-status-label")
+        container.addSubview(label)
+
+        for (button, id, action) in [(more, "hud-more", #selector(menu)), (toggle, "hud-toggle", #selector(toggleControl)), (stop, "hud-stop", #selector(stopControl))] {
+            button.target = self; button.action = action; button.isBordered = false
+            button.title = ""; button.image = nil
+            button.focusRingType = .exterior; button.refusesFirstResponder = false
+            button.setAccessibilityIdentifier(id)
+            button.onEscape = { [weak self] in self?.stopControl() }
+            container.addSubview(button)
+        }
+        stop.isEmergencyAction = true
         stop.toolTip = "Stop immediately · Esc or Control+Option+F12"
+        more.hudIcon = .dotsThreeFill
+        more.hudTitle = ""
         more.setAccessibilityLabel("Control settings")
-        p.contentView = background; panel = p
+        more.toolTip = "Takeover and interruption settings"
+        more.nextKeyView = toggle; toggle.nextKeyView = stop; stop.nextKeyView = more
+        p.initialFirstResponder = toggle
+        p.contentView = hostRoot; panel = p; rootView = hostRoot; contentContainer = container
+
         for screen in NSScreen.screens {
             let ring = makePanel(screen.frame, clickThrough: true)
             ring.contentView = MacGlowView(frame: NSRect(origin: .zero, size: screen.frame.size))
@@ -53,20 +298,72 @@ final class MacVisuals: NSObject {
         }
         let cursor = makePanel(NSRect(x: 0, y: 0, width: 40, height: 40), clickThrough: true)
         cursor.contentView = MacPointerView(frame: NSRect(x: 0, y: 0, width: 40, height: 40)); pointer = cursor
-        let quartzY = (NSScreen.screens.first?.frame.maxY ?? 0) - p.frame.maxY
-        if let bytes = try? JSONSerialization.data(withJSONObject: [p.frame.minX, quartzY, p.frame.width, p.frame.height]) {
-            try? bytes.write(to: URL(fileURLWithPath: MacFence.file + ".hud"), options: [.atomic]); chmod(MacFence.file + ".hud", 0o600)
+        writeHudBounds(p.frame)
+    }
+    func layoutControls(for presentation: MacHudStatePresentation) {
+        if #available(macOS 26.0, *), let glass = rootView as? NSGlassEffectView {
+            if presentation.isEmergency {
+                glass.tintColor = NSColor(calibratedRed: 0.42, green: 0.06, blue: 0.08, alpha: 0.88)
+            } else if presentation.resolvedState == "paused" {
+                glass.tintColor = NSColor(calibratedRed: 0.14, green: 0.10, blue: 0.04, alpha: 0.50)
+            } else {
+                glass.tintColor = NSColor(calibratedRed: 0.05, green: 0.07, blue: 0.11, alpha: 0.44)
+            }
         }
+        label.stringValue = presentation.title
+        label.textColor = .white
+        toggle.isPrimaryRearm = presentation.isEmergency
+        toggle.hudTitle = presentation.toggleTitle
+        toggle.hudIcon = MacPhosphorIcon(rawValue: presentation.toggleSymbol) ?? .playFill
+        toggle.setAccessibilityLabel(presentation.toggleAccessibilityLabel)
+        toggle.toolTip = presentation.toggleAccessibilityLabel
+        stop.hudTitle = presentation.stopTitle
+        stop.hudIcon = MacPhosphorIcon(rawValue: presentation.stopSymbol) ?? .stopFill
+        stop.setAccessibilityLabel(presentation.stopAccessibilityLabel)
+        stop.isEmergencyAction = !presentation.isEmergency
+        if presentation.isEmergency {
+            label.frame = NSRect(x: 18, y: 12, width: 174, height: 20)
+            more.frame = NSRect(x: 196, y: 6, width: 32, height: 32)
+            toggle.frame = NSRect(x: 234, y: 6, width: 84, height: 32)
+            stop.frame = NSRect(x: 324, y: 6, width: 64, height: 32)
+        } else {
+            label.frame = NSRect(x: 18, y: 12, width: 210, height: 20)
+            more.frame = NSRect(x: 234, y: 6, width: 32, height: 32)
+            toggle.frame = NSRect(x: 272, y: 6, width: 32, height: 32)
+            stop.frame = NSRect(x: 310, y: 6, width: 78, height: 32)
+        }
+        toggle.needsDisplay = true; stop.needsDisplay = true; more.needsDisplay = true
     }
     func show(_ next: String) {
-        build(); state = next
-        label.stringValue = next == "active" ? "Antigravity is working" : next == "paused" ? "Paused · you have control" : next == "stopped" ? "Stopped · re-arm to begin" : "Ready · awaiting a task"
-        toggle.image = NSImage(systemSymbolName: next == "active" ? "pause.fill" : "play.fill", accessibilityDescription: nil)
-        toggle.setAccessibilityLabel(next == "active" ? "Pause computer use" : next == "paused" ? "Resume computer use" : "Re-arm computer use")
-        stop.setAccessibilityLabel(next == "stopped" ? "Dismiss stopped controls" : "Stop computer use immediately")
-        if next != "active" { releaseCursor(); rings.forEach { $0.orderOut(nil) }; pointer?.orderOut(nil) }
-        if !captureHidden { panel?.orderFrontRegardless() }
-        if next == "active" && !captureHidden { applyCursor(); rings.forEach { $0.orderFrontRegardless() }; animate() }
+        build()
+        let latched = !MacFence.latch.isEmpty && MacFence.latchBlocks(MacFence.latch)
+        let presentation = MacVisuals.statePresentation(for: next, latched: latched)
+        let wasVisible = panel?.isVisible == true
+        state = presentation.resolvedState
+        layoutControls(for: presentation)
+        if state != "active" { releaseCursor(); rings.forEach { $0.orderOut(nil) }; pointer?.orderOut(nil) }
+        if !captureHidden, let p = panel {
+            writeHudBounds(p.frame)
+            let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            if !wasVisible && !reduceMotion {
+                p.alphaValue = 0.0
+                if let layer = rootView?.layer {
+                    layer.transform = CATransform3DMakeScale(0.96, 0.96, 1.0)
+                }
+                p.orderFrontRegardless()
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.16
+                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    p.animator().alphaValue = 1.0
+                    rootView?.layer?.transform = CATransform3DIdentity
+                }
+            } else {
+                p.alphaValue = 1.0
+                rootView?.layer?.transform = CATransform3DIdentity
+                p.orderFrontRegardless()
+            }
+        }
+        if state == "active" && !captureHidden { applyCursor(); rings.forEach { $0.orderFrontRegardless() }; animate() }
     }
     func applyCursor() {
         if cursorApplied { return }
@@ -79,9 +376,19 @@ final class MacVisuals: NSObject {
         for display in hiddenDisplays { CGDisplayShowCursor(display) }
         hiddenDisplays.removeAll(); pointer?.orderOut(nil)
     }
-    func hide() { releaseCursor(); panel?.orderOut(nil); rings.forEach { $0.orderOut(nil) }; pointer?.orderOut(nil) }
+    func hide() {
+        releaseCursor()
+        panel?.alphaValue = 1.0
+        rootView?.layer?.transform = CATransform3DIdentity
+        panel?.orderOut(nil)
+        rings.forEach { $0.orderOut(nil) }
+        pointer?.orderOut(nil)
+        if !MacFence.file.isEmpty {
+            try? FileManager.default.removeItem(atPath: MacFence.file + ".hud")
+        }
+    }
     func hideForCapture() { captureHidden = true; panel?.orderOut(nil); rings.forEach { $0.orderOut(nil) }; pointer?.orderOut(nil) }
-    func finishCapture(_ state: String) { captureHidden = false; if state == "active" || state == "paused" { show(state) } }
+    func finishCapture(_ state: String) { captureHidden = false; if state == "active" || state == "paused" || state == "stopped" { show(state) } }
     func activity(_ action: String) { /* The persistent state label stays calm between actions. */ }
     func animate() {
         if captureHidden || state != "active" { return }
