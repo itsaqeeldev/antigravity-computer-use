@@ -139,3 +139,60 @@ missing. Source/CI fixes and reported hardware observations are separate evidenc
 - Ad-hoc and local test signing with substituted transport qualifies atomic rollback and deployment invariants, not production Apple Developer ID notarization or Gatekeeper distribution.
 - Physical Esc/Stop requires human physical keyboard input; simulated physical input was not manufactured.
 
+## 30 October 2026: Intel Mac Complete Qualification Acceptance & Defect Repair
+
+### Verified Identities & Build Stack
+
+- **Host Hardware**: Intel MacBook Pro (16-inch, 2019), Intel Core i7-9750H CPU @ 2.60 GHz (6 cores / 12 threads), native `x86_64`.
+- **Operating System**: macOS 26.6.2, Darwin Kernel Version 25.6.0 (x86_64), Build 25G83.
+- **Display Topology**: Built-in Color LCD `(0, 0, 1792, 1120)`, visibleFrame `(0, 83, 1792, 1007)`, backingScaleFactor `2.0` (Retina).
+- **Toolchain**: Node v24.20.0 (`darwin-x64` toolchain at `.localdata/toolchain/node-v24.20.0-darwin-x64`), Apple Swift version 6.3.1 (`swiftlang-6.3.1.1.2 clang-2100.0.123.102`), target `x86_64-apple-macosx26.0`.
+- **Candidate Commit Base**: `395ece7e43eaeb463dee7fcd08bc6578911d9b60` (`codex/review-intel-mac`).
+- **Candidate Bundle**: `.localdata/bundles/candidate-filedialog`, build ID `a23a6f1eb84088d84d0f713a097c753a2e33632192ca3390d66a229fa5a76f0a`, 110 sealed files (`darwin-x64`).
+- **Installed Release**: `/Users/ghaz-webscare/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T10-34-51-269Z-b768075e`.
+- **Active Controller Runtime**: PID 20466 (`desktop-service.mjs --serve`), guardian PID 20735 (`AxonHost --guardian`).
+- **Host IDE**: Antigravity 2.28.2 (PID 2355 `/Applications/Antigravity.app/Contents/Resources/bin/language_server`).
+
+### Defects Identified and Repaired
+
+1. **Standalone Open/Save Panel Role Collision (`server/native/macos/MacOperations.swift`)**:
+   - *Problem*: `macFileDialog` expected modal sheets or windows with `ownRole == "AXSheet" || ownSubrole == "AXDialog"`. On modern macOS, standalone `NSOpenPanel` / `NSSavePanel` windows have `AXRole: "AXWindow"` and `AXSubrole: "AXStandardWindow"`, with `AXIdentifier: "open-panel"` or `"save-panel"`. This caused `macFileDialog` to fail closed with `file_dialog_not_found: "Observe an already-open native file picker attached to this owner."`.
+   - *Fix*: Added `let ownId = axString(owner, kAXIdentifierAttribute as String) ?? ""` and permitted `ownId == "open-panel" || ownId == "save-panel"` in candidate search.
+   - *Go-To-Folder Animation Timing*: Bounded asynchronous polling (up to 2.0s) for the `Cmd+Shift+G` target text field, replacing a rigid 200 ms sleep that raced sheet animations on Intel hardware.
+
+### Automated Test Suite Matrix
+
+| Test Suite / Script | Command | Result | Timing & Receipts |
+| --- | --- | --- | --- |
+| Mac Native Compilation & Contract 1 | `node scripts/macos-native-check.mjs` | **PASSED** | Compiled with `swiftc`, verified private storage, contract 1 checks passed |
+| Native Concurrency & Storage | `node tests/macos-storage.test.mjs` | **PASSED** | 4/4 passed: concurrency, ACL guards, hardlink refusal, kernel lease (3.52s) |
+| Mac Build & Tool Probe | `node tests/macos-tool-probe.test.mjs` | **PASSED** | 4/4 passed: concurrent compilation, bundle sealing, timeout distinction (43.6s) |
+| Recovery, Stop & Update Suite | `node tests/recovery-update.test.mjs` | **PASSED** | 36 passed, 0 failed, 1 Windows-specific test skipped (4.15s) |
+| Signed Update & Rollback Check | `node scripts/macos-install-check.mjs` | **PASSED** | Signed native update, rollback, Stop preservation, sealed install verified |
+| Full Provenance Verification | `node scripts/check-provenance.mjs` | **PASSED** | 175 of 175 files verified matching `UPSTREAM.json` |
+| Install Integrity Verification | `node scripts/verify-install.mjs <target>` | **PASSED** | 110 files verified, build ID `a23a6f1e...` matched, skill matched |
+
+### Real-Device Physical Acceptance Matrix
+
+| Capability / Acceptance Check | App / Context | Observed Real Behavior | Result & Evidence |
+| --- | --- | --- | --- |
+| **App Launch & Human Modal** | TextEdit & Calculator | Launched via `cu.mjs launch`; prompted native human modal; human physically clicked **Allow** | **PASS** (receipt `20676.6`, PID 20961) |
+| **Physical Single Click** | TextEdit | Physical animated cursor motion (frames: 8, duration: 346 ms) focused edit view | **PASS** (receipt `17144.12`) |
+| **Physical Double Click** | TextEdit | Physical animated double click selected target word | **PASS** (receipt `17144.13`) |
+| **Physical Right Click** | TextEdit | Opened native context menu (Cut, Copy, Paste, Translate, Look Up) | **PASS** (receipt `17144.14`) |
+| **Coordinate Fallback Click** | TextEdit | Failed closed without image (`no_image`); succeeded after `--image` at `(350, 250)` dismissing context menu | **PASS** (receipt `17144.17`) |
+| **Unicode Typing Verification** | TextEdit | Entered 81 characters: Urdu (`یہ ایک آزمائشی تحریر ہے`), ZWNJ (`می‌ں` U+200C), ZWJ (`a‍b` U+200D), Emoji (`👩🏾‍💻 🚀 ✨`), Math (`∑ ∏ √ ≠ ≤ ≥`) | **PASS** (receipt `17144.19`, window marked `Edited`) |
+| **Mouse Wheel Scrolling** | TextEdit | Executed `scroll --amount -5` via physical CGEvent wheel post | **PASS** (receipt `17144.20`) |
+| **Physical Drag** | TextEdit | Animated drag from `(200, 200)` to `(350, 200)` with cursor tracking | **PASS** (receipt `17144.22`) |
+| **Native Save & Code-Point Verification** | TextEdit | Saved to `test-saved-unicode.rtf`, extracted to `.txt`. SHA256 checksum and exact 85 code points / 89 UTF-16 code units matched 100% | **PASS** (`de55e87c2e3695b923475b9918d1651965b980fc792024a60dc13385d0cecf10`) |
+| **Emergency Stop Persistence (Issue #26)** | Service Restart | Controller stopped with `cu.mjs stop`; `emergency.stop` latched; controller service shut down and restarted; `status` retained `state: "stopped"` with `control_reason: "persisted_emergency_stop"`; all actions refused with `control_inactive` | **PASS** (receipts `20241.12`, `20466.1`) |
+| **Human-Only Physical Re-Arm** | Native HUD | Floating HUD displayed at top center (`Stopped · re-arm to begin`). Human physically clicked Play button (`▶`); `emergency.stop` unlinked; state transitioned to `idle` with `control_reason: "human_resume"` | **PASS** (receipt `20676.5`) |
+| **Second Complete Task After End** | Calculator (`/System/Applications/Calculator.app`) | Approved via modal, captured initial `0`, animated clicks for `7`, `*`, `8`, `=`; visual snapshot and AX verified result `56`; `cu.mjs end` called cleanly with `ended: true`, `state: "idle"`, `restart_required: false`, without restarting Antigravity | **PASS** (receipts `20676.12` through `20676.16`, image `calculator-result-56.jpg`) |
+
+### Evidence Boundaries & Pending Checks
+
+- **Ad-Hoc vs Production Signing**: All isolated tests used ad-hoc test signing with local substituted transport. This qualifies runtime safety, ACL guards, and atomic rollback invariants, but does **not** qualify public Apple Developer ID notarization or Gatekeeper distribution.
+- **Hardware Limitations**: Tested on a single integrated Retina display (`1792x1120 @ 2.0x`). Multiple external monitors with mixed DPI, sleep/wake power cycle, and OS permission revocation in System Settings require physical hardware reconfiguration and remain **Pending Physical Hardware Qualification**.
+- **Evidence Containment**: All generated receipts, screenshots, logs, and RTF artifacts are isolated in ignored `.localdata/evidence/` and `.localdata/installed/data/`.
+
+
