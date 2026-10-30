@@ -131,7 +131,7 @@ export class Runtime {
       // A late, uncorrelated stopped event cannot prove that the Stop we just
       // attempted reached the native guardian. Preserve the uncertain state.
       const priorStopUnconfirmed=previousState==='stopped'&&this.lastControlReason==='guardian_stop_unconfirmed';
-      if((reason||s!==this.state)&&!priorStopUnconfirmed)this.lastControlReason=reason||s;
+      if((reason||s!==this.state)&&(!priorStopUnconfirmed||persistenceFailure(reason)))this.lastControlReason=reason||s;
       this.state=s;
       if((reason==='guardian_exited'&&previousState!=='idle'||reason==='guardian_unresponsive')&&this.latchFile)try{fs.writeFileSync(this.latchFile,'stopped');}catch{}
       if(s==='stopped'&&this.latchFile){try{if(fs.readFileSync(this.latchFile,'utf8')!=='stopped')throw Error('invalid latch');}catch{this.lastControlReason='stop_persistence_failed';this.diagnosticError='stop_persistence_failed';}}
