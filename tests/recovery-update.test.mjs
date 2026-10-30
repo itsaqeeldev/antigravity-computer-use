@@ -14,6 +14,8 @@ test('prior Windows cleanup requires dead recorded processes and an empty exact 
   for(const pid of [101,102,103,104,105])assert.equal(verify(record,n=>{if(n===pid)return;return dead();}),false);
   assert.equal(verify({...record,guard:'../escape'}),false);assert.equal(verify({...record,dispatched:false}),false);assert.equal(verify({...record,watchdogs_complete:false}),false);assert.equal(verify({...record,children:[102,103,105]}),false);assert.equal(verify({...record,children:[]}),false);
   fs.writeFileSync(file+'.inputs','k:65:0:0');assert.equal(verify(),false);fs.writeFileSync(file+'.inputs','\n');assert.equal(verify(),false);fs.writeFileSync(file+'.inputs','');
+  const unrelated=path.join(dir,'unrelated-empty');fs.writeFileSync(unrelated,'');fs.unlinkSync(file+'.inputs');fs.linkSync(unrelated,file+'.inputs');assert.equal(verify(),false);fs.unlinkSync(file+'.inputs');fs.writeFileSync(file+'.inputs','');
+  if(process.platform!=='win32'){fs.unlinkSync(file+'.inputs');fs.symlinkSync(unrelated,file+'.inputs');assert.equal(verify(),false);fs.unlinkSync(file+'.inputs');fs.writeFileSync(file+'.inputs','');}
   fs.writeFileSync(file,'active|token|9|');assert.equal(verify(),false);fs.writeFileSync(file,'stopped||0|');
   fs.writeFileSync(file+'.watchdog','bad');assert.equal(verify(),false);fs.unlinkSync(file+'.watchdog');assert.equal(verify(),false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}

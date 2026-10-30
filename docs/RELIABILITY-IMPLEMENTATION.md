@@ -1151,6 +1151,10 @@ link tests and real installation/update acceptance remain outstanding.
 The reader also caps the actual read at 1,025 bytes, even if a file grows
 after its size was checked, and refuses changes detected during the read;
 simulated growing and changing files are rejected locally.
+The Windows prior-guard, watchdog and input-ledger reads now apply the same
+single-link, file-identity and bounded-read checks. A hard-linked empty ledger
+is refused in local regression tests. This does not qualify actual watchdog
+cleanup or physical crash recovery, which remain open under issue #9.
 
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
