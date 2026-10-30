@@ -648,7 +648,7 @@
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
-      "sha256": "6b6069ddef257fca082ad30ea3acb52beeaabdc48431da10d02ddc63dc84598f"
+      "sha256": "0198e78d5798684372be5e1e45d1bad489c84ddbe85109a4fe2c2ab342a35fdc"
     },
     {
       "path": "tests/reporting.test.mjs",

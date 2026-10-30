@@ -40,6 +40,13 @@ head. Check serialization of native dispatch and cleanup, a worker killed while
 an input is held, lock/ledger replacement, cleanup failure and a second task.
 Posting a CGEvent or seeing an empty journal does not by itself prove that a
 release reached the target. Record actual physical observations separately.
+Run the native missing-cursor-location contract fixture on both available
+architectures: it must retain the complete key/button ledger and post no event.
+If macOS denies post-event access, verify the conditional denied-access fixture
+retains the held-button journal. These are inert failure-path checks, not proof
+of successful physical release. Qualify release delivery to a disposable target
+separately, including an interrupted drag and modifier chord; if delivery cannot
+be observed, leave that gate pending. Never manufacture OS permission or re-arm.
 Check cooperative worker self-exit after Stop, Pause and expiry, and verify an
 unresponsive worker leaves cleanup unconfirmed without signalling a recycled
 PID. Do not suspend or kill unrelated processes to create the test.
