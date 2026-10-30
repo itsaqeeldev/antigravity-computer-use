@@ -10,6 +10,10 @@ namespace Axon {
         static Process process; static Thread reader; static Bitmap latest; static string pending;
         internal static Bitmap Surface(string state, int width, int height) {
             var helper = Environment.GetEnvironmentVariable("AGCU_LIQUIDGLASS_HELPER");
+            if(String.IsNullOrWhiteSpace(helper)) {
+                var candidate=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"liquidglass","LiquidGlass.Host.exe");
+                if(File.Exists(candidate))helper=candidate;
+            }
             if(String.IsNullOrWhiteSpace(helper)||!File.Exists(helper))return null;
             lock(Gate){try{Ensure(helper);pending=width+"|"+height+"|"+(state??"active");Monitor.PulseAll(Gate);return latest==null?null:new Bitmap(latest);}catch{return null;}}
         }

@@ -40,6 +40,12 @@ else {
  ]){fs.writeFileSync(path.join(out,name),body,{mode:0o755});}
  fs.chmodSync(path.join(out,platform.node),0o755);fs.chmodSync(path.join(out,'bin',platform.storage),0o755);
 }
+// A release pipeline may provide the self-contained, package-backed LiquidGlass
+// companion. Source builds omit it and retain the explicit compatibility path.
+const liquidGlassHelper=process.env.AGCU_LIQUIDGLASS_HELPER_BUILD;
+if(process.platform==='win32'&&liquidGlassHelper&&fs.existsSync(liquidGlassHelper)){
+  fs.cpSync(liquidGlassHelper,path.join(out,'liquidglass'),{recursive:true});
+}
 console.log(out);
 const files={};
 function inventory(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())inventory(p);else if(path.relative(out,p)!=='bundle-manifest.json')files[path.relative(out,p).replaceAll('\\','/')]=sha(p);}}
