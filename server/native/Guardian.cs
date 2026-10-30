@@ -16,6 +16,20 @@ using System.Windows.Automation;
 using System.Web.Script.Serialization;
 
 namespace Axon {
+    // Milliseconds since boot, including sleep, shared by native processes.
+    // The watchdog still needs independent expiry cleanup; see issue #18.
+    internal static class NativeDeadline {
+        [DllImport("kernel32.dll")] internal static extern ulong GetTickCount64();
+        internal static ulong Create(long requestedTicks,long wallNow,ulong bootNow,int maximumMs) {
+            if(wallNow<0||requestedTicks<=wallNow||maximumMs<=0)return 0;
+            long remaining=(requestedTicks-wallNow)/TimeSpan.TicksPerMillisecond;
+            if(remaining<=0)return 0;
+            ulong duration=(ulong)Math.Min(remaining,(long)maximumMs);
+            if(UInt64.MaxValue-bootNow<duration)return 0;
+            return bootNow+duration;
+        }
+        internal static bool Valid(ulong until,ulong now) {return until>now;}
+    }
     internal static class ControlFence {
         [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out int pid);
         internal static Dictionary<string, object> Identity(long hwnd) {
@@ -119,9 +133,10 @@ namespace Axon {
             string[] state;
             try { state = File.ReadAllText(FileName).Split('|'); }
             catch { throw new AxonError("control_stopped", "Permission process is unavailable.", null); }
-            long until;
-            if (state.Length < 3 || state[0] != "active" || state[1] != Token ||
-                !Int64.TryParse(state[2], out until) || DateTime.UtcNow.Ticks >= until)
+            long until;ulong bootUntil;
+            if (state.Length < 5 || state[0] != "active" || state[1] != Token ||
+                !Int64.TryParse(state[2], out until) || DateTime.UtcNow.Ticks >= until ||
+                !UInt64.TryParse(state[4],out bootUntil) || !NativeDeadline.Valid(bootUntil,NativeDeadline.GetTickCount64()))
                 throw new AxonError("control_stopped", "Control is paused, stopped or expired. Use the local controls.", null);
             CheckWatchdogIdentity(FileName);
             if(!(bool)DesktopContext.Inspect()["interactive"])
@@ -243,7 +258,7 @@ namespace Axon {
         readonly List<Process> workers=new List<Process>();
         readonly object workerLock=new object();
         readonly bool hostManaged=Environment.GetEnvironmentVariable("AGCU_PERMISSION_MODE")=="host-managed";
-        long deadline;
+        long deadline; ulong bootDeadline;
         bool prompting, registered, normalClose;
         string StopLatch {get {return Environment.GetEnvironmentVariable("AGCU_STOP_LATCH");}}
         static readonly object outputLock = new object();
@@ -278,7 +293,7 @@ namespace Axon {
                     try {ControlFence.Recover();}catch {}
                     if(InputLedger.HasHeld()){Emit(new {ev="visual_warning",message="Held-input cleanup is incomplete; control stays paused/stopped"});return;}
                     if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch))try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
-                    deadline=DateTime.UtcNow.AddMinutes(10).Ticks;SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
+                    deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
                 }
             };
             stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate {
@@ -401,7 +416,7 @@ namespace Axon {
             string f = ControlFence.FileName;
             if (String.IsNullOrEmpty(f)) return;
             string temp = f + ".tmp";
-            File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants))));
+            File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants)))+"|"+bootDeadline.ToString());
             if (File.Exists(f)) File.Replace(temp, f, null); else File.Move(temp,f);
         } }
         void SetState(string next,string reason=null,bool updateVisibility=true) {
@@ -464,7 +479,7 @@ namespace Axon {
             if(++visualTick%3==0 && state=="active" && DesktopVisuals.MotionEnabled) {phase+=.14f;Invalidate();}
             if (state == "active") {
                 if(!CursorSafety.CheckWatchdog()){Emergency("cursor_watchdog_failed");return;}
-                if (DateTime.UtcNow.Ticks >= deadline) { SetState("idle"); return; }
+                if (DateTime.UtcNow.Ticks >= deadline || !NativeDeadline.Valid(bootDeadline,NativeDeadline.GetTickCount64())) { SetState("idle"); return; }
                 if(!modeMenu.Visible && takeover.ShouldPause(Presence.Capture(),TakeoverPolicy.NowMs,visualScale)) {SetState("paused","human_takeover");return;}
                 Overlay.MarkActive();
                 if (Overlay.ConsumeStop()) SetState("stopped");
@@ -509,7 +524,7 @@ namespace Axon {
                 // a chat-directed Resume. Emergency Stop remains human-only.
                 try {ControlFence.Recover();}catch {}
                 bool resumeAllowed=hostManaged && state=="paused" && !InputLedger.HasHeld();
-                if(resumeAllowed) {deadline=DateTime.UtcNow.AddMinutes(10).Ticks;SetState("active","host_authorized_resume");Emit(new {ev="host_resume",state=state});}
+                if(resumeAllowed) {deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));if(bootDeadline==0)resumeAllowed=false;else {SetState("active","host_authorized_resume");Emit(new {ev="host_resume",state=state});}}
                 Emit(new {id=id,allowed=resumeAllowed,state=state});return;
             }
             if (op == "pause") { SetState("paused","requested_pause"); return; }
@@ -523,10 +538,13 @@ namespace Axon {
             }
             if (op == "capture_end") { captureHidden=false;SyncVisibility();return; }
             if (op == "activate") {
+                bool accepted=false;
                 if (state != "stopped" && state != "paused" && !InputLedger.HasHeld()) {
-                    token=Convert.ToString(m["token"]); deadline=Convert.ToInt64(m["deadline"]); SetState("active");
+                    string nextToken=Convert.ToString(m["token"]);long requested=Convert.ToInt64(m["deadline"]);
+                    ulong nextBoot=NativeDeadline.Create(requested,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));
+                    if(!String.IsNullOrEmpty(nextToken)&&nextBoot>0){token=nextToken;deadline=requested;bootDeadline=nextBoot;SetState("active");accepted=state=="active";}
                 }
-                Emit(new { id=id, allowed=state=="active", state=state }); return;
+                Emit(new { id=id, allowed=accepted, state=state }); return;
             }
             if (op != "prompt") return;
             if (state == "stopped" || state == "paused") { Emit(new { id=id, allowed=false, state=state }); return; }
