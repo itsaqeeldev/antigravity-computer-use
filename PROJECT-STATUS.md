@@ -26,6 +26,12 @@ engine took 4.53 seconds and the full launch-to-End session took 2 minutes 22.5
 seconds. JPEG, matched model speed, physical safety and updater qualification
 remain pending.
 
+The Stop-marker candidate from source `1960190` is now installed as build
+`b8d1ad546cdedcb77555efef3e22093dc8d6bc406ef715d561c97e0d6a913f31`; install
+verification passes for 109 files, the service is idle with no task or grants,
+and the automatic beta update policy is preserved. Its new durable Stop behavior
+still needs one real desktop task plus physical re-arm qualification.
+
 **Incomplete; development candidate only.** The review branch integrates Mac
 PR #5 with additional marker protection. Windows CI passed at `fc2b9ac`; Mac
 checks and exact-head checks for later commits must be inspected independently.

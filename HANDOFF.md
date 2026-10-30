@@ -22,6 +22,14 @@ completion is recorded as a defect boundary rather than a clean host pass.
 This is a real smoke qualification of the installed candidate, not Upscaly AI
 qualification, physical Stop/re-arm qualification, or release approval.
 
+The Stop-marker candidate from source `1960190` is now installed through the
+supported installer. Exact installed build is
+`b8d1ad546cdedcb77555efef3e22093dc8d6bc406ef715d561c97e0d6a913f31`; verification
+passes for 109 files and the skill pointer. The service reports idle, no open
+task, no grants, host-managed/manual policy, and automatic beta updates. The
+previous installation remains in the printed rollback backup. No real desktop
+task has been run on this new Stop-marker build yet.
+
 ## Real Antigravity Upscaly qualification — 30 October 2026
 
 The installed candidate also completed the real stable Upscaly workflow through

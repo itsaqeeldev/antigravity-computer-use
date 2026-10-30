@@ -492,7 +492,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "b216a33b2288bff663b140dbfccead1b9f599de8da1ab5ee4d4a9a25d5c37c6d"
+      "sha256": "6f2e4a6772e6548b600dca7aab84cbbd75c95fb3008e90b22659ae72e684bff9"
     },
     {
       "path": "tests/guardian-visibility.mjs",
