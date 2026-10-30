@@ -3,8 +3,9 @@ import {testDirectory,projectRoot}from'./paths.mjs';
 function run(body){
  const dir=fs.mkdtempSync(path.join(testDirectory('bootstrap'),'case-'));
  const prelude=`$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'\nAdd-Type -AssemblyName System.IO.Compression\n$parseErrors=$null;$parseTokens=$null\n$source=[IO.File]::ReadAllText($env:AGCU_BOOTSTRAP_SOURCE)\n$ast=[System.Management.Automation.Language.Parser]::ParseInput($source,[ref]$parseTokens,[ref]$parseErrors)\nif($parseErrors.Count){throw ($parseErrors.Message -join '; ')}\n$functions=$ast.FindAll({param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst]},$false)\nInvoke-Expression (($functions | ForEach-Object {$_.ToString()}) -join "\n")\n$fixture=$env:AGCU_BOOTSTRAP_FIXTURE\n`;
- const result=spawnSync('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(prelude+body,'utf16le').toString('base64')],{windowsHide:true,encoding:'utf8',timeout:30000,env:{...process.env,PSModulePath:path.join(process.env.WINDIR||'C:/Windows','System32/WindowsPowerShell/v1.0/Modules'),AGCU_BOOTSTRAP_SOURCE:path.join(projectRoot,'install.ps1'),AGCU_BOOTSTRAP_FIXTURE:dir}});
- try{assert.equal(result.status,0,(result.stdout||'')+(result.stderr||''));return result.stdout.trim();}finally{fs.rmSync(dir,{recursive:true,force:true});}
+ const result=spawnSync('powershell.exe',['-NoProfile','-EncodedCommand',Buffer.from(prelude+body,'utf16le').toString('base64')],{windowsHide:true,encoding:'utf8',timeout:60000,env:{...process.env,PSModulePath:path.join(process.env.WINDIR||'C:/Windows','System32/WindowsPowerShell/v1.0/Modules'),AGCU_BOOTSTRAP_SOURCE:path.join(projectRoot,'install.ps1'),AGCU_BOOTSTRAP_FIXTURE:dir}});
+ assert.equal(result.status,0,`PowerShell failed: ${result.error?.message || `exit ${result.status}, signal ${result.signal}`}\n${result.stdout||''}${result.stderr||''}\nFixture retained: ${dir}`);
+ fs.rmSync(dir,{recursive:true,force:true});return result.stdout.trim();
 }
 const windows={skip:process.platform!=='win32'};
 test('the documented pipe-to-IEX entrypoint dispatches installation without script-file execution',windows,()=>{

@@ -23,6 +23,12 @@ after the documented acceptance gates in [reliability status](RELIABILITY-IMPLEM
 The Mac workflow and updater changes are currently on the development branch;
 the default branch and published beta may not contain them yet.
 
+The Windows workflow limits Node's test-file concurrency to four to reduce
+competition between native compilation, PowerShell and installer fixtures on
+hosted runners. It still executes the full suite. A timed-out bootstrap test
+reports its process error and retains its own fixture under `.localdata/tests/`;
+this does not establish why a timeout occurred or replace a successful rerun.
+
 For a local source check, use Node 24.20.0 from the repository root:
 
 ```sh

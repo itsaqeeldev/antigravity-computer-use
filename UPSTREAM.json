@@ -528,7 +528,7 @@
     },
     {
       "path": "tests/bootstrap.test.mjs",
-      "sha256": "376d9b51b58114104cef796cb036240dca6553746e07d727db9bdb72b183e2a7"
+      "sha256": "083d0ed880d26624ea186386d2e70e338c2d5c849bce2c384428bba9bd9a0527"
     },
     {
       "path": "docs/media/UPSCALY-DEMO.md",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "a76fe9a460ceedff58dca163277b4546285613c24ab94af5ad8b9949219c14e1"
+      "sha256": "44c7914f6b0c175b6e22548f184357872281012a8af495a35bda5cdc2b84514a"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -696,7 +696,7 @@
     },
     {
       "path": ".github/workflows/windows.yml",
-      "sha256": "33f2cfaecc628a48451214ec62821ecd9507d7a1784c1587b6efa4ee3589522b"
+      "sha256": "def29b3b7d2f02e4bce71bf20e2cbd34f36411783846f57716774c3b3156b76a"
     },
     {
       "path": "release-public-key.pem",
@@ -780,7 +780,7 @@
     },
     {
       "path": "docs/CI.md",
-      "sha256": "a99368e1522ce5d6fd20ef8ae715d6a1543cfe99ac3e9f4b98964bf40c7c3d63"
+      "sha256": "515bf79da8632f67e33d47d3ffcfdb644232a4a803bb19aa673ab52eb1afbdc1"
     }
   ]
 }

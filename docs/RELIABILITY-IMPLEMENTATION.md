@@ -1094,3 +1094,16 @@ change does not remove old fixtures or make low-space local qualification pass.
 The older beta had no task marker, so its absence in an older stopped service
 cannot establish that an Antigravity conversation has finished; that bootstrap
 qualification remains outstanding.
+
+On 30 October Windows CI run `40979736685` at `fa828a0` failed one bootstrap
+test when its PowerShell child exceeded 30 seconds; 335 tests passed and 11
+were skipped. A separate Windows run for the same commit passed. Hosted-runner
+resource contention is plausible but unproven. The workflow now limits test-file
+concurrency to four, and the bootstrap fixture allows 60 seconds, reports process
+errors and retains its directory on failure. The four focused tests passed
+locally; the revised workflow still needs its own CI run. No runtime safety
+deadline or acceptance requirement was changed.
+
+Source inspection found a possible macOS race between input dispatch and
+uncoordinated guardian/watchdog ledger recovery, tracked in issue #11. It is
+not yet reproduced or fixed. Mac physical input cleanup and Stop remain pending.
