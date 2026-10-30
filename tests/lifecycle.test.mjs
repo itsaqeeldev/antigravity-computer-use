@@ -111,10 +111,9 @@ test('End keeps task open and Stop latched until held-input release succeeds',as
   confirmed=true;const ended=await r.finish();assert.equal(ended.ended,true);assert.equal(r.state,'stopped');assert.equal(driver.inputMayBeHeld,false);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);assert.equal(fs.readFileSync(latchFile,'utf8'),'stopped');assert.equal(releases,3);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
-test('ready exposes recovery guidance without clearing a restarted task or Stop',async()=>{
- const r=fixture();r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>({state:'idle',controls_visible:true});
- const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_recovered_task');assert.equal(r.taskOpen,true);
- r.guardian.request=async()=>({state:'stopped',controls_visible:true});const stopped=await r.ready();assert.equal(stopped.next_action,'awaiting_human_rearm');assert.equal(stopped.recovered_task,true);
+test('ready prioritizes previous input cleanup over re-arm without starting controls',async()=>{
+ const r=fixture();let requests=0;r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>{requests++;return {state:'idle',controls_visible:true};};
+ for(const state of ['idle','paused','stopped']){r.state=state;const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_prior_input_cleanup');assert.equal(ready.error.code,'recovered_cleanup_unverified');assert.equal(ready.replay_allowed,false);assert.equal(r.taskOpen,true);assert.equal(requests,0);}
 });
 test('ready reports unconfirmed cleanup instead of asking for repeated re-arm',async()=>{
  const r=fixture();r.state='stopped';r.lastControlReason='input_cleanup_failed';const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.next_action,'inspect_input_cleanup');assert.equal(r.state,'stopped');

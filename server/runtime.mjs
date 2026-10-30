@@ -190,6 +190,10 @@ export class Runtime {
     if(this.state==='stopped'&&this.lastControlReason==='guardian_stop_unconfirmed'&&this.driver?.inputMayBeHeld===true)return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_input_cleanup',replay_allowed:false,error:{code:'input_cleanup_failed',message:'Input cleanup and native Stop delivery are unconfirmed. Inspect diagnostics; do not restart, re-arm or replay.'}};
     if(this.state==='stopped'&&this.lastControlReason==='guardian_stop_unconfirmed')return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_diagnostics',replay_allowed:false,error:{code:'guardian_stop_unconfirmed',message:'Stop delivery to native controls is unconfirmed. Inspect diagnostics and input cleanup; do not restart, re-arm or replay.'}};
     if(this.state==='stopped'&&persistenceFailure(this.lastControlReason))return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_stop_persistence_without_restart',replay_allowed:false,error:{code:this.lastControlReason,message:'Control is stopped because native control storage failed. Inspect private storage; do not restart or send input.'}};
+    // A replacement process cannot use its own empty ledger as evidence that
+    // the previous process released input. Do not lead the agent toward re-arm
+    // or start a new guardian before the recovered task has passed cleanup.
+    if(this.recoveredTask)return {...this.status(),ready:false,controls_visible:null,next_action:'inspect_prior_input_cleanup',replay_allowed:false,error:{code:'recovered_cleanup_unverified',message:'A previous task survived restart. Inspect its result without replay and verify its native input cleanup before re-arm or a new task.'}};
     const unavailable=()=>({...this.status(),ready:false,controls_visible:this.recoveryVisibility??null,guardian_running:!!this.guardian.proc&&!this.guardian.proc.killed,guardian_exit:this.guardian.lastExit??null,...recoveryAdvice({error:this.recoveryFailure}),error:this.recoveryFailure});
     if(this.recoveryFailure)return unavailable();
     let controls;
