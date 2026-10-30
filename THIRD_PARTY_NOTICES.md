@@ -16,3 +16,9 @@ OpenAI `openai/openai-cua-sample-app`, revision `6dd34b40acc1d002696ccd41aaf0a1f
 Anthropic `anthropics/claude-quickstarts`, revision `9ec32b91df50b0d4906cae64b13c6298055ff40d`, MIT: `computer-use-best-practices/computer_use/image.py` sizing algorithm is ported into `upstream-utils.mjs`; `tools/batch.py` sequential first-failure algorithm is adapted into the MCP batch implementation. Our transport image budget is not a claim about Gemini's encoder. Copyright (c) 2023 Anthropic; full MIT license in `licenses/Anthropic.txt`.
 
 The Windows bundle includes the locally installed official Node executable, with its version/checksum recorded in `bundle-manifest.json` and upstream Node license under `licenses/`. No proprietary product bundles, extracted assets or leaked source maps are included. Product names identify compatibility; no affiliation or endorsement is claimed.
+
+The Windows HUD material profile is adapted from `shayann07/liquidglass`,
+`ports/dotnet/LiquidGlass.Skia/GlassPainter.cs`, under Apache-2.0. The
+adaptation is recorded in `server/native/LiquidGlassMaterial.cs`; the native
+host uses a dependency-free GDI+ compatibility renderer so it does not capture
+foreign desktop pixels or require the library's modern .NET/Skia runtime.

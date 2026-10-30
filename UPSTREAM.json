@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "07d28cb15919c9979b2e228e3aa70e83f4a783278c62a9bad439ffab89963162",
+      "local_sha256": "e8c0805ac14cf836c684af6a28ca730fc679bf4a74539e8020438ac5ebfed049",
       "modified": true
     },
     {
@@ -276,7 +276,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "91e4948ca63c5615135ed9540e07590912e6605ef6809f08fa59d419cf161c0a"
+      "sha256": "2e3ca8af679f556f5f1df55fa575e625c87d44796728c223c4733e3fbd38b351"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -789,6 +789,10 @@
     {
       "path": "tests/native-snapshot-budget.test.mjs",
       "sha256": "984b0f58c2061bb0f2c60234a2e97488074bda8ff4a5f37c0860e2230d0f1a87"
+    },
+    {
+      "path": "server/native/LiquidGlassMaterial.cs",
+      "sha256": "57acdb09ec49c1fb3f47ec1e0fd815bb72460933f30c7d8b8ad9b3beaa51c618"
     }
   ]
 }

@@ -105,28 +105,11 @@ namespace Axon {
         internal static void Hud(Graphics g,string state,int hover,float phase,string activity=null) {
             g.SmoothingMode=SmoothingMode.AntiAlias;g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             RectangleF panel=new RectangleF(1,1,HudWidth-2,HudHeight-2);Color accent=StateColor(state);
-            // The palette follows LiquidGlass's measured dark-chrome/clear-bar
-            // contract while keeping this safety-critical overlay dependency-free:
-            // the published WinForms adapter targets modern .NET/Skia and only
-            // captures controls owned by its host. This layered HUD must never
-            // capture foreign desktop pixels or require a second runtime.
+            // Use the published LiquidGlass material profile through the native
+            // compatibility adapter. The adapter keeps this safety-critical
+            // layered window dependency-free and never captures foreign pixels.
             using(GraphicsPath shape=Overlay.RoundRect(panel,21)) {
-                using(LinearGradientBrush bg=new LinearGradientBrush(panel,Color.FromArgb(224,51,61,76),Color.FromArgb(182,12,17,27),90f)) {
-                    bg.InterpolationColors=new ColorBlend {
-                        Colors=new[]{Color.FromArgb(226,59,70,88),Color.FromArgb(208,31,39,54),Color.FromArgb(178,10,14,23)},
-                        Positions=new[]{0f,.42f,1f}
-                    };
-                    g.FillPath(bg,shape);
-                }
-                using(GraphicsPath sheen=new GraphicsPath()) {
-                    sheen.AddEllipse(-42,-58,220,108);
-                    using(PathGradientBrush light=new PathGradientBrush(sheen)) {
-                        light.CenterColor=Color.FromArgb(38,238,248,255);light.SurroundColors=new[]{Color.Transparent};
-                        g.SetClip(shape);g.FillPath(light,sheen);g.ResetClip();
-                    }
-                }
-                using(Pen outer=new Pen(Color.FromArgb(104,213,231,246),1f))g.DrawPath(outer,shape);
-                using(Pen inner=new Pen(Color.FromArgb(28,255,255,255),1f))g.DrawPath(inner,Overlay.RoundRect(new RectangleF(2,2,HudWidth-4,HudHeight-4),20));
+                LiquidGlassMaterial.DrawSurface(g,shape,panel,accent,Math.Max(.72f,Math.Min(1f,(float)BreathLevel)),1f);
             }
             string detail=state=="active"?(String.IsNullOrEmpty(activity)?"Antigravity is working":activity+" with Antigravity"):state=="paused"?"Paused · you have control":state=="stopped"?"Stopped · re-arm to begin":"Antigravity is ready";
             Label(g,detail,9,FontStyle.Regular,Color.FromArgb(240,243,246),new RectangleF(28,6,238,40));
