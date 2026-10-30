@@ -44,6 +44,9 @@ screen text or paths. They describe controller-side wait time, not host/model
 decision gaps or native inference. An in-flight observation can still exceed
 the polling budget; issue #25 tracks hard deadlines and cleanup. Change-wait
 elapsed time includes its initial app-identity check before polling begins.
+Observation failures now also carry numeric wait metrics through direct and
+batch IPC; failures before observation or while checking cancellation may not.
+Inert IPC tests verify the numeric-only fields, not real provider timing.
 
 ## Text-only timeout observation
 

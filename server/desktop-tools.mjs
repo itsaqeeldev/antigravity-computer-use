@@ -1,5 +1,6 @@
 // Adapted stdio dispatch and tool vocabulary from ridelink0/claude-computer-use (MIT).
 import {contract} from './platform.mjs';
+import {safeWaitMetrics} from './recovery.mjs';
 const str={type:'string'},num={type:'integer'},bool={type:'boolean'};
 const nodeCount={...num,minimum:1,maximum:500};
 const settle={...num,minimum:0,maximum:2000};
@@ -129,7 +130,7 @@ export async function call(r,name,a){
      completed.pop();return {...last,ok:false,verification_error:{code:last.incomplete?'wait_observation_incomplete':'wait_change_timeout',message:last.incomplete?'The accessible tree was incomplete; inspect the returned state before continuing. Do not replay prior steps.':'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
     }
     observation=last.metadata?.observation_id;
-   }catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(e.delivery_unknown===true||e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
+   }catch(e){return {ok:false,completed,failed_index:i,skipped:plan.length-i-1,...(safeWaitMetrics(e.wait_metrics)?{wait_metrics:safeWaitMetrics(e.wait_metrics)}:{}),...(e.delivery_unknown===true||e.code==='input_outcome_unknown'?{delivery_unknown:true}:{}),error:{code:e.code||'batch_step_failed',message:e.message,...(e.hint?{hint:e.hint}:{})},observe_before_continuing:true};}
   }
   return {...last,batch:{completed,skipped:0}};
  }

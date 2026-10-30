@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b8871613223dac65db20f259e77d9d423d7dfeafe27d54fe9d0debf473a7410f"
+      "sha256": "1e07de5020ec5d0e0584e772767d16b8568ae4042d631a676d49f24541d82148"
     },
     {
       "path": "server/mcp.mjs",
@@ -292,11 +292,11 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "63449270c44926966520a079ca7d6c89c900f0eae3615409fc89a9dc0cbc0a3d"
+      "sha256": "60ec7cbfee5242e30c9daaeb920e487abe86e45255acd1536ccca896e946c000"
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "bc69736c659da81ab8a8c67a9bf271670dd8a7f5f300c819f9d9ba7d78d6e646"
+      "sha256": "7b1c5d50eb5f391ab846a87fa47053b2079a230e2e9c5ccd9c985c8d34aea323"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "b409dcf4f306c4a2945d61ea8c85c2e85ac9b1ab9d6191a4013fb56621a9a784"
+      "sha256": "e0a1c00ac1ad29b66b3e65dfe7ef9d089d3284402ad0bdcbf08e039e7d344a5c"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "467e23fb343712153021b557411ce4f2ddc00aa3b817c202f2d93c1d8b78fc73"
+      "sha256": "8925cc4b7d46469ee40bcaa1cc6409528c7e01ae7adb9ecf4cef8530581f0102"
     },
     {
       "path": "HANDOFF.md",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "2f2b796654945620bdd80b09540f882fe89a894f62294d786a7cb34e47df70d1"
+      "sha256": "ac974c4c56a916204eb4d1ccb0c92e4371c6b7697078e90dcb9323959836cb83"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "410b3d7ff69d32c053661558d76b643e1bf6e485066a26932de74014cbb7eec4"
+      "sha256": "31270391dbbee85a43bf6e4ffb3cdf222b723b5fc90d0d5f6d3be504fd69fa8e"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

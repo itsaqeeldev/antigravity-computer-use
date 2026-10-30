@@ -342,8 +342,15 @@ test('expired budget after a slow grant skips the snapshot and later batch input
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  try{
   const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Observe',steps:[{kind:'click',name:'Start'},{kind:'wait',until:'Ready',timeout_ms:100},{kind:'click',name:'Continue'}]});
-  assert.equal(reply.error.code,'wait_observation_timeout');assert.equal(reply.next_action,'inspect_effect_without_replay');assert.equal(reply.replay_allowed,false);assert.equal(reply.skipped,1);assert.equal(reply.completed.length,1);assert.equal(snapshots,0);assert.equal(inputs,1);
+  assert.equal(reply.error.code,'wait_observation_timeout');assert.equal(reply.next_action,'inspect_effect_without_replay');assert.equal(reply.replay_allowed,false);assert.equal(reply.skipped,1);assert.equal(reply.completed.length,1);assert.equal(snapshots,0);assert.equal(inputs,1);assert.equal(reply.wait_metrics.observations,1);assert.equal(reply.wait_metrics.polling_budget_ms,100);assert(reply.wait_metrics.elapsed_ms>=100);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('direct wait returns numeric metrics when an observation fails',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-wait-error-metrics-'));
+ const runtime={frames:new Map(),status:()=>({state:'active'}),check(){},async close(){},async observe(){throw Object.assign(Error('provider failed'),{code:'op_timeout'});}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{const reply=await request(session,'wait',{hwnd:7,until:'Ready',reason:'Observe',timeout_ms:1000});assert.equal(reply.error.code,'op_timeout');assert.equal(reply.wait_metrics.observations,1);assert.equal(reply.wait_metrics.polling_budget_ms,1000);assert(reply.wait_metrics.elapsed_ms>=0);}
+ finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('a disconnected app-discovery client does not stop an active task',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;

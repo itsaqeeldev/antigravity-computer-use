@@ -34,6 +34,10 @@ function waitFailure(observation,labels){
   const fields=(observation.metadata.elements||[]).flatMap(node=>[node.name,node.text,typeof node.state?.value==='string'?node.state.value:null]).filter(value=>typeof value==='string').map(value=>value.toLowerCase());
   return (labels||[]).find(label=>{const needle=label.toLowerCase();return tree.includes(needle)||fields.some(value=>value.includes(needle));});
 }
+function attachWaitMetrics(error,started,budget,observations){
+  if(error&&typeof error==='object')try{error.wait_metrics={elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget};}catch{}
+  return error;
+}
 const persistenceFailure=reason=>['stop_persistence_failed','guard_persistence_failed'].includes(reason);
 function initializeInputLedger(guardFile){
   const ledger=guardFile+'.inputs';let fd;
@@ -360,7 +364,7 @@ export class Runtime {
   async wait(args){
     const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget,generation=this.generation;let latest,observations=0,workerEpoch;
     const observe=async options=>{
-      observations++;const result=await this.observe(options),currentEpoch=this.driver?.epoch;
+      observations++;let result;try{result=await this.observe(options);}catch(error){throw attachWaitMetrics(error,started,budget,observations);}const currentEpoch=this.driver?.epoch;
       // The first observation may start a previously absent worker. Bind to
       // its resulting epoch, and refuse a restart during later observations.
       if(observations===1)workerEpoch=currentEpoch;
@@ -422,7 +426,7 @@ export class Runtime {
     const until=performance.now()+budget;
     do {
       this.check();
-      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_deadline:until,require_native_budget:true});
+      observations++;let latest;try{latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_deadline:until,require_native_budget:true});}catch(error){throw attachWaitMetrics(error,started,budget,observations);}
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}

@@ -3,7 +3,11 @@ import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server
 import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
 import {spawn,spawnSync} from 'node:child_process';
 import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERSION} from '../server/version.mjs';
-import {priorWindowsCleanupVerified,recoveryAdvice} from '../server/recovery.mjs';
+import {priorWindowsCleanupVerified,recoveryAdvice,safeWaitMetrics} from '../server/recovery.mjs';
+test('wait error metrics accept only numeric fields and discard other content',()=>{
+ assert.deepEqual(safeWaitMetrics({elapsed_ms:123,observations:2,polling_budget_ms:1000,text:'private content'}),{elapsed_ms:123,observations:2,polling_budget_ms:1000});
+ assert.equal(safeWaitMetrics({elapsed_ms:'private',observations:1,polling_budget_ms:1000}),undefined);
+});
 test('session budget exhaustion gives bounded recovery without replay',()=>{
  assert.deepEqual(recoveryAdvice({error:{code:'session_limit'}}),{next_action:'end_owned_task_then_reauthorize',replay_allowed:false});
  assert.deepEqual(recoveryAdvice({input_completed:true,verification_error:{code:'session_limit'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});

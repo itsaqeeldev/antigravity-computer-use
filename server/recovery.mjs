@@ -1,5 +1,11 @@
 // Deterministic guidance accompanies errors; it never executes a retry.
 import fs from 'node:fs';import path from 'node:path';
+export function safeWaitMetrics(value){
+ if(!value||typeof value!=='object')return undefined;
+ const {elapsed_ms,observations,polling_budget_ms}=value;
+ if(!Number.isSafeInteger(elapsed_ms)||elapsed_ms<0||!Number.isSafeInteger(observations)||observations<0||!Number.isSafeInteger(polling_budget_ms)||polling_budget_ms<100||polling_budget_ms>30000)return undefined;
+ return {elapsed_ms,observations,polling_budget_ms};
+}
 // Inspect only a recorded prior Windows guard. Never inject input, kill a PID,
 // clear Stop, or trust a PID that is still alive (including possible reuse).
 export function priorWindowsCleanupVerified(directory,record,{platform=process.platform,probe=process.kill}={}){
