@@ -572,3 +572,8 @@ both report `mergeStateStatus: DIRTY`, and neither has a current check run in
 the API. Their commits are present in this local `main`, but that is not the
 same as merged upstream review or current CI evidence.
 
+Fresh exact-head regression on `b2791c2`: serial Node test run completed with
+452 tests, 441 pass, 0 fail and 11 platform skips in 97,358 ms. This confirms
+the package-client and bundle changes did not regress the controller suite; it
+does not replace physical or installed-device qualification.
+
