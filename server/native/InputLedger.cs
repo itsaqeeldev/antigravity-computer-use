@@ -37,6 +37,8 @@ namespace Axon {
             return null;
         }
         internal static void Send(Native.INPUT[] events) {
+            if(String.IsNullOrEmpty(ControlFence.FileName)||!File.Exists(FileName))
+                throw new AxonError("input_cleanup_failed","Input ledger is missing; no input was sent.",null);
             bool tracked=false;foreach(var e in events){bool down;if(Key(e,out down)!=null){tracked=true;break;}}
             if(!tracked){if(Native.SendInput((uint)events.Length,events,Native.InputSize)!=(uint)events.Length)Reject();return;}
             using(Mutex mutex=OpenMutex()) {

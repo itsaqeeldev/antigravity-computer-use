@@ -987,6 +987,9 @@ The passive runtime initializes its new guard's ledger before human controls
 can start, and a missing ledger causes cleanup to fail closed. A compiled
 Windows helper test checks the missing-ledger exit without sending input; Mac's
 native contract check covers the same refusal when its fixture starts empty.
+Windows native dispatch now also refuses untracked events such as pointer moves
+when the ledger is missing, before calling the OS input API. A compiled native
+test uses an inert input stub to verify that boundary.
 When native cleanup fails, both guardian implementations now retain Stop and
 continue other cleanup rather than reporting idle or aborting the remaining
 cleanup sequence. `ready` reports `inspect_input_cleanup` instead of repeatedly

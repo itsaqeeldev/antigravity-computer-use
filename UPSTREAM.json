@@ -232,11 +232,11 @@
     },
     {
       "path": "tests/InputLedgerTests.cs",
-      "sha256": "2a0cb85046a425421106ed7f82856ad7d67d2b94c8b01c4b9544679401acbe86"
+      "sha256": "748d656d03de1c5f2c8e6e5f7d43b8047419ff41c9dd551bd482ad4ea62539aa"
     },
     {
       "path": "tests/input-ledger.test.mjs",
-      "sha256": "6a884596c684ccbff10412a4dde995a95c1bbde66091dbf6c74d3b13a85ae684"
+      "sha256": "2429797dc3329173d0ec9bce21adc7fe897151b7f577352eb984a709f60c825f"
     },
     {
       "path": "tests/NativeWatchdogMetadataTests.cs",
@@ -280,7 +280,7 @@
     },
     {
       "path": "server/native/InputLedger.cs",
-      "sha256": "7b15df6310042371913d05c238a2874e3d6274189d317c4df656f27229768b10"
+      "sha256": "3e976dd11908f62f8f2f43c2661831a228072d5b1e367b5ac582c3b5478ca55d"
     },
     {
       "path": "server/native/CursorMotion.cs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "0ea293c6a12e380f852305e3d8b6cd42181572c06a6c14d0ae0d77cc6a3d388d"
+      "sha256": "a76fe9a460ceedff58dca163277b4546285613c24ab94af5ad8b9949219c14e1"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

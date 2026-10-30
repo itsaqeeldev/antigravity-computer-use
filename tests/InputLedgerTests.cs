@@ -18,6 +18,7 @@ internal static class InputLedgerTests {
  static int count;static void Check(bool v,string m){if(!v)throw new Exception(m);count++;Console.WriteLine("PASS "+m);}
  static int Main(string[] args){try {
   ControlFence.FileName=Path.Combine(args[0],"journal.state");File.Delete(ControlFence.FileName+".inputs");
+  bool movementRefused=false;try{InputLedger.Send(new[]{Native.MouseInput(1,0)});}catch(AxonError){movementRefused=true;}Check(movementRefused&&Native.sent.Count==0,"missing ledger refuses untracked pointer input");
   bool missingRefused=false;try{InputLedger.Recover();}catch(IOException){missingRefused=true;}Check(missingRefused&&InputLedger.HasHeld()&&Native.sent.Count==0,"missing ledger cannot confirm cleanup or send input");
   File.WriteAllText(ControlFence.FileName+".inputs","");
   InputLedger.Recover();Check(Native.sent.Count==0,"idle recovery sends no unrelated key or mouse releases");
