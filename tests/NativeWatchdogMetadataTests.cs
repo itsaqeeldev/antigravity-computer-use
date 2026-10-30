@@ -26,6 +26,8 @@ class NativeWatchdogMetadataTests {
             string guard=Path.Combine(args[1],"identity");
             Action mustRefuse=delegate { bool failed=false;try{check.Invoke(null,new object[]{guard});}catch(TargetInvocationException){failed=true;}if(!failed)throw new Exception("invalid watchdog identity accepted"); };
             mustRefuse();File.WriteAllText(guard+".watchdog","invalid");mustRefuse();
+            File.WriteAllText(guard+".watchdog",new string('9',129));mustRefuse();
+            File.WriteAllBytes(guard+".watchdog",new byte[]{0xff});mustRefuse();
             var info=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,"--hold");info.UseShellExecute=false;info.CreateNoWindow=true;
             using(Process child=Process.Start(info)) {
                 try {

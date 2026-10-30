@@ -131,7 +131,14 @@ namespace Axon {
         // stale metadata or an exited watchdog must never permit input.
         internal static void CheckWatchdogIdentity(string file) {
             try {
-                string[] watcher=File.ReadAllText(file+".watchdog").Split('|');int pid;long started;
+                string marker=file+".watchdog";FileAttributes attributes=File.GetAttributes(marker);
+                if((attributes&(FileAttributes.ReparsePoint|FileAttributes.Directory))!=0)throw new Exception();
+                byte[] bytes=new byte[129];int used=0;
+                using(var stream=new FileStream(marker,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) {
+                    int n;while(used<bytes.Length&&(n=stream.Read(bytes,used,bytes.Length-used))>0)used+=n;
+                }
+                if(used>128)throw new Exception();
+                string[] watcher=new UTF8Encoding(false,true).GetString(bytes,0,used).Split('|');int pid;long started;
                 if(watcher.Length!=2||!Int32.TryParse(watcher[0],out pid)||pid<=0||!Int64.TryParse(watcher[1],out started)||started<=0)throw new Exception();
                 using(Process p=Process.GetProcessById(pid)) {
                     if(p.HasExited||p.StartTime.ToUniversalTime().Ticks!=started||!String.Equals(p.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))throw new Exception();
