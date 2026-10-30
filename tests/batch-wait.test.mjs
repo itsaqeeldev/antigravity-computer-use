@@ -35,7 +35,14 @@ test('a text-only wait confirms the final tree without capturing a screenshot',a
  const flags=[],frames=new Map();let count=0;
  const runtime={frames,check(){},async observe(a){flags.push(a.with_image);const id='s'+(++count);frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};}};
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',with_image:false});
- assert.equal(result.matched,true);assert.deepEqual(flags,[false,false]);assert(!frames.has('s1'));assert(frames.has('s2'));
+ assert.equal(result.matched,true);assert.deepEqual(flags,[false,false]);assert(!frames.has('s1'));assert(frames.has('s2'));assert.equal(result.wait_metrics.observations,2);assert.equal(result.wait_metrics.polling_budget_ms,15000);assert(result.wait_metrics.elapsed_ms>=0);
+});
+
+test('successful batch retains bounded wait timing without task contents',async()=>{
+ const metrics={elapsed_ms:30,observations:2,polling_budget_ms:1000};
+ const runtime={async wait(){return{matched:true,wait_metrics:metrics,metadata:{observation_id:'ready'}};},async action(){return{metadata:{observation_id:'after'}};}};
+ const result=await call(runtime,'computer_run',args([{kind:'wait',until:'Ready'},{kind:'click',name:'Continue'}]));
+ assert.deepEqual(result.batch.completed[0].wait_metrics,metrics);assert.equal(result.batch.completed[1].wait_metrics,undefined);
 });
 test('wait timeout stays bounded when the wall clock moves backwards',async()=>{
  const frames=new Map();let reads=0,clock=100000;const original=Date.now;
@@ -140,7 +147,7 @@ test('text-only timeout returns the last observed frame without a second slow ca
  let reads=0;const frames=new Map();
  const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:'Loading'}};}};
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
- assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(frames.has('v1'));
+ assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(frames.has('v1'));assert.equal(result.wait_metrics.observations,1);assert.equal(result.wait_metrics.polling_budget_ms,100);assert(result.wait_metrics.elapsed_ms>=100);
 });
 test('a text-only timeout in a real batch never sends the next action',async()=>{
  let reads=0,inputs=0;const frames=new Map();

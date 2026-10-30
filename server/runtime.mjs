@@ -331,43 +331,45 @@ export class Runtime {
     catch(error){return {result,input_completed:true,verification_required:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message,...(error.hint?{hint:error.hint}:{})}};}
   }
   async wait(args){
-    const until=performance.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);let latest;
+    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget;let latest,observations=0;
+    const observe=async options=>{observations++;return this.observe(options);};
+    const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
     do {
-      this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query,...(args.abort_on?.length?{max_nodes:500}:{})});
+      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
       if(failure){
-        if(args.with_image===false)return {matched:false,aborted:true,abort_match:failure,...latest};
-        this.frames.delete(latest.metadata.observation_id);return {matched:false,aborted:true,abort_match:failure,...await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image})};
+        if(args.with_image===false)return finish({matched:false,aborted:true,abort_match:failure,...latest});
+        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image})});
       }
       if(tree.includes(args.until.toLowerCase())){
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
         this.frames.delete(latest.metadata.observation_id);
-        const verified=await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
+        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
         const verifiedFailure=(args.abort_on||[]).find(text=>verifiedTree.includes(text.toLowerCase()));
-        if(verifiedFailure)return {matched:false,aborted:true,abort_match:verifiedFailure,...verified};
-        if(args.abort_on?.length&&verified.metadata.tree_incomplete)return {matched:false,incomplete:true,...verified};
-        if(verifiedTree.includes(args.until.toLowerCase()))return {matched:true,...verified};
-        if(args.with_image===false&&performance.now()>=until)return {matched:false,timed_out:true,...verified};
+        if(verifiedFailure)return finish({matched:false,aborted:true,abort_match:verifiedFailure,...verified});
+        if(args.abort_on?.length&&verified.metadata.tree_incomplete)return finish({matched:false,incomplete:true,...verified});
+        if(verifiedTree.includes(args.until.toLowerCase()))return finish({matched:true,...verified});
+        if(args.with_image===false&&performance.now()>=until)return finish({matched:false,timed_out:true,...verified});
         this.frames.delete(verified.metadata.observation_id);
         if(performance.now()>=until)break;
       } else {
         // A text-only timeout already has an observation to return. Starting
         // a second potentially slow capture after the budget is exhausted can
         // add latency without changing the fact that the wait must stop.
-        if(args.with_image===false&&performance.now()>=until)return {matched:false,timed_out:true,...latest};
+        if(args.with_image===false&&performance.now()>=until)return finish({matched:false,timed_out:true,...latest});
         this.frames.delete(latest.metadata.observation_id);
         if(performance.now()>=until)break;
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
-    const final=await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image});
+    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image});
     const finalTree=final.metadata.tree.toLowerCase();
     const finalFailure=(args.abort_on||[]).find(text=>finalTree.includes(text.toLowerCase()));
-    if(finalFailure)return {matched:false,aborted:true,abort_match:finalFailure,...final};
-    return {matched:false,timed_out:true,...final};
+    if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
+    return finish({matched:false,timed_out:true,...final});
   }
   async waitChange(args){
     this.check();

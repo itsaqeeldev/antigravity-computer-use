@@ -296,6 +296,16 @@ test('direct IPC batches use a fresh change-wait frame without replaying prior a
   assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'click',frame:'changed'}]);assert(!runtime.frames.has('post-action'));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('direct IPC retains real wait metrics after a later batch action',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-wait-metrics-'));let reads=0;
+ const runtime={frames:new Map(),status(){return{state:'active'};},check(){},async close(){},async observe(){const id='v'+(++reads);this.frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};},async action(){return{metadata:{observation_id:'after'}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Observe',steps:[{kind:'wait',until:'Ready',timeout_ms:1000},{kind:'click',name:'Continue'}]});
+  assert.equal(reply.ok,true);assert.equal(reply.batch.completed[0].wait_metrics.observations,2);assert.equal(reply.batch.completed[0].wait_metrics.polling_budget_ms,1000);assert(reply.batch.completed[0].wait_metrics.elapsed_ms>=0);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('a disconnected app-discovery client does not stop an active task',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;
  const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);

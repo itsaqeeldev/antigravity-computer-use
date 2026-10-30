@@ -1,5 +1,12 @@
 # Measuring desktop task latency
 
+`wait` replies include `wait_metrics`: elapsed monotonic milliseconds,
+observation count and polling budget. Successful batch steps retain the same
+metrics when a later action supplies the final result. These fields contain no
+screen text or paths. They describe controller-side wait time, not host/model
+decision gaps or native inference. An in-flight observation can still exceed
+the polling budget; issue #25 tracks hard deadlines and cleanup.
+
 ## Text-only timeout observation
 
 When a text-only wait exhausts its polling budget without a match, it now
