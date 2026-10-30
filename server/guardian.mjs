@@ -49,8 +49,11 @@ export class Guardian extends EventEmitter {
     return new Promise((resolve,reject)=>{
       const defaultTimeout=m.op==='prompt'?95000:10000;
       const timeout=Number.isFinite(timeoutMs)&&timeoutMs>0?Math.min(defaultTimeout,Math.max(100,Math.floor(timeoutMs))):defaultTimeout;
-      const timer=setTimeout(()=>{this.pending.delete(id);this.send({op:'stop'});reject(Object.assign(new Error('Local controls did not answer; inspect diagnostics.'),{code:'guardian_request_timeout'}));},timeout);
-      this.pending.set(id,{resolve,reject,timer});this.send({...m,id});
+      const requestStop=()=>{try{this.send({op:'stop'});}catch{}};
+      const timer=setTimeout(()=>{this.pending.delete(id);requestStop();reject(Object.assign(new Error('Local controls did not answer; Stop was requested. Inspect status and do not replay.'),{code:'guardian_request_timeout'}));},timeout);
+      this.pending.set(id,{resolve,reject,timer});
+      try{this.send({...m,id});}
+      catch{clearTimeout(timer);this.pending.delete(id);requestStop();reject(Object.assign(new Error('Delivery to local controls is unconfirmed; Stop was requested. Inspect status and do not replay.'),{code:'guardian_write_failed'}));}
     });
   }
   async prompt(m){return this.request({op:'prompt',...m});}

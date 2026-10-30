@@ -56,6 +56,17 @@ test('bounded guardian capture timeout sends Stop and discards its pending reque
  await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');
  assert.equal(sent[0].op,'capture');assert.equal(sent[1].op,'stop');assert.equal(guardian.pending.size,0);
 });
+test('guardian write failure clears its timer and attempts Stop even if Stop also throws',async()=>{
+ const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);throw Error('closed pipe');};
+ await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed'&&/do not replay/i.test(e.message));
+ assert.deepEqual(sent,['capture','stop']);assert.equal(guardian.pending.size,0);
+ await new Promise(resolve=>setTimeout(resolve,130));assert.deepEqual(sent,['capture','stop']);
+});
+test('guardian timeout still rejects when its Stop write throws',async()=>{
+ const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);if(m.op==='stop')throw Error('closed pipe');};
+ await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');
+ assert.deepEqual(sent,['capture','stop']);assert.equal(guardian.pending.size,0);
+});
 test('guardian shutdown waits for actual exit and refuses replacement after unconfirmed cleanup',async()=>{
  let child,starts=0,kills=0;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{kills++;return true;};return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500,shutdownGrace:5,killTimeout:15});

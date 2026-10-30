@@ -1,5 +1,10 @@
 # Reliability and updates implementation log
 
+Guardian requests now clear their pending timer if the pipe write throws and
+attempt Stop without assuming delivery. Timeout rejection also survives a Stop
+write throwing. Simulated broken-pipe tests cover timer cleanup and reporting;
+actual native pipe loss, Stop persistence and physical recovery remain pending.
+
 The timeout-frame candidate initially captured the worker epoch before its
 first observation, which could mistake a normal first worker start for a
 restart. It now binds to the epoch after that observation and rejects a change
