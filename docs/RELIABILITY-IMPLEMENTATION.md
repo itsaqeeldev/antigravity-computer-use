@@ -1203,6 +1203,12 @@ bounded conversion from the requested duration, explicit refusal of malformed
 or legacy active state, and safe handling of restart and suspend. Checking only
 the guardian UI timer is insufficient. These are design inputs, not completed
 implementation or physical sleep/wake evidence.
+The current Windows cursor watchdog's `CrashCleanup` latches emergency Stop;
+calling it for ordinary session expiry would incorrectly turn a routine limit
+into a human-only re-arm. A safe design must handle an expiry racing with Esc
+without overwriting a real Stop latch or allowing further queued input. The
+worker's per-input fence and an independent watchdog both need the same bound;
+neither a JavaScript deadline nor an in-process UI timer proves that property.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,
