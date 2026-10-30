@@ -1,5 +1,13 @@
 # Reliability and updates implementation log
 
+The Stop candidate now persists its latch and aborts the driver even if the
+guardian pipe throws. It retains an unconfirmed-delivery state across repeated
+Stop attempts and refuses automatic recovery; an absent passive guardian does
+not need to be launched merely to latch Stop. Simulated tests cover pipe loss,
+latch-write failure, repeat attempts and passive Stop. An accepted pipe write
+is still not a native Stop acknowledgement, and real pipe loss, restart and
+physical re-arm remain unqualified.
+
 On 30 October the local Windows source suite at `c0b95e2` passed 426 tests,
 with 11 explicit skips and no failures (`node --test --test-concurrency=4
 tests/*.test.mjs`). The skips are not native qualification. This does not prove

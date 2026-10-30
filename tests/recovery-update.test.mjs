@@ -73,9 +73,35 @@ test('an unconfirmed guardian Stop invalidates runtime control and aborts its dr
  try{
   runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
   await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed');
-  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'stop_persistence_failed');assert.equal(aborts,1);
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);
+  const ready=await runtime.ready();assert.equal(ready.error.code,'guardian_stop_unconfirmed');assert.equal(ready.replay_allowed,false);
   guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
  }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('Stop persists its latch and aborts input even if guardian delivery throws',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-stop-write-')),latch=path.join(dir,'stop');let aborts=0;
+ const guardian=new EventEmitter();guardian.send=()=>{throw Error('broken pipe');};
+ const runtime=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){}},latchFile:latch});
+ try{
+  runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
+  await assert.rejects(runtime.stop(),e=>e.code==='guardian_stop_unconfirmed');
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);
+  assert.equal((await runtime.ready()).error.code,'guardian_stop_unconfirmed');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
+  guardian.send=()=>true;await assert.rejects(runtime.stop(),e=>e.code==='guardian_stop_unconfirmed');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');
+ }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('passive Stop persists without launching an absent guardian',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-passive-stop-')),latch=path.join(dir,'stop');let aborts=0;
+ const guardian=new Guardian({});const runtime=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){}},latchFile:latch});
+ try{const result=await runtime.stop();assert.equal(result.stopped,true);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);assert.equal(guardian.proc,undefined);}
+ finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('Stop still aborts input when both guardian delivery and latch persistence fail',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-double-fail-'));let aborts=0;
+ const guardian=new EventEmitter();guardian.send=()=>{throw Error('broken pipe');};
+ const runtime=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){}},latchFile:path.join(dir,'missing','stop')});
+ try{runtime.state='active';await assert.rejects(runtime.stop(),e=>e.code==='stop_persistence_failed');assert.equal(runtime.state,'stopped');assert.equal(aborts,1);assert.equal(runtime.lastControlReason,'stop_persistence_failed');}
+ finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('guardian timeout still rejects when its Stop write throws',async()=>{
  const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);if(m.op==='stop')throw Error('closed pipe');};
