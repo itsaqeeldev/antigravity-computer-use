@@ -1128,6 +1128,14 @@ metadata durability or power-loss survival: Apple's [fsync documentation](https:
 describes additional drive-level limitations. Mac CI and physical crash/power
 qualification remain required for this change.
 
+Apple Silicon CI run `40981240381` at `ed47341` failed the competing-service
+test: the native helper exited but its structured refusal was not read before
+the JavaScript client reported a generic exit. The client now waits for stream
+closure before reporting a missing startup reply; a late native refusal retains
+its specific error, while late success from a dead helper still fails closed.
+Deterministic event-order tests pass on Windows. The exact fix still needs its
+own Mac CI results; this does not establish desktop acceptance.
+
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or

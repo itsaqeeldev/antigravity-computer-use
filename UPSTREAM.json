@@ -424,11 +424,11 @@
     },
     {
       "path": "server/service-lease.mjs",
-      "sha256": "584b737ff03605f8a17401d9e65d6450338965d3f2e08f5adedd8932cb49fb0e"
+      "sha256": "6e7d2224bf90733e0e062ee16bcff4c8cf3278ed899f4870a7f94f1fe6d0e3fe"
     },
     {
       "path": "tests/service-lease.test.mjs",
-      "sha256": "a929ab17f238a7f0d7f1528b61cd13b91a25ff96a2823dedc11a6def9e2c0fcd"
+      "sha256": "6505c16c28cb9b86700e521de642d9c9793f60de1ca2e586b891fe8a0b4c63ac"
     },
     {
       "path": "server/native/WindowGeometry.cs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "22cb3ff0156db437ba9f72be7f8ed944aa41c094354b7d49ca2d3ab2d831c87f"
+      "sha256": "66ffbfdc5c13949afa484f2e6ad1fe962c72f246c5b249d41694e2f028468597"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

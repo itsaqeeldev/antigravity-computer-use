@@ -35,10 +35,13 @@ export async function acquireServiceLease(directory,{spawnProcess=spawn,helper=e
   });
   child.once('exit',code=>{
    resolveExit(code);
-   if(!ready){fail(Object.assign(Error('Controller ownership helper exited before readiness.'),{code:'service_lease_exited'}));return;}
+   // stdout can still contain the structured refusal after exit. Node's
+   // close event fires only after the streams drain; preserve that response.
+   if(!ready)return;
    if(publishPending){const pending=publishPending;publishPending=null;clearTimeout(pending.timer);pending.reject(Object.assign(Error('Incident publication outcome is unknown.'),{code:'incident_publish_outcome_unknown'}));}
    if(!releasing)markLost();
   });
+  child.once('close',()=>{if(!ready)fail(Object.assign(Error('Controller ownership helper exited before readiness.'),{code:'service_lease_exited'}));});
  });
  lease.publishIncidents=bytes=>{
   lease.assertHeld();if(publishPending)throw Error('Incident publication already pending.');

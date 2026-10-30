@@ -7,6 +7,24 @@ import {storageOperation} from '../server/storage.mjs';
 import {rollbackGuarded} from '../scripts/rollback.mjs';
 const base=testDirectory('service-lease-tests');fs.mkdirSync(base,{recursive:true});
 const temporary=()=>fs.mkdtempSync(path.join(base,'owner-'));
+test('structured refusal survives helper exit before stdout is drained',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child});
+ process.nextTick(()=>{child.exitCode=1;child.emit('exit',1);child.stdout.write('{"ok":false,"error":{"code":"service_already_running","message":"Already owned."}}\n');child.emit('close',1);});
+ await assert.rejects(pending,e=>e.code==='service_already_running');
+});
+test('helper exit without a complete reply still fails closed',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child});
+ process.nextTick(()=>{child.exitCode=1;child.emit('exit',1);child.stdout.write('{');child.emit('close',1);});
+ await assert.rejects(pending,e=>e.code==='service_lease_exited');
+});
+test('a late success from an exited helper cannot grant ownership',async()=>{
+ const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.pid=process.pid;child.exitCode=null;child.signalCode=null;child.kill=()=>false;
+ const pending=acquireServiceLease(base,{helper:'inert',spawnProcess:()=>child,prepareStorage:async()=>{}});
+ process.nextTick(()=>{child.exitCode=1;child.emit('exit',1);child.stdout.write('{"ok":true,"lease_acquired":true}\n');child.emit('close',1);});
+ await assert.rejects(pending,e=>e.code==='service_ownership_lost');
+});
 test('native lease preparation refuses unrelated nonempty storage',async t=>{
  const dir=temporary(),file=path.join(dir,'unrelated.txt');fs.writeFileSync(file,'preserve');
  try{
