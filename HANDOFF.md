@@ -130,6 +130,16 @@ and `human_resume_required` with `replay_allowed: false`. This clears the
 physical Stop/cleanup boundary for that installed build. Human Re-arm and the
 second complete task without restarting Antigravity are still pending.
 
+## Mac permission-mode repair — 30 October 2026
+
+Commit `e7793fd` makes supported `--sidecar` installations default to
+`host-managed` permission mode unless an existing deployment explicitly chose a
+mode. This lets Antigravity’s Turbo/host permission policy authorize ordinary
+Mac actions without repeated standalone native approval modals. Emergency Stop,
+physical Esc, the native HUD latch and human-only re-arm remain independent of
+that permission mode. The Mac agent verified TextEdit and Calculator in
+host-managed mode with no repeated permission popups.
+
 ## Historical checkpoints
 
 ## 28 October stable Upscaly demo and remaining problems
