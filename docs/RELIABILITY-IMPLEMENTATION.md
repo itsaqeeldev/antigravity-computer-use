@@ -1326,3 +1326,11 @@ If cleanup itself fails after a submitted action, the response now retains both
 the `input_cleanup_failed` stop reason and `delivery_unknown`. Direct and batch
 IPC tests verify that remaining actions do not run and recovery guidance keeps
 the cleanup failure visible. This remains simulated transport coverage.
+
+Incident exports now use fixed operation, state and error-code categories;
+unknown identifiers become `unknown`, including when reading older journals.
+Agent feedback combinations remain fixed, and an older build ID is reported as
+unknown rather than accepting free-form stored text. Unlisted legitimate error
+codes lose specificity until deliberately added to the allowlist. Existing
+stored journals are not silently rewritten; exports are sanitized on read.
+Tests inspect the would-be GitHub title and body without making a network call.

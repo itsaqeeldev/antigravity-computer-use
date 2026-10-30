@@ -620,7 +620,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "87cf609ecc31ddfa2347ee9e721411a47aa54a7da56eaa3c0355e2f9eb3fb475"
+      "sha256": "3ff19ba17a6122b9bc0fecb3c5665cbe6a63e7324710ce08dc9c05626b55b384"
     },
     {
       "path": "scripts/update.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "4a0ce9d3644f8b7adbbc07931adabf347201d5ab8734417273cea51ef921ef69"
+      "sha256": "63fcc7443cb0166e95342c2535f5c11ab5759ddba154f9e07c6b982f9e3b554d"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -652,7 +652,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "8b1635473cd81fc6012ec752b61110ce519151c56873de038e5b48ac7adb06be"
+      "sha256": "c97bb05c4283e5789a5db169e93e735cbfd4b4d887738f725c57f5f3a461875f"
     },
     {
       "path": "tests/incident-concurrency.test.mjs",
