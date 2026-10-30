@@ -1,5 +1,12 @@
 # Reliability and updates implementation log
 
+When a scheduled-update or reporting timestamp is in the future after a wall
+clock correction, the candidate rebases it to the current time without an
+immediate network request. This avoids an indefinite future wait and preserves
+the normal daily/hourly throttle after the correction. Transaction fixtures
+cover update and consented-reporting scheduling; real system-clock changes,
+restart behavior and elapsed-time guarantees across clocks remain unqualified.
+
 On 30 October at 10:06 a.m. Pakistan time, a read-only Codex window inventory
 returned no targetable Antigravity or Upscaly window on the current desktop.
 Antigravity processes still existed, but process existence does not establish

@@ -38,7 +38,14 @@ async function updateLocked(target,command,{fetcher,adapters}){
  };
  const save=v=>writeAtomicJSON(stateFile,v);
  if(command==='scheduled'){
-  const now=Date.now(),last=read();
+  const now=Date.now();let last=read();
+  // A wall-clock correction must not postpone a check until an old future
+  // timestamp arrives. Rebase to now without checking immediately, keeping
+  // the existing minimum intervals instead of causing a network burst.
+  if(['attempt_at','reporting_at'].some(key=>Number.isFinite(last[key])&&last[key]>now)){
+   last={...last};for(const key of ['attempt_at','reporting_at'])if(Number.isFinite(last[key])&&last[key]>now)last[key]=now;
+   save(last);
+  }
   if(fs.existsSync(path.join(target,'update-switching.json'))){try{return await updateLocked(target,'recover',{fetcher,adapters});}catch{return {deferred:true,next_action:'inspect_interrupted_update'};}}
   if(settings.reporting&&(!last.reporting_at||now-last.reporting_at>=3600000)){
    const result=await (adapters.diagnostics||diagnostics)(path.join(target,'data'),{submit:true,target});

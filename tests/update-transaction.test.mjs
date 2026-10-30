@@ -190,6 +190,26 @@ test('scheduled reporting checks again after an empty journal but throttles atte
 test('offline checks retain the working installation and throttle scheduled retries',async()=>{
  const f=fixture();try{let attempts=0;const offline={...f,fetcher:async()=>{attempts++;throw Error('network_failure');}};await update(f.target,'scheduled',offline);await update(f.target,'scheduled',offline);assert.equal(attempts,1);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).last_error,'network_failure');}finally{f.cleanup();}
 });
+
+test('a backward clock correction rebases a future update check without a network burst',async()=>{
+ const f=fixture();try{
+  fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'notify',channel:'stable',reporting:false}));
+  const file=path.join(f.target,'update-state.json');fs.writeFileSync(file,JSON.stringify({attempt_at:Date.now()+86400000}));
+  await update(f.target,'scheduled',f);const first=f.fetches(),rebased=JSON.parse(fs.readFileSync(file));assert.equal(first,0);assert(rebased.attempt_at<=Date.now());
+  await update(f.target,'scheduled',f);assert.equal(f.fetches(),first);
+  rebased.attempt_at=Date.now()-86400001;fs.writeFileSync(file,JSON.stringify(rebased));await update(f.target,'scheduled',f);assert(f.fetches()>first);
+ }finally{f.cleanup();}
+});
+
+test('a future reporting timestamp is rebased without silently submitting reports',async()=>{
+ const f=fixture();try{
+  fs.writeFileSync(path.join(f.target,'update-settings.json'),JSON.stringify({mode:'manual',channel:'stable',reporting:true}));
+  const file=path.join(f.target,'update-state.json');fs.writeFileSync(file,JSON.stringify({reporting_at:Date.now()+7200000}));let calls=0;
+  f.adapters.diagnostics=async()=>{calls++;return{submitted:1};};await update(f.target,'scheduled',f);assert.equal(calls,0);
+  const state=JSON.parse(fs.readFileSync(file));assert(state.reporting_at<=Date.now());state.reporting_at=Date.now()-3600001;fs.writeFileSync(file,JSON.stringify(state));
+  await update(f.target,'scheduled',f);assert.equal(calls,1);
+ }finally{f.cleanup();}
+});
 test('a failed scheduled check never applies a previously staged update on a later tick',async()=>{
  const f=fixture();try{
   await update(f.target,'check',f);

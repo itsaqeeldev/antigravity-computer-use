@@ -624,7 +624,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "6bd160af2ab7fe641296537f813148754ce9d96f3f6f40eb3a55f8c079c17336"
+      "sha256": "7b24721e9b5be7b8b066ee9d75fa5b1e7369fc04013ef961d696cd19c7043fa5"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -640,11 +640,11 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "22f9aa5451e0d3334c6839910c6a521b46b922afd8e94760f47e81467a788ded"
+      "sha256": "d43bc44f47a92aeaaa2f59673f5b3106bccd50b34df337947794e4108ad34511"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "79b785887d240ec6728e37de21f76c0b7e3fd652b603a3ed7215e5aa539c00f8"
+      "sha256": "a2b797bcc150479c53164eec8aefd71cec2eaa724452522ee65bb41fb1146487"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
