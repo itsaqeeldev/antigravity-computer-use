@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "07d28cb15919c9979b2e228e3aa70e83f4a783278c62a9bad439ffab89963162",
+      "local_sha256": "e8c0805ac14cf836c684af6a28ca730fc679bf4a74539e8020438ac5ebfed049",
       "modified": true
     },
     {
@@ -276,7 +276,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "19d5158e1f483101ff0b2be222336e1698ffe3ee9ca8e28d89b32473b1a034dd"
+      "sha256": "2e3ca8af679f556f5f1df55fa575e625c87d44796728c223c4733e3fbd38b351"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "d916538a98fbcf2b4d23d8a9eeb7fc679c2a763944d471d9d1e6272d93891742"
+      "sha256": "d60e913da49bb50107f351ee622372ba33aadb07efd0ea64779748c7251e121b"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "1becfb28cf102233e090650beda020af5b0d14e583d933edbc08947d00239e3e"
+      "sha256": "64a28b8ca1c889f70cc19b463fdf42145750c1b34b5125c0a58c92872b838055"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
