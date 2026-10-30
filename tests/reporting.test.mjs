@@ -51,6 +51,12 @@ test('identifier-shaped task content is excluded from new and older incident exp
   await diagnostics(f.directory,{submit:true,target:f.target,acquire,run});assert.equal(submissions,2);
  }finally{f.clean();}
 });
+test('known native permission and file-dialog failures retain useful classifications',()=>{
+ const f=fixture(false);try{
+  for(const code of ['mac_permissions_required','file_dialog_path_mismatch','accessibility_denied'])f.i.record('computer_file_dialog',{error:{code}});
+  const values=f.i.read().map(item=>item.code);for(const code of ['mac_permissions_required','file_dialog_path_mismatch','accessibility_denied'])assert(values.includes(code));
+ }finally{f.clean();}
+});
 test('corrupt incident data is preserved and prevents recording or submission',async()=>{
  for(const corrupt of ['journal','ack','oversized']){const f=fixture(true);try{
   const file=corrupt==='ack'?f.i.ackFile:f.i.file,contents=corrupt==='oversized'?'x'.repeat(256*1024+1):'{broken';fs.writeFileSync(file,contents);

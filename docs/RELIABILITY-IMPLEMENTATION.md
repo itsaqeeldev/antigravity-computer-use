@@ -1334,6 +1334,8 @@ unknown rather than accepting free-form stored text. Unlisted legitimate error
 codes lose specificity until deliberately added to the allowlist. Existing
 stored journals are not silently rewritten; exports are sanitized on read.
 Tests inspect the would-be GitHub title and body without making a network call.
+Known literal native errors from the Windows and Mac hosts are included, so
+permission, display and file-picker failures retain their classifications.
 Reporting also reconciles an existing issue by its exact incident marker and
 platform when a legacy code is now sanitized, avoiding a duplicate or a stuck
 unknown-submission state after the upgrade. This is tested with mocked GitHub
