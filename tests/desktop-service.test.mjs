@@ -12,6 +12,7 @@ import {Incidents} from '../server/incidents.mjs';
 import {Runtime,appKey} from '../server/runtime.mjs';
 import {EventEmitter} from 'node:events';
 import {Driver} from '../server/driver.mjs';
+import {Sessions} from '../server/sessions.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
 
 test('direct command discovery exposes action schemas without source or session access',()=>{
  const click=describeCommand('click');assert.equal(click.command,'click');assert(click.inputSchema.required.includes('observation_id'));assert.deepEqual(click.inputSchema.properties.button.enum,['left','right','middle']);assert.equal(click.inputSchema.additionalProperties,false);
@@ -98,6 +99,17 @@ test('direct IPC refuses replay and unverified cleanup after task recovery',asyn
   assert.equal((await send('prepare_update')).prepared,false);
   const ended=await send('end');assert.equal(ended.error.code,'recovered_cleanup_unverified');assert.equal(ended.next_action,'inspect_prior_input_cleanup');assert.equal(cleanups,1);assert.equal((await send('status')).recovered_task,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,true);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('direct IPC runtime dispatch holds its native input fence',async t=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-ipc-input-fence-')),taskFile=path.join(dir,'task-state.json');
+ try{storageOperation('data',dir);}catch(error){if(['storage_unsafe_ancestor','insecure_storage_ancestor','storage_permissions_conflict'].includes(error.code)){fs.rmSync(dir,{recursive:true,force:true});t.skip('native private storage qualification refused: '+error.code);return;}throw error;}
+ const guardian=new EventEmitter();guardian.pid=101;guardian.send=()=>{};guardian.close=async()=>{};let calls=0;
+ const sessions=new Sessions({dir:path.join(dir,'sessions')});
+ const driver={info:{pid:102},epoch:1,async start(){},async abort(){},async call(op){if(op==='authorize')return {result:{sensitive:false}};assert.equal(op,'clipboard');calls++;await assert.rejects(acquireServiceLease(sessions.inputFence),e=>e.code==='service_already_running');const task=JSON.parse(fs.readFileSync(taskFile));assert.equal(task.dispatched,true);return {result:{fixture:true}};}};
+ const runtime=new Runtime({guardian,driver,sessions,taskFile});runtime.guardFile=path.join(dir,path.basename(runtime.guardFile));fs.writeFileSync(runtime.guardFile,'idle||0|');runtime.beginTask();fs.writeFileSync(runtime.guardFile+'.watchdog','103|12345');runtime.state='active';runtime.deadline=Date.now()+60000;
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));const send=(name,args={})=>request(session,name,args,10000,'standalone');
+ try{const reply=await send('clipboard',{reason:'Inert fence fixture'});assert.equal(reply.input_completed,true);assert.equal(calls,1);assert.equal((await send('end')).ended,true);assert.equal(JSON.parse(fs.readFileSync(taskFile)).open,false);}
+ finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 
 test('service shutdown removes its process signal handlers',async()=>{

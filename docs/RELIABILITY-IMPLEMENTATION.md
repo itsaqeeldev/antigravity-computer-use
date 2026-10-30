@@ -863,6 +863,11 @@ An additional real process-death fixture confirms that the next session refuses
 the dead owner's metadata, and can proceed only after its internal verified
 cleanup path clears the matching record under the native fence. The fixture's
 action sends no desktop input.
+An authenticated direct IPC integration test also routes an inert operation
+through the real Runtime, task record and native fence. A competing native
+lease is refused while dispatch is in progress, and End closes the task. The
+driver and guardian in that test are inert; this is not a desktop action or a
+concurrent Antigravity-task qualification.
 The fence only coordinates updated runtimes using the same data directory; it
 does not isolate conversations in one Sidecar (issue #7), coordinate separate
 installations, or establish safety against older runtimes that ignore the
