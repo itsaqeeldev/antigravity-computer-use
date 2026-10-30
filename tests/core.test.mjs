@@ -94,6 +94,12 @@ test('batch returns final image by default and uses fresh internal observations 
  assert.equal(seen[0].observe.with_image,false);assert.equal(seen[1].observe.with_image,true);
  assert.equal(seen[0].observation_id,'initial');assert.equal(seen[1].observation_id,'frame1');assert.equal(result.batch.completed.length,2);
 });
+test('save batch passes the post-click frame to the owner dialog and stops on path mismatch',async()=>{
+ const seen=[];const r={async action(op,args){seen.push({op,args});if(op==='file_dialog')throw Object.assign(Error('Filename did not match'),{code:'file_dialog_path_mismatch'});return {metadata:{observation_id:'after-save-click'}};}};
+ const result=await call(r,'computer_run',{hwnd:1,observation_id:'before',reason:'Save document',steps:[{kind:'click',index:8,risk:'routine'},{kind:'file_dialog',path:'D:/result.txt',action:'save',entry_method:'clipboard'},{kind:'key',keys:'enter'}]});
+ assert.equal(seen.length,2);assert.equal(seen[0].args.observation_id,'before');assert.equal(seen[1].op,'file_dialog');assert.equal(seen[1].args.hwnd,1);assert.equal(seen[1].args.observation_id,'after-save-click');
+ assert.equal(result.ok,false);assert.equal(result.error.code,'file_dialog_path_mismatch');assert.equal(result.completed.length,1);assert.equal(result.skipped,1);
+});
 
 test('post-input verification failure stops the batch with delivery evidence intact',async()=>{
  let delivered=0;const r={async action(){delivered++;return {input_completed:true,verification_error:{code:'capture_failed'}};}};

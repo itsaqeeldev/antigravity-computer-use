@@ -368,7 +368,7 @@
     },
     {
       "path": "tests/core.test.mjs",
-      "sha256": "6358219c9a8033e0e0531d1910f54b513599900264aebcf0e406c2adbad1bfb1"
+      "sha256": "a001cca1b47000236804b4fa0e8dd54a2683ca3296cd3f4830eabe5b63493d91"
     },
     {
       "path": "tests/workflow.test.mjs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "65b217b6e4b0447e84186bd6f02010d4aff44c215fecca18436cfed5aa364f43"
+      "sha256": "e7acc7d5672aa8c4578a371a8c88105371929d1df97ad5fb9a9ce9b4767b210b"
     },
     {
       "path": "HANDOFF.md",

@@ -42,7 +42,9 @@ Sonnet batch and 14.2 seconds after a Flash click. These gaps include all host
 work between calls; they do not identify model reasoning or prove that batching
 would remove them. The skill now shows the already-supported observed Save plus
 file-dialog batch, which still stops on failure and requires output verification.
-It needs a matched real-host benchmark before claiming any savings.
+An isolated batch regression confirms fresh-frame propagation and stopping on a
+path mismatch; it does not exercise a real native picker. The example needs a
+matched real-host benchmark before claiming any savings.
 
 Use a real app task in Antigravity and preserve its exact build, model, input,
 settings, prompt start time and final task receipt ID. Save all local test
