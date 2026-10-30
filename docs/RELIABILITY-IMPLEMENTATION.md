@@ -1142,6 +1142,13 @@ native input fence is scoped to one data directory and that host conversation
 ownership is not identified. A regression checks those limits; issues #7 and
 #10 remain open and this wording change does not implement task isolation.
 
+Issue #12 tracks a task-marker read hazard: a linked or dangling marker could
+previously be followed or mistaken for an absent task. The candidate reader
+now checks a single-link regular file, opens it without following links where
+supported, compares file identity, and fails closed if it disappears after
+inspection. Local updater, installation and recovery regressions pass; Mac
+link tests and real installation/update acceptance remain outstanding.
+
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or

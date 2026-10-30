@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "bb0cdd9e8e7294d3b848b210a56f91cb288cbfd7748fc3f9d17417bf70fd2cae"
+      "sha256": "18ac05d165d86bcbaa375185a827b2d46cca2ab123ecdc7256210efa70f88fef"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -736,11 +736,11 @@
     },
     {
       "path": "server/atomic-json.mjs",
-      "sha256": "11404f9109a693948096996ce4a4a970a1fa6621d67fb7245201d105404def45"
+      "sha256": "00ba5c6f6cb6a7ab7f3a6b5cb45e32a5419d42a7ca0ffa0560284ee8a567644e"
     },
     {
       "path": "tests/atomic-json.test.mjs",
-      "sha256": "c04bb06fbc7095560ccd25ae5fd11d23b7947f0bfa2c4316e6496952249d0147"
+      "sha256": "35edc7fa70ea65b1b6d6f070bf07432d2d0c0f90640dd12802603232eacf2c3e"
     },
     {
       "path": "tests/NativeRiskPolicyTests.cs",

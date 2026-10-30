@@ -1,14 +1,20 @@
 // Same-directory metadata publication. Flush the complete file before exposing
 // it; never truncate the previous recovery journal in place.
 import fs from 'node:fs';import path from 'node:path';import {randomUUID} from 'node:crypto';
-export function readTaskRecord(file){
- try{if(fs.statSync(file).size>1024)throw Error();const value=JSON.parse(fs.readFileSync(file,'utf8'));if(value?.schema!==1||typeof value.open!=='boolean')throw Error();
+export function readTaskRecord(file,{io=fs}={}){
+ let fd,observed=false;
+ try{const entry=io.lstatSync(file);observed=true;if(!entry.isFile()||entry.isSymbolicLink()||entry.nlink!==1||entry.size>1024)throw Error();
+  fd=io.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));const opened=io.fstatSync(fd);
+  if(!opened.isFile()||opened.nlink!==1||opened.size>1024||opened.dev!==entry.dev||opened.ino!==entry.ino)throw Error();
+  const value=JSON.parse(io.readFileSync(fd,'utf8'));if(value?.schema!==1||typeof value.open!=='boolean')throw Error();
   if(value.guard!==undefined&&(typeof value.guard!=='string'||!/^guard-[1-9][0-9]{0,9}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.state$/.test(value.guard)))throw Error();
   if(value.children!==undefined&&(!Array.isArray(value.children)||value.children.length>32||value.children.some(pid=>!Number.isSafeInteger(pid)||pid<=0||pid>4294967295)||new Set(value.children).size!==value.children.length))throw Error();
   if(value.dispatched!==undefined&&typeof value.dispatched!=='boolean')throw Error();
   if(value.watchdogs_complete!==undefined&&typeof value.watchdogs_complete!=='boolean')throw Error();
+  const current=io.lstatSync(file);if(!current.isFile()||current.isSymbolicLink()||current.nlink!==1||current.dev!==opened.dev||current.ino!==opened.ino)throw Error();
   return {open:value.open,guard:value.guard??null,children:value.children??null,dispatched:value.dispatched??null,watchdogs_complete:value.watchdogs_complete??null};}
- catch(error){if(error.code==='ENOENT')return {open:false,guard:null,children:null,dispatched:null,watchdogs_complete:null};throw Object.assign(Error('task_state_invalid: inspect private storage before continuing.'),{code:'task_state_invalid'});}
+ catch(error){if(error.code==='ENOENT'&&!observed)return {open:false,guard:null,children:null,dispatched:null,watchdogs_complete:null};throw Object.assign(Error('task_state_invalid: inspect private storage before continuing.'),{code:'task_state_invalid'});}
+ finally{if(fd!==undefined)io.closeSync(fd);}
 }
 export function readTaskState(file){return readTaskRecord(file).open;}
 export function writeAtomicJSON(file,value,{exclusive=false,io=fs}={}){
