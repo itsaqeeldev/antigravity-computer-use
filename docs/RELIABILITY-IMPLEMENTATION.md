@@ -1136,6 +1136,12 @@ its specific error, while late success from a dead helper still fails closed.
 Deterministic event-order tests pass on Windows. The exact fix still needs its
 own Mac CI results; this does not establish desktop acceptance.
 
+Peer descriptions no longer call every controller a Claude session or claim
+that shared Sidecar conversations have separate grants. They state that the
+native input fence is scoped to one data directory and that host conversation
+ownership is not identified. A regression checks those limits; issues #7 and
+#10 remain open and this wording change does not implement task isolation.
+
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or

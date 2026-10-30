@@ -48,7 +48,7 @@
     {
       "path": "server/sessions.mjs",
       "upstream_sha256": "09563923bcd19974f2882855c8b23883038e13942c6583c861b4e22cc274ebe0",
-      "local_sha256": "7667d27f843887e080f05ce7488c3e9da36e43ab67a8ae92b508141d5c098ce8",
+      "local_sha256": "fad7e782980f0d9add3d66fedd2d15c476c766814b96ceb7d5b4cd50275b05fa",
       "modified": true
     },
     {
@@ -248,7 +248,7 @@
     },
     {
       "path": "tests/session-safety.test.mjs",
-      "sha256": "001dfc98b13012a672670bda39659a392721126b719e502c236dbf61d3c29e68"
+      "sha256": "03b234936eebbf626a39eaf8951ba21957cc2bb2260fcce355acca8b9dcceb13"
     },
     {
       "path": "tests/recording-visuals-live.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "66ffbfdc5c13949afa484f2e6ad1fe962c72f246c5b249d41694e2f028468597"
+      "sha256": "bb0cdd9e8e7294d3b848b210a56f91cb288cbfd7748fc3f9d17417bf70fd2cae"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

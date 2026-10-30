@@ -3,6 +3,12 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {EventEmitter,once} from 'node:events';import {storageOperation} from '../server/storage.mjs';import {acquireServiceLease} from '../server/service-lease.mjs';
 import {spawn} from 'node:child_process';
 const inertFence=()=>({assertHeld(){},async release(){}});
+test('peer guidance describes only the scope actually coordinated',()=>{
+ const s=new Sessions({dir:testDirectory('peer-guidance'),sessionId:'advisory'});s.peers=()=>[{pid:123,label:'session 2',session_id:'different'}];
+ const note=s.note(null,{always:true}),description=s.describe();
+ assert.match(note,/only within this data directory/);assert.match(note,/sharing one Sidecar are not identified/);
+ assert.match(description,/registrations in this data directory/);assert.doesNotMatch(note+description,/Claude|grants.*never shared/i);
+});
 test('unavailable input lease fails closed without executing action',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-lease-'));const s=new Sessions({dir,acquireInputLease:async()=>inertFence()});s.lease=path.join(dir,'missing','input.lease');let executed=false;
  await assert.rejects(s.withInput('click',{},async()=>{executed=true;}),e=>e.code==='input_lease_unavailable');assert.equal(executed,false);

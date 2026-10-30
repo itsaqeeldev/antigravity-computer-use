@@ -1,26 +1,8 @@
-// More than one Claude on one desktop.
-//
-// Coexistence with the human is handled in the host, by reading the kernel's
-// injected-input flag. That flag cannot answer the other question: when a
-// second Claude Code session is driving the same machine, its input is flagged
-// injected too, so every session sees another session's typing as "not the
-// user" and happily types over the top of it.
-//
-// Two agents sharing one pointer, one foreground window and one keyboard is not
-// something to detect after the fact. Sessions registered under the same data
-// directory take a native input fence before actions. Separate installations
-// have separate directories and are not coordinated by this fence. The result is:
-//
-//   - actions from different sessions never interleave, they queue
-//   - each session can name the others, and say what they last touched
-//   - two sessions working in the SAME window is called out, because that is
-//     the case where two correct agents still produce nonsense
-//   - the on-screen banners stack instead of hiding one another, so a Stop
-//     button exists for every session that is running
-//
-// Everything here is plain files: no daemon, no port, no dependency. A session
-// that dies takes nothing with it - its registration is pruned by the next
-// session to look, and its lease is stolen once it stops breathing.
+// Sessions under the same data directory serialize input through a native
+// fence. Registration and peer descriptions are advisory, not task identity.
+// A shared Sidecar currently cannot distinguish host conversations (#7), and
+// separate installations are not coordinated (#10). A stale action lease is
+// retained until prior input cleanup is verified; it is never stolen by age.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -28,7 +10,7 @@ import path from 'node:path';
 import { dataDir } from './build.mjs';
 import { acquireServiceLease } from './service-lease.mjs';
 
-// Liveness is the pid, not the clock: a Claude session sitting idle for ten
+// Liveness is the pid, not the clock: a session sitting idle for ten
 // minutes is still running, still owns its banner row, and must not have its
 // slot handed to someone else. A quiet registration is only reported as quiet.
 const STALE_MS = 90_000;
@@ -46,8 +28,8 @@ const POLL_MS = 40;
 export class LeaseBusy extends Error {
   constructor(holder) {
     super(holder && holder.label
-      ? `Another Claude session (${holder.label}, pid ${holder.pid}) is still running its own ${holder.op || 'action'}.`
-      : 'Another Claude session is holding the input lease.');
+      ? `Another controller (${holder.label}, pid ${holder.pid}) is still running its own ${holder.op || 'action'}.`
+      : 'Another controller is holding the input lease.');
     this.code = 'another_session_busy';
     this.holder = holder;
   }
@@ -79,9 +61,7 @@ function writeJson(file, obj) {
 
 export class Sessions {
   constructor({ dir, pid = process.pid, now = () => Date.now(), monotonic = () => performance.now(), sleep, isAlive, sessionId = null, acquireInputLease = acquireServiceLease, onInputLeaseLost = null } = {}) {
-    // The Claude Code session (conversation) this server belongs to. A resumed
-    // conversation keeps its id and gets a new server process, so this is what
-    // tells "an earlier process of this same conversation" from another Claude.
+    // An optional advisory identifier. It is not a host-authenticated task ID.
     this.sessionId = sessionId || null;
     this.dir = dir || path.join(dataDir(), 'sessions');
     this.lease = path.join(this.dir, 'input.lease');
@@ -97,7 +77,7 @@ export class Sessions {
     this.label = 'session 1';
     this.me = null;
     // Calls inside one session queue in memory rather than fighting over the
-    // lease file - Claude Code can issue two tool calls at once, and two of our
+    // lease file - a host can issue two tool calls at once, and two of our
     // own actions racing is the same hazard as two sessions racing.
     this._chain = Promise.resolve();
     this._held = 0;
@@ -325,17 +305,17 @@ export class Sessions {
       return `${p.label} (pid ${p.pid}${p.idle ? ', idle' : ''}): ${what}`;
     };
     // After a resume the conversation's previous server can still be alive.
-    // It is this conversation, not another Claude, and is named as such.
+    // This is an advisory identifier, not authenticated host ownership.
     const mine = peers.filter((p) => this.sameConversation(p));
     const others = peers.filter((p) => !this.sameConversation(p));
     let s = '';
     if (others.length) {
       const whoElse = others.map(describePeer).join('; ');
-      s += `[${others.length} other Claude session${others.length > 1 ? 's share' : ' shares'} this desktop: ${whoElse}. ` +
-           `Input is serialised; grants and snapshots are not shared.]\n`;
+      s += `[${others.length} other controller registration${others.length > 1 ? 's' : ''}: ${whoElse}. ` +
+           `Input is serialised only within this data directory. Host conversations sharing one Sidecar are not identified here.]\n`;
     }
     if (mine.length) {
-      s += `[an earlier process of this same conversation is still running (pid ${mine.map((p) => p.pid).join(', ')}, from before a resume); input is serialised with it.]\n`;
+      s += `[a controller with the same advisory session ID is still running (pid ${mine.map((p) => p.pid).join(', ')}); input is serialised within this data directory.]\n`;
     }
     if (clash.length) {
       s += `[WARNING: ${clash.map((p) => p.label).join(', ')} acted in THIS SAME WINDOW moments ago. ` +
@@ -348,16 +328,16 @@ export class Sessions {
     const peers = this.peers();
     const h = this.holder();
     const lines = [`this session: ${this.label} (pid ${this.pid})`];
-    if (!peers.length) lines.push('other Claude sessions on this computer: none');
+    if (!peers.length) lines.push('other controller registrations in this data directory: none');
     else {
-      lines.push(`other Claude sessions on this computer: ${peers.length}`);
+      lines.push(`other controller registrations in this data directory: ${peers.length}`);
       for (const p of peers) {
         const last = p.last_op
           ? `${p.last_op}${p.last_title ? ` in "${p.last_title}"` : ''}, ${Math.round((this.now() - Number(p.last_at || 0)) / 1000)}s ago`
           : 'nothing yet';
         lines.push(`  ${p.label} (pid ${p.pid})${p.idle ? ' idle' : ''} - last action: ${last}`);
       }
-      lines.push('  input is serialised across sessions; grants are per session and never shared');
+      lines.push('  input is serialised within this data directory; shared Sidecar conversations are not identified');
     }
     if (h && Number(h.pid) !== this.pid) lines.push(`input lease: held by ${h.label} for ${h.op}`);
     if (this.leaseless) lines.push('input lease: UNAVAILABLE - input actions are refused.');
