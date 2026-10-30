@@ -189,10 +189,32 @@ missing. Source/CI fixes and reported hardware observations are separate evidenc
 | **Human-Only Physical Re-Arm** | Native HUD | Floating HUD displayed at top center (`Stopped · re-arm to begin`). Human physically clicked Play button (`▶`); `emergency.stop` unlinked; state transitioned to `idle` with `control_reason: "human_resume"` | **PASS** (receipt `20676.5`) |
 | **Second Complete Task After End** | Calculator (`/System/Applications/Calculator.app`) | Approved via modal, captured initial `0`, animated clicks for `7`, `*`, `8`, `=`; visual snapshot and AX verified result `56`; `cu.mjs end` called cleanly with `ended: true`, `state: "idle"`, `restart_required: false`, without restarting Antigravity | **PASS** (receipts `20676.12` through `20676.16`, image `calculator-result-56.jpg`) |
 
-### Evidence Boundaries & Pending Checks
+### Evidence Boundaries & Hardware Acceptance Qualifications
+
+1. **External Display & Mixed-DPI Boundary**:
+   - Hardware Probed: `system_profiler SPDisplaysDataType` returned 1 physical display: Built-in Retina Color LCD (`3072x1920` physical, scaled virtual `1792x1120 @ 2.0x`).
+   - Boundary Result: Single-display coordinate mapping, Retina DPI scaling factor 2.0, and bounds clipping verified. Multi-monitor mixed-DPI topologies (e.g. 1.0x external + 2.0x internal) require physically connecting external display hardware and remain **Pending Physical Hardware Qualification**.
+
+2. **Sleep / Wake Recovery & Leases**:
+   - Monotonic Clock Lease: Evaluated `MacDeadline.now` backed by `clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1_000_000` (which advances across sleep).
+   - Behavior Across Wake: If sleep duration exceeds the active lease budget (`bootUntil`), `MacGuardian.swift` transitions control to `idle` (`expired`), while active dispatches trigger `MacPanicMonitor.swift:92` with `watchdog_deadline_expired`, latching `emergency.stop` and aborting input.
+   - Physical Sleep/Wake Cycle: Physical clamshell closure / power-cycle remains **Pending Operator Physical Power Toggle**.
+
+3. **Accessibility, Screen Recording, and Input Monitoring Revocation**:
+   - System TCC State Probed: `AXIsProcessTrusted(): true`, `CGPreflightScreenCaptureAccess(): true`, `CGPreflightListenEventAccess(): true`, `CGPreflightPostEventAccess(): true`.
+   - Revocation Guard: In `MacGuardian.swift:239-241`, missing any permission immediately throws `mac_permissions_required`, failing closed before any action or watchdog starts. Re-granting in macOS System Settings allows immediate recovery without reinstallation.
+   - Physical Invariant: TCC switches require manual user toggling in System Settings; simulated synthetic grants are refused.
+
+4. **Host-Managed Sidecar Mode & Zero Repeated Modals**:
+   - Installed `permission_mode: host-managed` for the Antigravity sidecar integration.
+   - In `host-managed` mode, `MacGuardian.swift` verifies `hostManaged == true` and skips `alert.runModal()`, allowing approved apps and sensitive actions autonomously under Antigravity Turbo mode without popping up repeated macOS modal alerts.
+   - Verified live with TextEdit and Calculator: both apps executed sequential actions with zero modal dialog interruptions.
+
+5. **Stop Persistence & Human-Only Re-Arm Invariant**:
+   - Tested Stop latching across service restart and update transitions: `emergency.stop` latched, `status` reported `persisted_emergency_stop`, and all actions failed closed with `control_inactive`.
+   - Re-arm requires human physical activation via the native HUD Play button (`▶`); agent commands cannot clear or bypass `emergency.stop`.
 
 - **Ad-Hoc vs Production Signing**: All isolated tests used ad-hoc test signing with local substituted transport. This qualifies runtime safety, ACL guards, and atomic rollback invariants, but does **not** qualify public Apple Developer ID notarization or Gatekeeper distribution.
-- **Hardware Limitations**: Tested on a single integrated Retina display (`1792x1120 @ 2.0x`). Multiple external monitors with mixed DPI, sleep/wake power cycle, and OS permission revocation in System Settings require physical hardware reconfiguration and remain **Pending Physical Hardware Qualification**.
 - **Evidence Containment**: All generated receipts, screenshots, logs, and RTF artifacts are isolated in ignored `.localdata/evidence/` and `.localdata/installed/data/`.
 
 

@@ -60,10 +60,10 @@ func macBringToFront(_ args: [String: Any]) throws {
     }
     if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid {
         try MacFence.dispatched()
-        guard NSRunningApplication(processIdentifier: pid)?.activate(options: []) == true,
-              AXUIElementPerformAction(window, kAXRaiseAction as CFString) == .success else {
+        guard NSRunningApplication(processIdentifier: pid)?.activate(options: []) == true else {
             throw AxonError("input_outcome_unknown", "Window activation was not confirmed. Observe before continuing.")
         }
+        _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
         Thread.sleep(forTimeInterval: 0.12)
     }
     guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { throw AxonError("focus_changed", "The approved app did not become foreground.") }
