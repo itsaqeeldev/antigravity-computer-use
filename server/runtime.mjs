@@ -16,7 +16,7 @@ import {storageOperation} from './storage.mjs';
 import {contract,nativePlatform,launchTarget,executableKey} from './platform.mjs';
 import {Incidents} from './incidents.mjs';
 import {updateNotice} from './update-notice.mjs';
-import {recoveryAdvice,priorWindowsCleanupVerified} from './recovery.mjs';
+import {recoveryAdvice,priorWindowsCleanupVerified,priorMacCleanupVerified} from './recovery.mjs';
 import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
@@ -229,11 +229,49 @@ export class Runtime {
     return (await this.driver.call('identity',{hwnd:Number(hwnd)})).result;
   }
   async app(hwnd){
-    const identity=await this.identity(hwnd);
+    const handle=Number(hwnd);
+    const stale=(this.staleHandles??=new Set());
+    const known=(this.knownWindows??=new Map());
+    const failures=(this.windowFailures??=new Map());
+    if(stale.has(handle)){
+      throw Object.assign(Error('Repeated poll of stale window handle refused. Run apps once to discover current windows; do not poll the stale handle.'),{code:'identity_changed',repeated_failure:true,recovery_attempts_remaining:0});
+    }
+    let identity;
+    try{identity=await this.identity(handle);}
+    catch(error){
+      const wasKnown=known.has(handle)||Array.from(this.frames?.values()||[]).some(f=>Number(f?.hwnd)===handle);
+      if(error.code==='identity_changed'||(error.code==='window_not_found'&&wasKnown)){
+        stale.add(handle);
+        throw Object.assign(Error('Target window handle is stale because the window closed or its identity changed. Run apps once to discover current windows; do not poll the stale handle.'),{code:'identity_changed',recovery_attempts_remaining:0});
+      }
+      if(error.code==='window_not_found'){
+        const prior=failures.get(handle);
+        if(prior?.code==='window_not_found'){
+          prior.attempts+=1;
+          throw Object.assign(Error(error.message),{code:'window_not_found',repeated_failure:true,recovery_attempts_remaining:0});
+        }
+        failures.set(handle,{code:'window_not_found',attempts:1,recoverable:false,recoveryTried:true});
+        throw Object.assign(Error(error.message),{code:'window_not_found',recovery_attempts_remaining:0});
+      }
+      throw error;
+    }
     const wins=(await this.driver.call('list_apps',{include_hidden:true})).result.windows;
-    const listed=wins.find(w=>Number(w.hwnd)===Number(hwnd));
-    if(!listed)fail('window_not_found','Refresh computer_apps; target closed.');
+    const listed=wins.find(w=>Number(w.hwnd)===handle);
+    if(!listed){
+      if(known.has(handle)){
+        stale.add(handle);
+        throw Object.assign(Error('Target window handle is stale because the window closed. Run apps once to discover current windows; do not poll the stale handle.'),{code:'identity_changed',recovery_attempts_remaining:0});
+      }
+      fail('window_not_found','Refresh computer_apps; target closed.');
+    }
     const w={...listed,...identity};
+    const key=appKey(w);
+    const priorKnown=known.get(handle);
+    if(priorKnown&&priorKnown.key!==key){
+      stale.add(handle);
+      throw Object.assign(Error('Target process or window identity changed since discovery. Run apps once to discover current windows; do not poll the stale handle.'),{code:'identity_changed',recovery_attempts_remaining:0});
+    }
+    known.set(handle,{pid:w.pid,started:w.started,path:w.path,key});
     this.guardian.send({op:'attach',pid:this.driver.info?.pid});
     if([process.pid,process.ppid,this.driver.info?.pid,this.guardian.pid].includes(w.pid)||classify(w).tier===TIER.BLOCKED)
       fail('protected_app','This is a protected app or the control/host UI.');
@@ -267,11 +305,28 @@ export class Runtime {
       await new Promise(resolve=>setTimeout(resolve,Math.min(2000,Math.max(0,args.settle_ms))));
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting for the UI. Observe again after authorized Resume.');
     }
-    if(w.other_desktop)fail('other_desktop','Target is still running on another virtual desktop. Bring that app to the current desktop before requesting pixels; do not relaunch or click the visible desktop.');
-    if(w.minimized)fail('window_minimized','Target is minimized. Focus it, then take a fresh observation.');
+    const handle=Number(args.hwnd);
+    const failures=(this.windowFailures??=new Map());
+    const failWindowState=(code,message,recoverable)=>{
+      const prior=failures.get(handle);
+      if(prior&&prior.code===code&&!prior.recoveryCleared){
+        prior.attempts+=1;
+        throw Object.assign(Error(`Repeated poll of unavailable window refused (${code}). ${message}`),{code,repeated_failure:true,recovery_attempts_remaining:0});
+      }
+      if(prior&&prior.code===code&&prior.recoveryCleared){
+        prior.attempts+=1;prior.recoveryCleared=false;
+        throw Object.assign(Error(`Bounded recovery did not make the window available (${code}). ${message}`),{code,repeated_failure:true,recovery_attempts_remaining:0});
+      }
+      failures.set(handle,{code,attempts:1,recoverable,recoveryTried:!recoverable,recoveryCleared:false});
+      throw Object.assign(Error(message),{code,recovery_attempts_remaining:recoverable?1:0});
+    };
+    if(w.fullscreen)failWindowState('window_fullscreen','Target window is in macOS full-screen mode (a separate full-screen Space). Exit full-screen mode yourself to return the window to the normal Space, then observe again; no Space was switched.',false);
+    if(w.other_desktop)failWindowState('other_desktop','Target is still running on another virtual desktop or macOS Mission Control Space. Bring that app to the current desktop/Space yourself before requesting pixels; do not relaunch or click the visible desktop.',false);
+    if(w.minimized)failWindowState('window_minimized','Target is minimized. Focus it, then take a fresh observation.',true);
+    if(w.hidden)failWindowState('window_hidden','Target application is hidden. Focus it once, then take a fresh observation.',true);
     if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the snapshot could start. Inspect the app; do not replay prior input.');
     this.guardian.send({op:'activity',action:'observe'});
-    const metadata={...this.stamp(),hwnd:Number(args.hwnd),__pid:w.pid,__started:w.started};
+    const metadata={...this.stamp(),hwnd:handle,__pid:w.pid,__started:w.started};
     const query=String(args.query||'').trim().toLowerCase();
     // Query the larger bounded tree before filtering; a compact reply must not
     // prevent discovery of controls late in a real application's hierarchy.
@@ -291,7 +346,7 @@ export class Runtime {
       .replaceAll('raise max_nodes or use interactive_only','use query or raise max_nodes up to 500')
       .replace(/\[~\d+ tokens\. Re-read[^\]]+\]/g,'[Use query to return matching controls, or max_nodes up to 500 for more rows.]');
     const capturedMono=performance.now();
-    const response={observation_id:randomUUID(),hwnd:Number(args.hwnd),app:w.path,at:Date.now(),tree:rendered,tree_incomplete:treeIncomplete,elements:nodes};
+    const response={observation_id:randomUUID(),hwnd:handle,app:w.path,at:Date.now(),tree:rendered,tree_incomplete:treeIncomplete,elements:nodes};
     let image;
     if(args.with_image!==false){
       const prepareBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now())))+1000:null;
@@ -302,10 +357,17 @@ export class Runtime {
         const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
          image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80},captureBudget!==null?{timeoutMs:captureBudget+WAIT_TRANSPORT_GRACE_MS}:undefined)).result;
       }
+      catch(error){
+        if(['window_capture_unavailable','other_desktop','window_fullscreen','window_minimized','window_hidden','mac_permissions_required'].includes(error.code)){
+          failWindowState(error.code,error.message,['window_minimized','window_hidden','window_capture_unavailable'].includes(error.code));
+        }
+        throw error;
+      }
       finally { this.guardian.send({op:'capture_end'}); }
-      if(image.capture==='screen_occluded')fail('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.');
+      if(image.capture==='screen_occluded')failWindowState('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.',true);
       response.image={...image};delete response.image.data;
     }
+    failures.delete(handle);
     this.check();
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
     for(const [id,frame] of this.frames){const age=Date.now()-frame.at,monoAge=Object.hasOwn(frame,'atMono')?performance.now()-frame.atMono:null;if(!Number.isFinite(frame.at)||!Number.isFinite(age)||age<0||age>contract.frame_ms||(monoAge!==null&&(!Number.isFinite(frame.atMono)||!Number.isFinite(monoAge)||monoAge<0||monoAge>contract.frame_ms))||frame.workerEpoch!==workerEpoch)this.frames.delete(id);}
@@ -319,7 +381,17 @@ export class Runtime {
     if('confirmed' in args||'preapprove' in args)fail('model_approval_forbidden','Model-supplied approval flags are not accepted.');
     const w=args.hwnd!=null?await this.grant(Number(args.hwnd),args.reason):null;
     this.check();if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
-    if(op==='fit_window'){if(w?.other_desktop)fail('other_desktop','Bring the approved window to the current virtual desktop before fitting it. No desktop switch was performed.');this.frames.clear();}
+    if(op==='focus'||op==='fit_window'){
+      if(w?.fullscreen)throw Object.assign(Error('Bring the approved window out of macOS full-screen mode yourself before focusing or fitting it. No Space switch was performed.'),{code:'window_fullscreen',recovery_attempts_remaining:0});
+      if(w?.other_desktop)throw Object.assign(Error('Bring the approved window to the current virtual desktop before fitting or focusing it. No desktop switch was performed.'),{code:'other_desktop',recovery_attempts_remaining:0});
+      const failures=(this.windowFailures??=new Map());
+      const prior=w?failures.get(Number(w.hwnd)):null;
+      if(prior){
+        if(prior.recoveryTried)throw Object.assign(Error(`Bounded recovery attempt already used for this window (${prior.code}). Wait for human recovery instead of polling repeatedly.`),{code:prior.code,repeated_failure:true,recovery_attempts_remaining:0});
+        prior.recoveryTried=true;prior.recoveryCleared=true;
+      }
+      if(op==='fit_window')this.frames.clear();
+    }
     const generation=this.generation;
     const payload={...args,...this.stamp(),mode:'take',__risk:args.risk==='routine'?'routine':'sensitive'};
     delete payload.risk;delete payload.reason;delete payload.observation_id;delete payload.observe;
@@ -466,7 +538,7 @@ export class Runtime {
         const record=readTaskRecord(this.taskFile);
         if(record.open&&record.guard===this.priorGuard&&record.dispatched===this.priorDispatched&&record.watchdogs_complete===this.priorWatchdogsComplete&&JSON.stringify(record.children)===JSON.stringify(this.priorChildren)&&record.guard&&record.dispatched===true){
           const directory=path.dirname(this.taskFile);storageOperation('verify-data-tree',directory);
-          verified=priorWindowsCleanupVerified(directory,record);
+          verified=priorWindowsCleanupVerified(directory,record)||priorMacCleanupVerified(directory,record);
         }
       }catch{}
       if(!verified)fail('recovered_cleanup_unverified','Prior-session input cleanup is unverified. Keep the task open and inspect the previous native ledger; do not repeat input or force an update.');

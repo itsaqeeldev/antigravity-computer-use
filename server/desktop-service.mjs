@@ -140,7 +140,7 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
           queueIncident(name,reply);
           finished=true;socket.end(JSON.stringify(reply)+'\n');
         }finally{if(!control)busy=false;}
-      })().catch(error=>{finished=true;const result={ok:false,...(safeWaitMetrics(error.wait_metrics)?{wait_metrics:safeWaitMetrics(error.wait_metrics)}:{}),...(error.delivery_unknown===true||error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));queueIncident(ticket?.command,result);if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
+      })().catch(error=>{finished=true;const result={ok:false,...(safeWaitMetrics(error.wait_metrics)?{wait_metrics:safeWaitMetrics(error.wait_metrics)}:{}),...(error.delivery_unknown===true||error.code==='input_outcome_unknown'?{delivery_unknown:true,observe_before_continuing:true}:{}),...(error.repeated_failure===true?{repeated_failure:true}:{}),...(Number.isSafeInteger(error.recovery_attempts_remaining)?{recovery_attempts_remaining:error.recovery_attempts_remaining}:{}),error:{code:error.code||'refused',message:error.message,...(error.hint?{hint:error.hint}:{})}};Object.assign(result,recoveryAdvice(result));queueIncident(ticket?.command,result);if(ticket)result.receipt=receipts.finish(ticket,result);socket.end(JSON.stringify(result)+'\n');});
     });
   });
   server.on('error',()=>shutdown().catch(()=>{}));

@@ -1,5 +1,19 @@
 # Current qualification status — 30 October 2026
 
+## Final Intel Mac Space/capture & Liquid Glass HUD qualification — 30 October 2026
+
+Branch `codex/argon-final-mac` (from `v0.3.0-beta.3`, `b33940c`) repairs macOS
+Chrome and Space window capture (`_AXUIElementGetWindow` direct `CGWindowID`
+binding, browser/profile title suffix matching, off-Space `WindowRegistry`
+retention, retired-handle `identity_changed` detection, and 5-state
+deterministic failure classification with bounded recovery), upgrades the macOS
+control bar to Apple's native `NSGlassEffectView` with pure filled Phosphor
+Icons (no status dot, no strokes, high-contrast emergency crimson tint), and
+adds `priorMacCleanupVerified` for recovered macOS tasks. Live Chrome normal
+Space, minimized, hidden, full-screen, other-Space, twin-window and closed-handle
+checks passed on Intel macOS 26.6.2 (receipts `34634.4`–`34634.24`; see
+[docs/MACOS-QUALIFICATION.md](docs/MACOS-QUALIFICATION.md)).
+
 ## Mac covering-window repair integrated — 30 October 2026
 
 Mac PR #27’s covering-window repair and PR #28’s standalone file-dialog repair

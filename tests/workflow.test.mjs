@@ -1,6 +1,7 @@
 import {testDirectory} from './paths.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {Runtime,savedTakeoverMode,appKey,queryNodes} from '../server/runtime.mjs';
 import {Driver} from '../server/driver.mjs';
+import {failureReply} from '../scripts/desktop.mjs';
 import {EventEmitter} from 'node:events';import fs from 'node:fs';
 import path from 'node:path';import {dataDir} from '../server/build.mjs';
 import {spawn} from 'node:child_process';
@@ -322,4 +323,158 @@ test('Stop invalidates an action waiting for the shared input lease before it ca
   await inLease;await r.stop();release();
   await assert.rejects(action,error=>error.code==='control_inactive');assert.equal(delivered,0);assert.equal(r.state,'stopped');
  }finally{release();fs.unlinkSync(r.guardFile);}
+});
+
+test('Space mismatch and full-screen windows fail closed with distinct classifications and refuse repeated polling',async()=>{
+ let snapshots=0,screenshots=0,delivered=0;
+ const w={hwnd:11,pid:50,started:'one',path:'/Applications/Google Chrome.app',rect:[0,0,1200,800],other_desktop:true,fullscreen:false};
+ const r={generation:1,deadline:Date.now()+10000,remaining:10,frames:new Map(),async grant(){return w;},async app(){return w;},check(){},stamp(){return {};},
+  guardian:{send(){},async request(){}},sessions:{async withInput(_op,_meta,fn){return fn();}},
+  driver:{epoch:1,info:{pid:99},async start(){},async call(op){if(op==='snapshot')snapshots++;if(op==='screenshot')screenshots++;if(op==='focus'||op==='fit_window')delivered++;return {result:{}};}}};
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:11}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'other_desktop');
+  assert.equal(reply.next_action,'await_human_space_switch');
+  assert.equal(reply.recovery_attempts_remaining,0);
+  assert.equal(reply.replay_allowed,false);
+  assert.equal(reply.repeated_failure,undefined);
+  return true;
+ });
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:11}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'other_desktop');
+  assert.equal(reply.next_action,'await_human_space_switch');
+  assert.equal(reply.repeated_failure,true);
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
+ await assert.rejects(Runtime.prototype.action.call(r,'focus',{hwnd:11,risk:'routine',reason:'Must not switch Space'}),err=>err.code==='other_desktop'&&err.recovery_attempts_remaining===0);
+ assert.equal(snapshots,0);assert.equal(screenshots,0);assert.equal(delivered,0);
+
+ w.other_desktop=false;w.fullscreen=true;
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:11}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_fullscreen');
+  assert.equal(reply.next_action,'await_human_fullscreen_exit');
+  assert.equal(reply.recovery_attempts_remaining,0);
+  assert.equal(reply.replay_allowed,false);
+  return true;
+ });
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:11}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_fullscreen');
+  assert.equal(reply.repeated_failure,true);
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
+ await assert.rejects(Runtime.prototype.action.call(r,'fit_window',{hwnd:11,risk:'routine',reason:'Must not exit full-screen'}),err=>err.code==='window_fullscreen');
+ assert.equal(snapshots,0);assert.equal(screenshots,0);assert.equal(delivered,0);
+});
+
+test('minimized and hidden windows allow one bounded focus recovery attempt and refuse repeated polling without replay',async()=>{
+ let focused=0;
+ const w={hwnd:22,pid:60,started:'one',path:'/System/Applications/TextEdit.app',rect:[10,10,600,400],minimized:true,hidden:false};
+ const r={generation:1,deadline:Date.now()+10000,remaining:10,frames:new Map(),async grant(){return w;},async app(){return w;},check(){},recordDispatch(){},stamp(){return {};},observe:Runtime.prototype.observe,
+  guardian:{send(){},async request(){}},sessions:{async withInput(_op,_meta,fn){return fn();}},
+  driver:{epoch:1,info:{pid:99},async start(){},async call(op){
+   if(op==='authorize')return {result:{sensitive:false}};
+   if(op==='focus'){focused++;return {result:{focused:true}};}
+   if(op==='snapshot')return {result:{snapshot_id:'s1',nodes:[{i:1,role:'Window',name:'Doc'}]}};
+   if(op==='screenshot')return {result:{capture:'window',width:600,height:400,source:[10,10,600,400],data:'img'}};
+   throw Error('unexpected op '+op);
+  }}};
+ // First observe on minimized window returns 1 bounded recovery attempt.
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:22}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_minimized');
+  assert.equal(reply.next_action,'focus_target_then_observe');
+  assert.equal(reply.recovery_attempts_remaining,1);
+  assert.equal(reply.replay_allowed,false);
+  return true;
+ });
+ // Polling observe again without focusing refuses as repeated_failure.
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:22}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_minimized');
+  assert.equal(reply.repeated_failure,true);
+  assert.equal(reply.recovery_attempts_remaining,0);
+  assert.equal(reply.next_action,'await_human_window_recovery');
+  return true;
+ });
+ // One bounded focus attempt is permitted; if window stays minimized, post-action verification records window_minimized without inviting replay, and a second focus refuses before dispatch.
+ const focusOutcome=await Runtime.prototype.action.call(r,'focus',{hwnd:22,risk:'routine',reason:'Bounded focus attempt',observe:{settle_ms:0}});
+ assert.equal(focused,1);
+ assert.equal(focusOutcome.input_completed,true);
+ assert.equal(focusOutcome.verification_error.code,'window_minimized');
+ await assert.rejects(Runtime.prototype.action.call(r,'focus',{hwnd:22,risk:'routine',reason:'Second focus must refuse'}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_minimized');
+  assert.equal(reply.repeated_failure,true);
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
+ assert.equal(focused,1);
+
+ // Hidden app classification and recovery when unhidden:
+ w.minimized=false;w.hidden=true;r.windowFailures.clear();
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:22}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'window_hidden');
+  assert.equal(reply.next_action,'focus_target_then_observe');
+  assert.equal(reply.recovery_attempts_remaining,1);
+  return true;
+ });
+ w.hidden=false;
+ const recovered=await Runtime.prototype.observe.call(r,{hwnd:22});
+ assert.ok(recovered.metadata.observation_id);
+ assert.equal(r.windowFailures.has(22),false);
+});
+
+test('stale window handles and missing capture permissions classify precisely and stop repeated polling',async()=>{
+ let identityCalls=0;
+ let alive=true;
+ const r={generation:1,frames:new Map(),guardian:{send(){}},driver:{info:{pid:99},async call(op){
+  if(op==='identity'){
+   identityCalls++;
+   if(!alive)throw Object.assign(Error('No window matched hwnd/title.'),{code:'window_not_found'});
+   return {result:{hwnd:33,pid:70,started:'birth-1',path:'/Applications/Calculator.app',title:'Calculator',rect:[0,0,230,400]}};
+  }
+  if(op==='list_apps')return {result:{windows:alive?[{hwnd:33,pid:70,title:'Calculator',path:'/Applications/Calculator.app'}]:[]}};
+  throw Error('unexpected op '+op);
+ }},identity:Runtime.prototype.identity};
+ const first=await Runtime.prototype.app.call(r,33);
+ assert.equal(first.hwnd,33);assert.equal(identityCalls,1);
+ // Window closes -> handle 33 is now a stale window handle, classified as identity_changed.
+ alive=false;
+ await assert.rejects(Runtime.prototype.app.call(r,33),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'identity_changed');
+  assert.equal(reply.next_action,'discover_apps_then_observe');
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
+ assert.equal(identityCalls,2);
+ // Polling stale handle 33 again refuses immediately without calling native identity again.
+ await assert.rejects(Runtime.prototype.app.call(r,33),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'identity_changed');
+  assert.equal(reply.repeated_failure,true);
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
+ assert.equal(identityCalls,2);
+
+ // Screen Recording permission unavailable classification:
+ const permRuntime={generation:1,frames:new Map(),async grant(){return {hwnd:44,pid:80,started:'one',path:'/Applications/Safari.app',rect:[0,0,800,600]};},check(){},stamp(){return {};},
+  guardian:{send(){},async request(){}},driver:{epoch:1,async call(op){
+   if(op==='snapshot')return {result:{snapshot_id:'s1',nodes:[]}};
+   throw Object.assign(Error('Screen Recording permission needs human setup.'),{code:'mac_permissions_required'});
+  }}};
+ await assert.rejects(Runtime.prototype.observe.call(permRuntime,{hwnd:44}),err=>{
+  const reply=failureReply(err);
+  assert.equal(reply.error.code,'mac_permissions_required');
+  assert.equal(reply.next_action,'await_human_permission_grant');
+  assert.equal(reply.recovery_attempts_remaining,0);
+  return true;
+ });
 });

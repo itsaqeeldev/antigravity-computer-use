@@ -98,8 +98,8 @@ missing. Source/CI fixes and reported hardware observations are separate evidenc
 - Upstream base requested: `32fb9916a215fc60b7f172774ea41c29dca2f600`.
 - Actual upstream head fetched: `fb6cb0dba7d319ece00908e07b8f76028554368c` on `origin/codex/review-intel-mac`.
 - Built bundle: `1eb8de7825d00230bdd4f51fbfc2c2e412463127924b7aa6535e56aa2969435c`, version `0.3.0-beta.3`, 110 sealed files (`darwin-x64`).
-- Installed release: `/Users/ghaz-webscare/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T08-01-46-194Z-eb6e744d`.
-- Skill pointer: verified matching `/Users/ghaz-webscare/.gemini/config/skills/computer-use`.
+- Installed release: `~/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T08-01-46-194Z-eb6e744d`.
+- Skill pointer: verified matching `~/.gemini/config/skills/computer-use`.
 
 ### Defect Identified and Repaired
 
@@ -149,7 +149,7 @@ missing. Source/CI fixes and reported hardware observations are separate evidenc
 - **Toolchain**: Node v24.20.0 (`darwin-x64` toolchain at `.localdata/toolchain/node-v24.20.0-darwin-x64`), Apple Swift version 6.3.1 (`swiftlang-6.3.1.1.2 clang-2100.0.123.102`), target `x86_64-apple-macosx26.0`.
 - **Candidate Commit Base**: `395ece7e43eaeb463dee7fcd08bc6578911d9b60` (`codex/review-intel-mac`).
 - **Candidate Bundle**: `.localdata/bundles/candidate-filedialog`, build ID `a23a6f1eb84088d84d0f713a097c753a2e33632192ca3390d66a229fa5a76f0a`, 110 sealed files (`darwin-x64`).
-- **Installed Release**: `/Users/ghaz-webscare/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T10-34-51-269Z-b768075e`.
+- **Installed Release**: `~/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T10-34-51-269Z-b768075e`.
 - **Active Controller Runtime**: PID 20466 (`desktop-service.mjs --serve`), guardian PID 20735 (`AxonHost --guardian`).
 - **Host IDE**: Antigravity 2.28.2 (PID 2355 `/Applications/Antigravity.app/Contents/Resources/bin/language_server`).
 
@@ -216,5 +216,52 @@ missing. Source/CI fixes and reported hardware observations are separate evidenc
 
 - **Ad-Hoc vs Production Signing**: All isolated tests used ad-hoc test signing with local substituted transport. This qualifies runtime safety, ACL guards, and atomic rollback invariants, but does **not** qualify public Apple Developer ID notarization or Gatekeeper distribution.
 - **Evidence Containment**: All generated receipts, screenshots, logs, and RTF artifacts are isolated in ignored `.localdata/evidence/` and `.localdata/installed/data/`.
+
+## 30 October 2026: Final Argon Intel Mac Qualification — Space/Capture Classification & Liquid Glass HUD
+
+### Verified Baseline & Public `v0.3.0-beta.3` Release Identity
+
+- **Source Baseline**: `main` (`v0.3.0-beta.3`), commit `b33940cb65fb764e04922b9d600b0747ac076f2b`.
+- **Public `v0.3.0-beta.3` Release Asset Verification**:
+  - Asset: `AntigravityComputerUse-macos-x64.tar.gz` (`35,980,796` bytes)
+  - Tarball SHA-256: `1e26ac76eb90957be7ba56e22dabde525c6edc7fc12af57966ba38ec8c1eb81a`
+  - Ed25519 Signed Manifest (`verifyRelease` & `verifyStaged` against `release-public-key.pem`):
+    - `signed_build_id`: `fd9059851cda305a6bf19ff742a67c201a4b14d4a2f01a81ee3df5e75b0aae44`
+    - `signed_sequence`: `41072000000`
+    - `files`: `111` verified files (`darwin-x64`)
+
+### Root Causes & Fixes for macOS Space / Window Capture Failure
+
+1. **Browser/App `AXTitle` vs CoreGraphics `kCGWindowName` Suffix Mismatch (`AxonHost.swift`)**:
+   - *Root Cause*: On baseline `v0.3.0-beta.3` (receipt `22566.20`), `snapshot` on an approved Google Chrome window on the current normal Space failed with `window_capture_unavailable` and `next_action: "inspect_diagnostics"`. Chrome sets Accessibility `kAXTitleAttribute` (`AXTitle`) to `"<Tab Title> - Google Chrome - <Profile>"` while setting CoreGraphics `kCGWindowName` to `"<Tab Title>"`. `windowNumber(pid:title:rect:)` required exact `name == title` whenever `kCGWindowName` was non-empty (when Screen Recording permission was granted), causing `windowNumber` to return `nil`.
+   - *Fix*: Added private `_AXUIElementGetWindow` (`axWindowID`) binding verified against `kCGWindowOwnerPID == pid` and `kCGWindowLayer == 0`, plus `macWindowTitleMatches` for browser/document `" - "` and `" — "` suffixes and twin-window disambiguation (`matchCGWindow`).
+2. **Off-Space Window Retention & Stale Handle Detection (`AxonHost.swift`)**:
+   - *Root Cause*: `AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute)` only returns windows on the currently active macOS Space, causing windows moved to another Mission Control Space to vanish from `enumerateWindows()`, and closed `hwnd` lookups in `resolveWindow` fell through to title matching instead of reporting `identity_changed`.
+   - *Fix*: `WindowRegistry` now retains live `AXUIElement` handles across Spaces (`liveEntries()`) so off-Space windows appear in `apps` with `other_desktop: true`, marks closed handles as `retired` (`identity_changed`), and refuses ambiguous title-only selectors (`ambiguous_selector`).
+3. **Deterministic 5-State Capture Classification & Bounded Recovery (`MacOperations.swift`, `recovery.mjs`, `runtime.mjs`)**:
+   - Classified window capture dispositions into:
+     - `other_desktop` -> `next_action: "await_human_space_switch"` (no automatic Space switch)
+     - `window_fullscreen` -> `next_action: "await_human_fullscreen_exit"` (no automatic Space switch)
+     - `window_minimized` / `window_hidden` -> `next_action: "focus_target_then_observe"` with 1 bounded recovery attempt (`recovery_attempts_remaining: 1`); repeated `snapshot` without recovery refuses with `repeated_failure: true, recovery_attempts_remaining: 0, next_action: "await_human_window_recovery"`
+     - `identity_changed` -> `next_action: "discover_apps_then_observe"`
+     - `mac_permissions_required` / `accessibility_denied` -> `next_action: "await_human_permission_grant"`
+4. **Native Liquid Glass HUD & Phosphor Icons (`MacVisuals.swift`)**:
+   - Uses Apple's native `NSGlassEffectView` on macOS 26+ (with `NSVisualEffectView` fallback on earlier macOS), pure filled Phosphor Icons (`dots-three-fill`, `pause-fill`, `play-fill`, `stop-fill`, `x-fill`) centered with button labels without status dots or strokes, high-contrast crimson emergency tint (`alpha = 0.88`, `>= 8.5:1` contrast) for `Stopped · Re-arm required`, `0.16s` fade/scale transitions respecting `accessibilityDisplayShouldReduceMotion`, keyboard focus loop (`Tab`, `Space`/`Return`, `Esc`), and `.hud` marker cleanup on `hide()`.
+5. **macOS Recovered Task Verification (`recovery.mjs`, `runtime.mjs`)**:
+   - Added `priorMacCleanupVerified` so `end` can close a recovered macOS task once prior parent, worker, and watchdog PIDs are confirmed dead (`ESRCH`) and the native `.inputs` JSON ledger (`{"buttons":[],"keys":[]}`) is verified empty.
+
+### Live Desktop Qualification Receipts (Chrome & Window Dispositions)
+
+| Scenario | Window / Target | Observed Live Result | Receipt / Evidence |
+| --- | --- | --- | --- |
+| **Baseline Reproduction (Pre-Fix)** | Chrome on current Space (`hwnd: 2244476928`) | Failed with `window_capture_unavailable`, `next_action: "inspect_diagnostics"` | Receipt `22566.20` (`.localdata/qual-evidence/baseline-chrome-normal-space.json`) |
+| **Current Normal Space Capture & Coordinate Click** | Chrome (`hwnd: 2272329729`) | `snapshot --image` captured `1400×777` JPEG; `click --x 34 --y 162` moved animated cursor (`15` frames, `429 ms`), clicked `"Run Check"`, verified `"Clicked!"` | Receipts `34634.7`, `34634.8` |
+| **Minimized Window & Bounded Recovery** | Chrome (`hwnd: 2272329729`) | 1st `snapshot` -> `window_minimized`, `recovery_attempts_remaining: 1`, `next_action: "focus_target_then_observe"`; 2nd `snapshot` -> `repeated_failure: true, recovery_attempts_remaining: 0, next_action: "await_human_window_recovery"`; 1 bounded `focus` restored window and captured image | Receipts `34634.4`, `34634.5`, `34634.6` |
+| **Twin Approved Windows (Similar Titles & Same Bounds)** | Chrome (`2272329729` & `2272329739`) | Both captured their own exact `CGWindowID` without cross-capture | Receipts `34634.10`, `34634.11` |
+| **Hidden Application Window (`Cmd+H`)** | Chrome (`hwnd: 2272329735`) | 1st `snapshot` -> `window_hidden`, `recovery_attempts_remaining: 1`, `next_action: "focus_target_then_observe"`; 2nd `snapshot` -> `repeated_failure: true, recovery_attempts_remaining: 0` | Receipts `34634.12`, `34634.13` |
+| **macOS Full-Screen Space** | Chrome (`hwnd: 2272329739`) | `apps` reported `"fullscreen": true`; 1st `snapshot` -> `window_fullscreen`, `next_action: "await_human_fullscreen_exit"`; 2nd `snapshot` -> `repeated_failure: true, recovery_attempts_remaining: 0` | Receipts `34634.17`, `34634.18`, `34634.19` |
+| **Different Mission Control Space** | Chrome (`hwnd: 2272329740`) | `apps` retained off-Space window handle and reported `"other_desktop": true` without switching Spaces | Receipt `34634.17` |
+| **Stale / Closed Window Handle** | Chrome (`hwnd: 2272329739`) | After `close_window` (`34634.22`), 1st `snapshot` -> `identity_changed`, `next_action: "discover_apps_then_observe"`; 2nd `snapshot` -> `repeated_failure: true` | Receipts `34634.22`, `34634.23`, `34634.24` |
+
 
 

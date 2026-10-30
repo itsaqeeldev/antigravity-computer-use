@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "e8c0805ac14cf836c684af6a28ca730fc679bf4a74539e8020438ac5ebfed049",
+      "local_sha256": "07d28cb15919c9979b2e228e3aa70e83f4a783278c62a9bad439ffab89963162",
       "modified": true
     },
     {
@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "53e49dcbbc1ad02a213b6261342091547b07f73c929218d5cdd690346644c70f",
+      "local_sha256": "69f1126ffabeacc5b51d736fd6b684e7b4368bb39f8be2ca3c133a754b1777c7",
       "modified": true
     },
     {
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "45b29cbf55b603d852cd6148ea3426a76a64cff7ca6decb78b9492ded3e2aad4"
+      "sha256": "b79265b279e6045c9255c7a597d999ef036d26424beadc5d760505cc4b43094c"
     },
     {
       "path": "server/mcp.mjs",
@@ -276,7 +276,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "2e3ca8af679f556f5f1df55fa575e625c87d44796728c223c4733e3fbd38b351"
+      "sha256": "19d5158e1f483101ff0b2be222336e1698ffe3ee9ca8e28d89b32473b1a034dd"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -292,7 +292,7 @@
     },
     {
       "path": "server/desktop-service.mjs",
-      "sha256": "60ec7cbfee5242e30c9daaeb920e487abe86e45255acd1536ccca896e946c000"
+      "sha256": "1db0205d008f390b3e0493473f2ecb02a39f360f721da94d65f45985ea3f4b97"
     },
     {
       "path": "server/desktop-tools.mjs",
@@ -300,7 +300,7 @@
     },
     {
       "path": "scripts/desktop.mjs",
-      "sha256": "becb2555689167e8ef35c3e7f7d3eb7c691eaa9fd88660b0f363225a9040dd91"
+      "sha256": "25e23b3c30ae6636d6c02db2800b54af177b1a9bcad0fb5e946aed7fa3a6259f"
     },
     {
       "path": "server/version.mjs",
@@ -356,7 +356,7 @@
     },
     {
       "path": "scripts/verify-install.mjs",
-      "sha256": "b3216cc174d2f774939cfff3d74bcbee5d8b857d4f55b4f57fac3c085183ee9e"
+      "sha256": "54f6b9d8ef3362b6a3663a8182a68914724b9ec6136f1a56ca8d0d24fcaee3cc"
     },
     {
       "path": "scripts/bundle.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "9e3cc00269d12673172e55e2be5eb6294c64ed3bd01c88f9ac5107226de3e948"
+      "sha256": "49805db104af78a7adc8b3de34f57364892869145b7bd9f1da4b26f4a196b439"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,11 +472,11 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "64a28b8ca1c889f70cc19b463fdf42145750c1b34b5125c0a58c92872b838055"
+      "sha256": "1becfb28cf102233e090650beda020af5b0d14e583d933edbc08947d00239e3e"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
-      "sha256": "363e9933718fd42cdf8691fd3b75b604c36262ed287d4f98eb9dbe1061464d4c"
+      "sha256": "b9fd4728d4fe525990d03499fefb7702a2035e0ad2b59cf3d090417f63a96cb1"
     },
     {
       "path": "scripts/measure-run.mjs",
@@ -492,7 +492,7 @@
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "42cf103f11b1cd2ed14fd8ae9bf5284c64208099cda9d1eed07ce11cff5b5888"
+      "sha256": "e07be8c48b02053f3d62469bdc9d9d4cd9dde071caa2d0e39ea1befbb8556b79"
     },
     {
       "path": "tests/guardian-visibility.mjs",
@@ -576,11 +576,11 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "f9c6f1926fa912baddba1a46ed835e395b75dc02e5ff8356e94aecef9d080ff1"
+      "sha256": "168d2883a0ae487224cbf57128b1eec6a0832a5c2c29df1f641d64e9c8c6e8d4"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
-      "sha256": "de45fa41581942533655c29df9159fd181e6646b836bb4bb0a10414424650452"
+      "sha256": "beb858036b861fc396af8a9b5092cf26f1f26337b3ce1370f154b115a712bdcd"
     },
     {
       "path": "server/native/macos/PrivateStorage.swift",
@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/MACOS.md",
-      "sha256": "246566ad83ab6e55abf99a6882eb683f5cf6e40f363a02f89c4134a45a1ec9ac"
+      "sha256": "f80f218c671676198ef3bde7b023daaa1c8c22a4532dce9edb06f6f5abaa3408"
     },
     {
       "path": "server/update-core.mjs",
@@ -620,7 +620,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "ee1d98b52cb2d2baba6f55967499ecdcd4f3a7a3444c3c77dd92985945761cfe"
+      "sha256": "9de2c9c8c2162d545e2f47d9529e5eec0499dcfa5feaeb01291919634d879832"
     },
     {
       "path": "scripts/update.mjs",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "6b9e3ad7baf7f8fe3d116d71853e9b357d73686729933ad2760ef5ee9ba7fca5"
+      "sha256": "5246c9e593abad18de446577cf28b38cf200a4dec2e845b5ae4a76b6e287dafc"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "192aab5cceae2d9ad529b6652344a438c54b7f26cd9f0dbd81cfe435af64b191"
+      "sha256": "70c5b206fd8cb695999aa17c31d498428747f25769ca4019abb9bade7e4b541b"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -652,7 +652,7 @@
     },
     {
       "path": "tests/reporting.test.mjs",
-      "sha256": "b32c4ae439e8d5b7633a4aa8db6e95c7d58c42db2afcf990f733d7123aa41fb2"
+      "sha256": "b6219e179a0f26a6cee16647c3856324886f98b4c8169b78aed2937a668e938b"
     },
     {
       "path": "tests/incident-concurrency.test.mjs",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "31270391dbbee85a43bf6e4ffb3cdf222b723b5fc90d0d5f6d3be504fd69fa8e"
+      "sha256": "bc09cb68926889dbf9f4765c553d550f2a8e15872676eb5865eca03c851354ae"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",
@@ -764,7 +764,7 @@
     },
     {
       "path": "docs/MACOS-QUALIFICATION.md",
-      "sha256": "19f7d9e8aa1b33ad52e9d58d31f2b099759f95d3a15fe2da46d504da7b4cd333"
+      "sha256": "c028398afbb261bc4dec0f70bee0e4a651e47acbbb3a70fc859543f1fd701992"
     },
     {
       "path": "tests/MacStorageMarkerWriter.swift",
@@ -789,10 +789,6 @@
     {
       "path": "tests/native-snapshot-budget.test.mjs",
       "sha256": "984b0f58c2061bb0f2c60234a2e97488074bda8ff4a5f37c0860e2230d0f1a87"
-    },
-    {
-      "path": "server/native/LiquidGlassMaterial.cs",
-      "sha256": "57acdb09ec49c1fb3f47ec1e0fd815bb72460933f30c7d8b8ad9b3beaa51c618"
     }
   ]
 }

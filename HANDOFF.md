@@ -1,5 +1,30 @@
 # Antigravity Computer Use: handoff
 
+## 30 October final Intel Mac Space/capture & Liquid Glass HUD repair
+
+Branch `codex/argon-final-mac` (based on `v0.3.0-beta.3` commit
+`b33940cb65fb764e04922b9d600b0747ac076f2b`) reproduces and repairs the macOS
+window capture failure on Google Chrome and Mission Control Spaces:
+
+- Direct `_AXUIElementGetWindow` -> `CGWindowID` matching and browser/document
+  title suffix matching (`"<Tab> - Google Chrome - <Profile>"` vs CoreGraphics
+  `kCGWindowName`), twin-window disambiguation, off-Space `WindowRegistry`
+  retention (`other_desktop: true`), and retired handle `identity_changed`
+  refusal.
+- Deterministic 5-state window disposition classification (`other_desktop`,
+  `window_fullscreen`, `window_minimized` / `window_hidden`, `identity_changed`,
+  `mac_permissions_required`) with one bounded recovery attempt before refusing
+  repeated polling (`repeated_failure: true`, `recovery_attempts_remaining: 0`).
+- Native `NSGlassEffectView` Liquid Glass HUD on macOS 26+ (`NSVisualEffectView`
+  fallback on macOS 14/15) with pure filled Phosphor Icons, no status dot, no
+  strokes, high-contrast crimson emergency tint (`Stopped · Re-arm required`),
+  reduced-motion support, and keyboard accessibility.
+- `priorMacCleanupVerified` so `end` closes a recovered macOS task after prior
+  parent, worker and watchdog PIDs exit and the JSON `.inputs` ledger is empty.
+
+See [docs/MACOS-QUALIFICATION.md](docs/MACOS-QUALIFICATION.md) for live
+qualification receipts (`34634.4`–`34634.24`) and remaining human/hardware gates.
+
 ## 30 October release-candidate installation checkpoint
 
 Candidate source `89b355e` was installed through the supported installer on the
