@@ -322,7 +322,11 @@ namespace Axon {
                     deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));
                     if(bootDeadline==0){Emit(new {ev="error",message="Cannot establish the native session deadline; control stays paused/stopped"});return;}
                     if(Interlocked.Read(ref stopEpoch)!=humanEpoch)return;
-                    if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch))try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
+                    if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch)) {
+                        try { if(File.ReadAllText(StopLatch).StartsWith("unconfirmed:",StringComparison.Ordinal)) { Emit(new {ev="visual_warning",message="Stop delivery is unconfirmed; inspect prior input cleanup before re-arm"}); return; } }
+                        catch { Emit(new {ev="error",message="Cannot inspect the emergency latch; control stays stopped"}); return; }
+                        try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
+                    }
                     if(Interlocked.Read(ref stopEpoch)!=humanEpoch){ControlFence.LatchStop();return;}
                     SetState(state=="stopped"||state=="idle"?"idle":"active",null,true,humanEpoch);if(state!="stopped")Emit(new {ev="human_resume",state=state});
                 }

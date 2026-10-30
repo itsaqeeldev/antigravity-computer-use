@@ -115,6 +115,13 @@ test('ready prioritizes previous input cleanup over re-arm without starting cont
  const r=fixture();let requests=0;r.taskOpen=true;r.taskDurable=true;r.recoveredTask=true;r.guardian.request=async()=>{requests++;return {state:'idle',controls_visible:true};};
  for(const state of ['idle','paused','stopped']){r.state=state;const ready=await r.ready();assert.equal(ready.ready,false);assert.equal(ready.recovered_task,true);assert.equal(ready.next_action,'inspect_prior_input_cleanup');assert.equal(ready.error.code,'recovered_cleanup_unverified');assert.equal(ready.replay_allowed,false);assert.equal(r.taskOpen,true);assert.equal(requests,0);}
 });
+test('durable unconfirmed Stop remains distinct across controller restart',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-unconfirmed-restart-')),latch=path.join(dir,'emergency.stop');fs.writeFileSync(latch,'unconfirmed:fixture');let requests=0;
+ const guardian=new EventEmitter();guardian.send=()=>{};guardian.request=async()=>{requests++;return {state:'stopped',controls_visible:true};};
+ const r=new Runtime({guardian,driver:{async abort(){}},sessions:{register(){}},latchFile:latch});
+ try{assert.equal(r.state,'stopped');assert.equal(r.lastControlReason,'guardian_stop_unconfirmed');const ready=await r.ready();assert.equal(ready.error.code,'guardian_stop_unconfirmed');assert.equal(ready.next_action,'inspect_diagnostics');assert.equal(ready.replay_allowed,false);assert.equal(requests,0);guardian.emit('resume','idle','human_resume');assert.equal(r.state,'stopped');}
+ finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('explicit controls refuse unverified restart and Stop failures before starting guardian',async()=>{
  const r=fixture();let requests=0;r.guardian.request=async()=>{requests++;return {controls_visible:true};};
  r.recoveredTask=true;await assert.rejects(r.showControls(),e=>e.code==='recovered_cleanup_unverified');

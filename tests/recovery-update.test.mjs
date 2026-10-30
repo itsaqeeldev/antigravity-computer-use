@@ -62,7 +62,7 @@ test('asynchronous guardian pipe failure stops runtime and rejects pending work 
   const pending=guardian.request({op:'capture'},{timeoutMs:1000});await Promise.resolve();
   child.stdin.emit('error',Error('broken pipe'));
   await assert.rejects(pending,e=>e.code==='guardian_write_failed'&&/do not replay/i.test(e.message));
-  assert.equal(runtime.state,'stopped');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(aborts,1);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(guardian.pending.size,0);
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(aborts,1);assert.match(fs.readFileSync(latch,'utf8'),/^unconfirmed:/);assert.equal(guardian.pending.size,0);
   child.stdout.write('{"ev":"state","state":"active"}\n{"ev":"human_resume","state":"idle"}\n');assert.equal(guardian.state,'stopped');assert.equal(runtime.state,'stopped');
   await assert.rejects(guardian.start(),e=>e.code==='guardian_cleanup_unconfirmed');
   child.emit('close',1);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');
@@ -98,7 +98,7 @@ test('an unconfirmed guardian Stop invalidates runtime control and aborts its dr
  try{
   runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
   await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed');
-  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.match(fs.readFileSync(latch,'utf8'),/^unconfirmed:/);assert.equal(aborts,1);
   const ready=await runtime.ready();assert.equal(ready.error.code,'guardian_stop_unconfirmed');assert.equal(ready.replay_allowed,false);
   guardian.emit('state','stopped','old_notification');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
   guardian.emit('state','stopped','stop_persistence_failed');assert.equal(runtime.lastControlReason,'stop_persistence_failed');
@@ -111,7 +111,7 @@ test('Stop persists its latch and aborts input even if guardian delivery throws'
  try{
   runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
   await assert.rejects(runtime.stop(),e=>e.code==='guardian_stop_unconfirmed');
-  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(aborts,1);
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.match(fs.readFileSync(latch,'utf8'),/^unconfirmed:/);assert.equal(aborts,1);
   assert.equal((await runtime.ready()).error.code,'guardian_stop_unconfirmed');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
   guardian.send=()=>true;await assert.rejects(runtime.stop(),e=>e.code==='guardian_stop_unconfirmed');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');
  }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}

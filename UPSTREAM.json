@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "a2314efe70e256394f38616c90dd7a6c9c27e60f1b16176b4f213f762724362e"
+      "sha256": "bc941735cc4ffe13658072fe7da140e71796d5c76c066597d3fda9bad361cee6"
     },
     {
       "path": "server/mcp.mjs",
@@ -268,7 +268,7 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "b87f9a003d3ac8b8e1c4a43ece6f3e4e928d8f65424a36ae46dbfea052c40d0b"
+      "sha256": "502b51ba4c6725658bc9e68cc3689e14436b0aa3de16a1c6d2900c330029dbc1"
     },
     {
       "path": "server/native/CursorSafety.cs",
@@ -572,7 +572,7 @@
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
-      "sha256": "4e60784e8da1174e64bb49b021a5cafd6ff7b9e93f5f8608853562e44961d672"
+      "sha256": "fb29f3f9101e849d90eae48f2368b52bed1709a7cbac67eeb347762ec042804a"
     },
     {
       "path": "server/native/macos/MacOperations.swift",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "1f2816e36d3a66d1ea2c06e3716ec972058cd65d42ccff7782fb762c76ef709e"
+      "sha256": "6b9e3ad7baf7f8fe3d116d71853e9b357d73686729933ad2760ef5ee9ba7fca5"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e2f83a3b77fdfed16d080ed21f4b27f9d81a293ac5bb65234584bd24c2a9a07b"
+      "sha256": "192aab5cceae2d9ad529b6652344a438c54b7f26cd9f0dbd81cfe435af64b191"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -660,7 +660,7 @@
     },
     {
       "path": "tests/lifecycle.test.mjs",
-      "sha256": "482d27df6d03397d59a048970f89109e5d363e745539937073678348bf1bf428"
+      "sha256": "6abbc4ce97a677a6bc349c13ffe3584fd93a3e266a3019b405f5b6210a4cf28f"
     },
     {
       "path": "server/native/GuardCleanup.cs",

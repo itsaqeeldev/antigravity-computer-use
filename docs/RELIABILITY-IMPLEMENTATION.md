@@ -1441,6 +1441,14 @@ native guardian still requires its own durable re-arm fence; these changes do no
 resolve issue #26's acknowledgement protocol or prove old workers have exited.
 Driver fixture and IPC/batch regression coverage does not establish physical
 Stop behavior or real-app delivery; those acceptance checks remain pending.
+
+The Stop latch now records `unconfirmed:<nonce>` when guardian delivery is
+uncertain. A replacement Runtime preserves that reason across restart, refuses
+agent `ready` and explicit controls, and native Windows/macOS re-arm refuses to
+clear the marker while showing a recovery warning. Normal confirmed Stop still
+uses the ordinary `stopped` marker. Lifecycle coverage passes for the persisted
+reason and the native Windows source compiles; physical re-arm and a verified
+old-worker recovery run remain pending.
 If cleanup itself fails after a submitted action, the response now retains both
 the `input_cleanup_failed` stop reason and `delivery_unknown`. Direct and batch
 IPC tests verify that remaining actions do not run and recovery guidance keeps

@@ -286,6 +286,10 @@ final class MacGuardian: NSObject {
         guard bootUntil > 0 else { return }
         if state == "stopped" {
             guard !MacFence.latch.isEmpty else { return }
+            if let text = try? String(contentsOfFile: MacFence.latch, encoding: .utf8), text.hasPrefix("unconfirmed:") {
+                emit(["ev":"visual_warning", "message":"Stop delivery is unconfirmed; inspect prior input cleanup before re-arm"])
+                return
+            }
             if unlink(MacFence.latch) != 0 && errno != ENOENT { return }
         }
         set(state == "paused" ? "active" : "idle", reason: "human_resume")
