@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "510422a9b05d7d48a0a880cf255657d1d4368a4f78dcd7c01d6de77bc1296aba"
+      "sha256": "d705da43ce8d59bae7a9ab95bf5e6e144067f427c92d83255059a5444e239da2"
     },
     {
       "path": "server/mcp.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "335559b56307854f044ef5b3ec0dd78cc5498c8a0d0a7b1f0502b8f611c097d5"
+      "sha256": "56e8180a81b8182818ad8cc68f505ddd73a6ad477d075897c27e8b46ab9701cb"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "2e3b0fccde6df72bf5c50a5a60abf6ae45c284c9630be198e66651463677ed2a"
+      "sha256": "afc4119503a3c5cf4b2588a041140204fb70fae830f7b314f46bf7ad2340e247"
     },
     {
       "path": "HANDOFF.md",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "3646e39f62715d05fd7376181f16f85c6169febe6bc948e8d3fe176fbff5a560"
+      "sha256": "196bf8dcc57337716e7b5842e13d7b49173db3d5d15ee9116883d69b5d18d15d"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

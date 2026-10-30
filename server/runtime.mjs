@@ -255,7 +255,11 @@ export class Runtime {
     // Recompute after grant/identity work so it cannot leave the native walk
     // with a budget calculated before a slow permission or app check.
     const walkBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(process.platform==='darwin'?4000:8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
-    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})})).result;
+    // A provider can block inside a single accessibility call, beyond the
+    // native walk's cooperative budget. Retire the worker if that snapshot
+    // exceeds the budget plus transport grace; Driver fences its replacement
+    // until the old process and any held-input cleanup are confirmed.
+    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})},walkBudget!==null?{timeoutMs:walkBudget+1000}:undefined)).result;
     const nodes=queryNodes(tree.nodes,query);
     const rowLimit=Math.min(args.max_nodes||80,500);
     // This marks known loss, not proof that every visual error is accessible.

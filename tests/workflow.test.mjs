@@ -93,6 +93,22 @@ test('timeouts and failed writes do not invite replay of effectful operations',a
   assert.equal(aborts,failure==='timeout'||op!=='snapshot'?1:0);
  }
 });
+test('timed-out read-only snapshot fences replacement until worker exit is confirmed',async()=>{
+ const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={write(){},destroy(){}};child.kill=()=>false;
+ const driver=new Driver({timeoutMs:10});driver.proc=child;driver.info={};driver.exitTimeoutMs=30;let releases=0;driver.releaseHeldInputs=async()=>{releases++;return true;};
+ await assert.rejects(driver.call('snapshot',{}),e=>e.code==='op_timeout');
+ const retiring=driver.aborting;assert(retiring);await assert.rejects(retiring,e=>e.code==='input_cleanup_failed');
+ assert.equal(driver.retiring,child);assert.equal(driver.inputMayBeHeld,true);assert.equal(releases,1);await assert.rejects(driver.start(),e=>e.code==='input_cleanup_failed');
+ child.exitCode=1;child.emit('exit',1);await driver.abort();assert.equal(driver.retiring,null);assert.equal(driver.inputMayBeHeld,false);
+});
+test('wait observation timeout retires the actual Driver before replacement',async()=>{
+ const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={write(){},destroy(){}};child.kill=()=>false;
+ const driver=new Driver();driver.proc=child;driver.info={};driver.exitTimeoutMs=3000;let launches=0;driver._launch=async()=>{launches++;return {pid:456};};
+ const runtime={driver,frames:new Map(),async grant(){return{hwnd:1,pid:9,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return{};}};
+ await assert.rejects(Runtime.prototype.observe.call(runtime,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+100,require_native_budget:true}),e=>e.code==='op_timeout');
+ const replacement=driver.start();await new Promise(resolve=>setImmediate(resolve));assert.equal(launches,0);assert.equal(driver.retiring,child);
+ child.exitCode=1;child.emit('exit',1);assert.deepEqual(await replacement,{pid:456});assert.equal(launches,1);
+});
 test('partial launch write prevents worker replacement until prior exit',async()=>{
  const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={write(){throw Error('partial write');},destroy(){}};child.kill=()=>false;
  const driver=new Driver();driver.proc=child;driver.info={};driver.exitTimeoutMs=1000;let starts=0;
@@ -187,9 +203,9 @@ test('queries search a bounded larger hierarchy before compacting results',async
 });
 
 test('native wait budget is recalculated after a slow grant',async()=>{
- let received;const r={async grant(){await new Promise(resolve=>setTimeout(resolve,100));return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args){received=args;return {result:{snapshot_id:'s',nodes:[]}};}}};
+ let received,options;const r={async grant(){await new Promise(resolve=>setTimeout(resolve,100));return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args,opts){received=args;options=opts;return {result:{snapshot_id:'s',nodes:[]}};}}};
  await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+500});
- assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);
+ assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);assert.equal(options.timeoutMs,received.time_budget_ms+1000);
 });
 
 test('an expired wait budget refuses a new native snapshot after a slow grant',async()=>{
