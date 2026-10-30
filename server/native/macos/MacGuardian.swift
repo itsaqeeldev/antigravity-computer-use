@@ -87,6 +87,11 @@ final class MacPanicMonitor {
     static func deadlineGraceElapsed(since: UInt64, now: UInt64) -> Bool {
         now >= since && now - since >= 5000
     }
+    static func deadlineProblem(_ state: MacFenceState, now: UInt64) -> String? {
+        if state.cleanupPending { return "cleanup" }
+        if state.state == "active" && !MacDeadline.valid(state.bootUntil, now: now) { return "expired" }
+        return nil
+    }
     func checkDeadline() {
         if MacDeadline.now == 0 { MacFence.emergency("watchdog_clock_unavailable"); return }
         guard let state = try? MacFence.read() else {
@@ -98,17 +103,16 @@ final class MacPanicMonitor {
             return
         }
         invalidSince = nil
-        guard state.state == "active",
-              !MacDeadline.valid(state.bootUntil, now: MacDeadline.now) else {
+        guard let problem = Self.deadlineProblem(state, now: MacDeadline.now) else {
             expiredKey = nil; expiredSince = 0; return
         }
-        let key = state.token + "|" + String(state.bootUntil), now = MacDeadline.now
+        let key = problem + "|" + state.state + "|" + state.token + "|" + String(state.until) + "|" + String(state.bootUntil), now = MacDeadline.now
         if expiredKey != key { expiredKey = key; expiredSince = now; return }
         guard Self.deadlineGraceElapsed(since: expiredSince, now: now),
-              let latest = try? MacFence.read(), latest.state == "active",
-              latest.token == state.token, latest.bootUntil == state.bootUntil,
-              !MacDeadline.valid(latest.bootUntil, now: MacDeadline.now) else { return }
-        MacFence.emergency("watchdog_deadline_expired")
+              let latest = try? MacFence.read(), latest.state == state.state,
+              latest.token == state.token, latest.until == state.until, latest.bootUntil == state.bootUntil,
+              Self.deadlineProblem(latest, now: MacDeadline.now) == problem else { return }
+        MacFence.emergency(problem == "cleanup" ? "watchdog_cleanup_stalled" : "watchdog_deadline_expired")
         expiredKey = nil; expiredSince = 0
     }
     func start() -> Bool {
@@ -184,6 +188,7 @@ final class MacPanicMonitor {
 final class MacGuardian: NSObject {
     var state = "idle", token = "", until: Int64 = 0
     var bootUntil: UInt64 = 0
+    var cleanupPending = false
     var grants = Set<String>()
     var watchdog: Process?
     var timer: Timer?
@@ -238,12 +243,13 @@ final class MacGuardian: NSObject {
     }
     func writeState() throws {
         let encoded = Data(grants.sorted().joined(separator: "\n").utf8).base64EncodedString()
-        try MacFence.write("\(state)|\(token)|\(until)|\(encoded)|\(bootUntil)")
+        try MacFence.write("\(state)|\(token)|\(until)|\(encoded)|\(bootUntil)|\(cleanupPending ? 1 : 0)")
     }
     func set(_ next: String, reason: String = "") {
         if next == "active" && (!MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) || state == "stopped") { return }
         var effectiveReason = reason
         state = next
+        cleanupPending = next != "active"
         if next == "stopped" || next == "idle" { grants.removeAll() }
         do { try writeState() } catch { state = "stopped"; MacFence.emergency("state_write_failed") }
         // The independent watchdog may latch Stop while this transition is
@@ -251,12 +257,18 @@ final class MacGuardian: NSObject {
         // transition cannot leave the local UI claiming control is available.
         let resolved = MacFence.resolvedState(state, latched: !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch))
         if resolved != state {
-            state = resolved; grants.removeAll(); effectiveReason = "emergency_stop"
+            state = resolved; cleanupPending = true; grants.removeAll(); effectiveReason = "emergency_stop"
             do { try writeState() } catch { MacFence.emergency("state_write_failed") }
         }
         if state != "active" {
             macKillWorkers()
             if !MacInputLedger.recover() { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }
+            else {
+                cleanupPending = false
+                do { try writeState() } catch { state = "stopped"; effectiveReason = "state_write_failed"; MacFence.emergency(effectiveReason) }
+                let final = MacFence.resolvedState(state, latched: !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch))
+                if final != state { state = final; grants.removeAll(); effectiveReason = "emergency_stop"; do { try writeState() } catch { MacFence.emergency("state_write_failed") } }
+            }
             visuals.releaseCursor()
         }
         if state == "idle" { visuals.hide() }

@@ -89,6 +89,7 @@ struct MacFenceState {
     let token: String
     let until: Int64
     let bootUntil: UInt64
+    let cleanupPending: Bool
     let grants: Set<String>
     init(_ text: String) throws {
         let parts = text.components(separatedBy: "|")
@@ -102,6 +103,11 @@ struct MacFenceState {
             }
             bootUntil = monotonic
         } else { bootUntil = 0 }
+        if parts.count > 5 {
+            guard parts[5] == "0" || parts[5] == "1" else { throw AxonError("control_stopped", "Native cleanup state is invalid.") }
+            cleanupPending = parts[5] == "1"
+        } else { cleanupPending = false }
+        guard state != "active" || !cleanupPending else { throw AxonError("control_stopped", "Active native control cannot have pending cleanup.") }
         if parts.count > 3, let bytes = Data(base64Encoded: parts[3]), let text = String(data: bytes, encoding: .utf8) {
             grants = Set(text.components(separatedBy: "\n").filter { !$0.isEmpty })
         } else { grants = [] }
@@ -248,7 +254,7 @@ enum MacFence {
     }
     static func emergency(_ reason: String) {
         if !latch.isEmpty { try? Data("stopped".utf8).write(to: URL(fileURLWithPath: latch), options: [.atomic]) }
-        try? write("stopped||0|")
+        try? write("stopped||0||0|1")
         macKillWorkers()
         if !MacInputLedger.recover() { emit(["ev": "visual_warning", "message": "Input cleanup is incomplete; control stays stopped."]) }
     }

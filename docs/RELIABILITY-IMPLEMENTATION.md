@@ -1219,11 +1219,12 @@ then escalates an unresolved expired/inactive state after five seconds or a
 persistently invalid state after one second. It retains crash monitoring until explicit disarm after
 worker termination and ledger recovery. Headless classification and grace
 tests pass locally; native physical expiry/Stop races and Mac watchdog behavior
-remain unqualified. The Mac watchdog checks expired active and persistently
-unreadable state; it does not yet prove cleanup if the guardian writes idle and
-then stalls. Its startup now refuses if watchdog identity cannot be written and
-flushed. Mac compilation/CI for these changes is pending. Do not install or
-release this partial change.
+remain unqualified. A further Mac candidate records cleanup as pending until
+worker termination and ledger recovery return, allowing the watchdog to detect
+a guardian stalled after publishing idle. Its startup also refuses if watchdog
+identity cannot be written and flushed. Parser tests are headless; Mac
+compilation, actual cleanup acknowledgement, CGEvent delivery and device tests
+for these changes remain pending. Do not install or release this partial change.
 Issue #22 tracks Mac watchdog startup returning before a timed-out child exited.
 The pending candidate records the child's birth identity, requests termination,
 waits a bounded time and retains an unreaped child in the current guardian while

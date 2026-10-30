@@ -126,6 +126,14 @@ func macContractTest() throws {
           !MacPanicMonitor.deadlineGraceElapsed(since: 100, now: 99) else {
         throw AxonError("contract_test_failed", "Watchdog expiry grace differs.")
     }
+    let pendingCleanup = try MacFenceState("idle||0||0|1"), cleanIdle = try MacFenceState("idle||0||0|0")
+    guard pendingCleanup.cleanupPending, !cleanIdle.cleanupPending,
+          MacPanicMonitor.deadlineProblem(pendingCleanup, now: 100) == "cleanup",
+          MacPanicMonitor.deadlineProblem(cleanIdle, now: 100) == nil else {
+        throw AxonError("contract_test_failed", "Cleanup acknowledgement classification differs.")
+    }
+    do { _ = try MacFenceState("idle||0||0|invalid"); throw AxonError("contract_test_failed", "Malformed cleanup state accepted.") }
+    catch let error as AxonError { if error.code == "contract_test_failed" { throw error } }
     let readyPipe = Pipe()
     DispatchQueue.global().async {
         readyPipe.fileHandleForWriting.write(Data("{\"watchdog_".utf8))
