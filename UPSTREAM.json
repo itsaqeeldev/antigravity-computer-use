@@ -5,7 +5,7 @@
     {
       "path": "server/build.mjs",
       "upstream_sha256": "81260b378fffb46573cfe475a3a336930113c8abc465d3d278bbb0851d8a4377",
-      "local_sha256": "07d28cb15919c9979b2e228e3aa70e83f4a783278c62a9bad439ffab89963162",
+      "local_sha256": "00ee279a2a67febb7054437bbefa9b733096cce2a6c958be74626621562f013e",
       "modified": true
     },
     {
@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b5f310ca36092422af66af2b26e5972f69c106b0c5be36ee9634b69700fc2259"
+      "sha256": "cc2a7c64194720c1b2deb0ecca4b798ddc8cd888eaab084dc6f35c79cf747415"
     },
     {
       "path": "server/mcp.mjs",
@@ -276,7 +276,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "19d5158e1f483101ff0b2be222336e1698ffe3ee9ca8e28d89b32473b1a034dd"
+      "sha256": "074dd89957540cbc20f7ee984f344df72f6900b90eeaade63264bc91fc1fd4d2"
     },
     {
       "path": "server/native/InputLedger.cs",
@@ -360,7 +360,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "cd5301ad143857cfd0eba9e8c0e115cef75fe9d217881378fa54f5ab2bf84e97"
+      "sha256": "ce44a56a483e14d2bcf1b53e11f47df037a383afb398eaf76821414c55b3d841"
     },
     {
       "path": "tests/install.test.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "d916538a98fbcf2b4d23d8a9eeb7fc679c2a763944d471d9d1e6272d93891742"
+      "sha256": "d60e913da49bb50107f351ee622372ba33aadb07efd0ea64779748c7251e121b"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "1becfb28cf102233e090650beda020af5b0d14e583d933edbc08947d00239e3e"
+      "sha256": "64a28b8ca1c889f70cc19b463fdf42145750c1b34b5125c0a58c92872b838055"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,11 +488,11 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "a8dadb68932d7199a2330ecac9c4b33828f62e8313b4d0b11f014c76e56b0fe0"
+      "sha256": "174647f355fd289fc70b7d551e1c2cd587dfcee1bc6580f4949222b51db30f6d"
     },
     {
       "path": "HANDOFF.md",
-      "sha256": "e07be8c48b02053f3d62469bdc9d9d4cd9dde071caa2d0e39ea1befbb8556b79"
+      "sha256": "8bb8453f1db7173a858bc230946c20f98781eb86845a482e3bd16b8a49bde6de"
     },
     {
       "path": "tests/guardian-visibility.mjs",

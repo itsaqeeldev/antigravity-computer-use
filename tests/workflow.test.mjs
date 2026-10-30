@@ -216,7 +216,7 @@ test('queries search a bounded larger hierarchy before compacting results',async
 test('native wait budget is recalculated after a slow grant',async()=>{
  let received,options;const r={async grant(){await new Promise(resolve=>setTimeout(resolve,100));return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(op,args,opts){received=args;options=opts;return {result:{snapshot_id:'s',nodes:[]}};}}};
  await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+500});
- assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);assert.equal(options.timeoutMs,received.time_budget_ms+1000);
+ assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);assert.equal(options.timeoutMs,received.time_budget_ms+100);
 });
 
 test('an expired wait budget refuses a new native snapshot after a slow grant',async()=>{
@@ -239,7 +239,7 @@ test('wait screenshot gets a bounded driver timeout and restores overlay',async(
  const sent=[];let options,prepareOptions;
  const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(_m,opts){prepareOptions=opts;}},stamp(){return{};},frames:new Map(),driver:{async call(op,args,opts){if(op==='snapshot')return{result:{snapshot_id:'s',nodes:[]}};options=opts;return{result:{capture:'window',data:'fixture',source:[0,0,800,600]}};}}};
  await Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true});
- assert(options.timeoutMs>=1100&&options.timeoutMs<=6000);assert(prepareOptions.timeoutMs>=1100&&prepareOptions.timeoutMs<=6000);assert(sent.includes('capture_end'));
+ assert(options.timeoutMs>=200&&options.timeoutMs<=5100);assert(prepareOptions.timeoutMs>=1100&&prepareOptions.timeoutMs<=6000);assert(sent.includes('capture_end'));
 });
 
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{

@@ -17,13 +17,13 @@ with explicit inspect-without-replay guidance rather than starting that walk.
 The 100 ms minimum and post-deadline failure or timeout captures mean the
 polling budget is still not a hard limit.
 For wait snapshots only, the candidate also asks the driver to time out the
-native call after the cooperative walk budget plus one second of transport
+native call after the cooperative walk budget plus 100 ms of transport
 grace. A timeout starts worker retirement; the reply can precede confirmed
 exit, but the driver fences replacement and reports failed cleanup if the old
 worker cannot be confirmed stopped. Mocked worker and forwarding tests cover
 that boundary, including the actual JavaScript Driver with an inert worker that
 withholds its reply. Wait screenshots also receive a remaining-budget driver
-timeout plus one second of grace; if the budget expires during overlay-capture
+timeout plus 100 ms of grace; if the budget expires during overlay-capture
 preparation, the overlay is restored and no screenshot starts. Mocked tests
 cover both paths; an inert, unresponsive screenshot worker also exercises the
 actual JavaScript Driver, overlay restoration and replacement fence. Startup,
@@ -201,3 +201,4 @@ The next candidate adds opt-in App Sidecars for host-managed local process lifec
 Named no-file batches were exercised in the actual host on the installed AEA05 build: one real JPEG export task finished in235796ms with17controllercalls,18356service-ms and median native call436ms. JPEG differs from the prior PNG benchmark; these are bounded individual witnesses, not a statistical format-independent speed guarantee. Remaining median gap9479ms includes model/host/tool work. The actual executed --step command was inspected, rather than inferred from a requested example.
 
 A real settings-discovery defect was reproduced: query `format` returned only FORMAT/Export format labels while a separate JPEG query found the button. The candidate now reuses the foundation subtree traversal to include a matching section’s child controls, preserving observation indexes and offscreen state. This should remove extra catalogue/full-tree reads; packaged real-app qualification is separate from the source test. No Upscaly source or preferences were changed for this fix.
+

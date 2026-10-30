@@ -40,6 +40,16 @@ else {
  ]){fs.writeFileSync(path.join(out,name),body,{mode:0o755});}
  fs.chmodSync(path.join(out,platform.node),0o755);fs.chmodSync(path.join(out,'bin',platform.storage),0o755);
 }
+// A release pipeline may provide the self-contained, package-backed LiquidGlass
+// companion. Source builds omit it and retain the explicit compatibility path.
+const liquidGlassHelper=process.env.AGCU_LIQUIDGLASS_HELPER_BUILD;
+if(process.platform==='win32'&&liquidGlassHelper&&fs.existsSync(liquidGlassHelper)){
+  const destination=path.join(out,'liquidglass');fs.mkdirSync(destination,{recursive:true});
+  for(const name of ['LiquidGlass.Host.exe','libSkiaSharp.dll']){
+    const source=path.join(liquidGlassHelper,name);if(!fs.existsSync(source))throw new Error('LiquidGlass helper is missing '+name);
+    fs.copyFileSync(source,path.join(destination,name));
+  }
+}
 console.log(out);
 const files={};
 function inventory(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())inventory(p);else if(path.relative(out,p)!=='bundle-manifest.json')files[path.relative(out,p).replaceAll('\\','/')]=sha(p);}}
