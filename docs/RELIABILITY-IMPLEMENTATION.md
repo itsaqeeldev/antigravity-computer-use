@@ -1188,6 +1188,14 @@ The independent native session expiry still uses wall-clock timestamps. A
 backwards clock change can extend that nominal limit; issue #18 tracks a
 cross-process monotonic design and physical qualification. The polling fix
 must not be described as fixing native session expiry.
+Candidate clock sources are Windows [GetTickCount64](https://learn.microsoft.com/en-us/windows/win32/sysinfo/windows-time)
+and Apple's [continuous clock](https://developer.apple.com/documentation/kernel/1646199-mach_continuous_time),
+which their platform documentation says include sleep. An implementation needs
+one per-boot deadline shared by the native worker and independent watchdog,
+bounded conversion from the requested duration, explicit refusal of malformed
+or legacy active state, and safe handling of restart and suspend. Checking only
+the guardian UI timer is insufficient. These are design inputs, not completed
+implementation or physical sleep/wake evidence.
 
 Issue #17 tracks action budget consumed before input-fence acquisition. The
 candidate rechecks the deadline and budget inside the fence and counts only an
