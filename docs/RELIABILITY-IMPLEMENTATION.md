@@ -14,6 +14,13 @@ actions are serialized, but that does not prove whole-task isolation; coordinate
 one task at a time until a host-compatible ownership design is qualified. The
 skill now states that limit rather than promising safe concurrent tasks.
 
+On 30 October, a read-only Antigravity accessibility inspection showed the
+`Upscaly Code Repair Execution` conversation with a Stop execution control,
+indicating that execution was still running. This does not establish whether
+that task currently owns the desktop. Because issue #7 prevents reliable
+ownership attribution, the live installation and desktop were left untouched;
+real Antigravity qualification remains pending.
+
 [Antigravity's documented hooks](https://antigravity.google/docs/hooks) provide
 `conversationId` and tool-call details to `PreToolUse` handlers, which can deny
 a terminal call. This is a possible host-side coordination signal. The docs do
