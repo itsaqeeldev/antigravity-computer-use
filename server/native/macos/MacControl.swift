@@ -74,14 +74,14 @@ enum MacDeadline {
     // System-wide monotonic milliseconds, including time asleep.
     static var now: UInt64 { clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1_000_000 }
     static func create(requested: Int64, wallNow: Int64, bootNow: UInt64, maximumMs: Int) -> UInt64 {
-        guard wallNow >= 0, requested > wallNow, maximumMs > 0 else { return 0 }
+        guard wallNow >= 0, requested > wallNow, bootNow > 0, maximumMs > 0 else { return 0 }
         let remaining = (requested - wallNow) / 10_000
         guard remaining > 0 else { return 0 }
         let duration = UInt64(min(remaining, Int64(maximumMs)))
         let (deadline, overflow) = bootNow.addingReportingOverflow(duration)
         return overflow ? 0 : deadline
     }
-    static func valid(_ deadline: UInt64, now: UInt64) -> Bool { deadline > now }
+    static func valid(_ deadline: UInt64, now: UInt64) -> Bool { now > 0 && deadline > now }
 }
 
 struct MacFenceState {

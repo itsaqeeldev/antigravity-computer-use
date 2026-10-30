@@ -1234,6 +1234,10 @@ Watchdog readiness now reads a bounded complete JSON line, validates its boolean
 acknowledgement and checks that the child remains alive. A headless Mac contract
 fixture fragments the line across writes and refuses malformed, numeric and
 oversized acknowledgements; its Mac CI result is pending.
+The Mac termination wait now uses the same sleep-inclusive clock, refuses an
+unavailable clock, and remains bounded after wake. The watchdog also fails
+closed if that clock cannot be read; these changes await native CI and device
+sleep/wake verification.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

@@ -115,6 +115,8 @@ func macContractTest() throws {
     }
     let bounded = MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 1000, maximumMs: 500)
     guard bounded == 1500, MacDeadline.valid(bounded, now: 1499), !MacDeadline.valid(bounded, now: 1500),
+          !MacDeadline.valid(bounded, now: 0),
+          MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 0, maximumMs: 500) == 0,
           MacDeadline.create(requested: 100, wallNow: 100, bootNow: 10, maximumMs: 500) == 0,
           MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: UInt64.max - 1, maximumMs: 500) == 0 else {
         throw AxonError("contract_test_failed", "Monotonic deadline arithmetic differs.")

@@ -33,8 +33,14 @@ enum MacWorkers {
             guard let birth = expectedBirth, (try? macProcessStart(pid)) == birth else { return false }
             _ = kill(pid, SIGKILL)
         }
-        let until = ProcessInfo.processInfo.systemUptime + max(0, timeout)
-        while child.isRunning && ProcessInfo.processInfo.systemUptime < until { Thread.sleep(forTimeInterval: 0.005) }
+        guard timeout.isFinite else { return false }
+        let start = MacDeadline.now, budget = UInt64(max(0, min(timeout, 5)) * 1000)
+        guard start > 0 else { return false }
+        while child.isRunning {
+            let now = MacDeadline.now
+            if now == 0 || now < start || now - start >= budget { break }
+            Thread.sleep(forTimeInterval: 0.005)
+        }
         guard !child.isRunning else { return false }
         child.waitUntilExit(); return true
     }
@@ -82,6 +88,7 @@ final class MacPanicMonitor {
         now >= since && now - since >= 5000
     }
     func checkDeadline() {
+        if MacDeadline.now == 0 { MacFence.emergency("watchdog_clock_unavailable"); return }
         guard let state = try? MacFence.read() else {
             let now = MacDeadline.now
             if invalidSince == nil { invalidSince = now; return }
