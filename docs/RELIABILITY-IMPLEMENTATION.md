@@ -1365,6 +1365,8 @@ Starting a new manual or scheduled update check now clears the previous offer
 before network or staging work; applying requires an explicitly available
 offer. A failed check retains prior stage files for inspection but cannot apply
 them. Offline and insufficient-space paths are covered by transaction fixtures.
+Release-list responses are streamed with a 4 MiB limit before JSON parsing;
+oversized listings are refused before payload download or controller shutdown.
 
 Post-launch window discovery now measures its eight-second polling limit with
 the monotonic clock, so a backwards wall-clock adjustment does not extend the

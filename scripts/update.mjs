@@ -90,7 +90,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    save({...state,available:false,attempt_at:Date.now()});
    const keyFile=adapters.keyFile||path.join(root,'release-public-key.pem');if(!fs.existsSync(keyFile)){save({...state,available:false,attempt_at:Date.now(),last_error:'release_signing_not_configured'});return {available:false,next_action:'release_signing_not_configured'};}
    const endpoint='https://api.github.com/repos/shayann07/antigravity-computer-use/releases'+(settings.channel==='stable'?'/latest':'?per_page=20');
-   const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await response.json();
+   const response=await fetcher(endpoint,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('update_release_unavailable');let release=await readBoundedJSON(response,4*1024*1024);
    if(Array.isArray(release))release=release.find(r=>!r.draft);if(!release||release.draft)throw Error('update_release_unavailable');
    const asset=release.assets?.find(a=>a.name===`update-${process.platform}-${process.arch}.json`);
    if(!asset){

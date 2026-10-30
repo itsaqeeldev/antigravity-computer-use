@@ -68,5 +68,8 @@ export async function readBoundedJSON(reply,maxBytes=262144){
  // Streaming prevents an oversized metadata body from being buffered first.
  if(reply.body){const chunks=[];let length=0;for await(const chunk of reply.body){length+=chunk.length;if(length>maxBytes)throw Error('update_metadata_size');chunks.push(Buffer.from(chunk));}return JSON.parse(Buffer.concat(chunks).toString('utf8'));}
  // Inert test transports may expose only text/json; real fetch always has body.
+ if(typeof reply.text!=='function'&&typeof reply.json==='function'){
+  const value=await reply.json();if(Buffer.byteLength(JSON.stringify(value))>maxBytes)throw Error('update_metadata_size');return value;
+ }
  const text=await reply.text();if(Buffer.byteLength(text)>maxBytes)throw Error('update_metadata_size');return JSON.parse(text);
 }

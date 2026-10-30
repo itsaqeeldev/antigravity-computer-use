@@ -51,6 +51,13 @@ test('failed manual check cannot apply a previously staged offer',async()=>{
   await assert.rejects(update(f.target,'apply',f),/update_not_staged/);assert(!f.calls.includes('shutdown'));
  }finally{f.cleanup();}
 });
+test('oversized release listings are refused before payload download or shutdown',async()=>{
+ const f=fixture();try{
+  let requests=0;const fetcher=async()=>{requests++;return {ok:true,headers:{get:()=>null},body:(async function*(){yield Buffer.alloc(4*1024*1024+1);})()};};
+  await assert.rejects(update(f.target,'check',{...f,fetcher}),/update_metadata_size/);
+  assert.equal(requests,1);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available,false);
+ }finally{f.cleanup();}
+});
 test('a new check invalidates the prior offer durably before network work',async()=>{
  const f=fixture();let entered,release;const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
  try{

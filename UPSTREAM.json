@@ -612,7 +612,7 @@
     },
     {
       "path": "server/update-core.mjs",
-      "sha256": "c26892cdaec73d8ec3e674dfcbeb108563f2d2309f8b6934bbf8b3a2a59ffa92"
+      "sha256": "519148265d2932f87c8c12f5cd3c4eb453125bae85fe767e74157face91586cb"
     },
     {
       "path": "server/auto-update.mjs",
@@ -624,7 +624,7 @@
     },
     {
       "path": "scripts/update.mjs",
-      "sha256": "0ba9efd4f29fb4ac9189006ec98d4b9fe01607d493618d6edd25c0ce0ec5b16d"
+      "sha256": "6bd160af2ab7fe641296537f813148754ce9d96f3f6f40eb3a55f8c079c17336"
     },
     {
       "path": "scripts/sign-update.mjs",
@@ -640,11 +640,11 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "d766a470b762035db65b119d92431c98a0a87cee4fc8db53525b856a4adb7c8c"
+      "sha256": "22f9aa5451e0d3334c6839910c6a521b46b922afd8e94760f47e81467a788ded"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "430db79038412a22f1774006578836fa3e91961029c6dbdba4c152dcc0281f2b"
+      "sha256": "6a0583a11858aaa089c910a8b867b861646e2d94cec22793545d91c28aeab44f"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
