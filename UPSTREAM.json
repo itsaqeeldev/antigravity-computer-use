@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "d705da43ce8d59bae7a9ab95bf5e6e144067f427c92d83255059a5444e239da2"
+      "sha256": "d58d199e754bf545182b121c9e1a770cce18ac6acff379a84de7742b784942ac"
     },
     {
       "path": "server/mcp.mjs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "61a6ada6dc2b988fe13d12888a782d390c4689d257408e68372489f37deb7fbc"
+      "sha256": "2ca28bb5128d3ee376f29b98ba6d118a23d49a0e562604b4a4076f664f61b40a"
     },
     {
       "path": "skills/computer-use/references/recovery.md",

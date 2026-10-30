@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {call,TOOLS,validate} from '../server/desktop-tools.mjs';
-import {Runtime,appKey,comparableView} from '../server/runtime.mjs';
+import {Runtime,appKey,comparableView,waitUntil} from '../server/runtime.mjs';
 import {parseRunArguments} from '../scripts/arguments.mjs';
 const args=steps=>({hwnd:7,observation_id:'initial',reason:'Verify once, never replay',steps});
 const describe=kind=>({inputSchema:TOOLS.find(tool=>tool.name==='computer_'+kind).inputSchema});
+
+test('an early timer wake cannot complete a polling delay before its deadline',async()=>{
+ let now=0,calls=0;await waitUntil(2,{now:()=>now,sleep:async requested=>{assert(requested>=1);if(++calls>4)throw Error('unbounded timer loop');now+=0.5;}});
+ assert.equal(now,2);assert.equal(calls,4);
+});
 
 test('a batch waits then uses the freshly verified frame for its next action',async()=>{
  const seen=[];

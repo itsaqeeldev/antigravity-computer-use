@@ -21,10 +21,10 @@ import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
-async function waitUntil(target){
+export async function waitUntil(target,{now=()=>performance.now(),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
   // Node timers may wake before a fractional deadline. Do not start another
   // expensive poll until the intended delay has actually elapsed.
-  while(true){const remaining=target-performance.now();if(remaining<=0)return;await new Promise(resolve=>setTimeout(resolve,Math.max(1,Math.ceil(remaining))));}
+  while(true){const remaining=target-now();if(remaining<=0)return;await sleep(Math.max(1,Math.ceil(remaining)));}
 }
 function waitFailure(observation,labels){
   if(!labels?.length)return undefined;
