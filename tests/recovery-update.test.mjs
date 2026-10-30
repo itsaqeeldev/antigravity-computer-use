@@ -3,7 +3,12 @@ import {Guardian} from '../server/guardian.mjs';import {Runtime} from '../server
 import {failureReply} from '../scripts/desktop.mjs';import {readBoundedJSON} from '../server/update-core.mjs';
 import {spawn,spawnSync} from 'node:child_process';
 import {serveDesktop} from '../server/desktop-service.mjs';import {BUILD_ID,VERSION} from '../server/version.mjs';
-import {priorWindowsCleanupVerified} from '../server/recovery.mjs';
+import {priorWindowsCleanupVerified,recoveryAdvice} from '../server/recovery.mjs';
+test('session budget exhaustion gives bounded recovery without replay',()=>{
+ assert.deepEqual(recoveryAdvice({error:{code:'session_limit'}}),{next_action:'end_owned_task_then_reauthorize',replay_allowed:false});
+ assert.deepEqual(recoveryAdvice({input_completed:true,verification_error:{code:'session_limit'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});
+ assert.deepEqual(recoveryAdvice({delivery_unknown:true,error:{code:'session_limit'}}),{next_action:'inspect_effect_without_replay',replay_allowed:false});
+});
 test('prior Windows cleanup requires dead recorded processes and an empty exact ledger',()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'prior-ledger-')),guard='guard-101-12345678-1234-1234-1234-123456789abc.state',file=path.join(dir,guard);
  const record={guard,children:[102,103,104,105],dispatched:true,watchdogs_complete:true},dead=()=>{throw Object.assign(Error('gone'),{code:'ESRCH'});};

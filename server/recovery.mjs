@@ -33,6 +33,7 @@ export function recoveryAdvice(result){
  if(code==='desktop_context_unavailable')return {next_action:'human_start_on_visible_desktop',replay_allowed:false};
  if(code==='version_mismatch')return {next_action:'resolve_version_mismatch',replay_allowed:false};
  if(code==='recovered_task_requires_end')return {next_action:'inspect_recovered_task',replay_allowed:false};
+ if(code==='session_limit')return {next_action:'end_owned_task_then_reauthorize',replay_allowed:false};
  if(['recovered_cleanup_unverified','input_lease_stale'].includes(code))return {next_action:'inspect_prior_input_cleanup',replay_allowed:false};
  if(['stop_persistence_failed','guard_persistence_failed'].includes(code))return {next_action:'inspect_stop_persistence_without_restart',replay_allowed:false};
  if(code==='input_cleanup_failed')return {next_action:'inspect_input_cleanup',replay_allowed:false};

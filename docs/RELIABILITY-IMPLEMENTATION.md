@@ -1162,6 +1162,11 @@ timer now defers both policies for open or paused tasks. Isolated IPC tests
 cover preservation and later cleanup; missing or unreadable task state also
 defers cleanup. The independent native session expiry
 still applies, and a real long-gap Antigravity test remains pending.
+Session-limit failures now identify a bounded recovery action: end only the
+owned task, obtain the required new authorization and observe again. An
+uncertain or already-completed input still takes precedence and requires
+inspection without replay. This guidance does not establish host ownership or
+remove the native time/action limit.
 
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
