@@ -81,11 +81,13 @@ macOS may require new permission approval after an ad-hoc-signed update.
   failures return unknown delivery without a physical retry.
 - A separate event-tap watchdog handles physical Esc or Control+Option+F12,
   invalidates the native fence, terminates birth-time-matched input workers and
-  releases journaled automation-held input. Stop persists across restart;
-  only the local human Re-arm control clears it.
+  attempts to release journaled automation-held input. Stop persists across
+  restart; only the local human Re-arm control clears it. macOS event posting
+  does not acknowledge delivery: physical held-input cleanup remains unqualified.
 - Input permission and point ownership are rechecked while dispatching native
-  events. Errors release journaled input and preserve unknown delivery; cleanup
-  failure latches Stop. Native headless refusal tests do not prove physical Esc.
+  events. Errors attempt journaled input cleanup and preserve unknown delivery;
+  detected cleanup failure latches Stop. Native headless refusal tests do not
+  prove physical Esc or successful release at a target application.
 - Manual takeover is the default. Optional Smart mode ignores small motion and
   yields on deliberate input. Resume requires fresh observations.
 - AppKit renders the minimal bar, breathing edges and original arrow/text

@@ -35,6 +35,14 @@ Check that named clicks move the real pointer by default; also test explicit
 semantic-only clicks, disabled controls, and that error/Stop paths do not replay
 input. Record which actions are physically observed rather than inferred.
 
+Specifically challenge issues #7, #9, #11, #16 and #17 on the exact current
+head. Check serialization of native dispatch and cleanup, a worker killed while
+an input is held, lock/ledger replacement, cleanup failure and a second task.
+Posting a CGEvent or seeing an empty journal does not by itself prove that a
+release reached the target. Record actual physical observations separately.
+The Sidecar does not yet authenticate host conversation ownership; never use a
+model-supplied ID as a credential or disturb another task to make this pass.
+
 Qualify updater authenticity, idle deferral, preserved Stop/config/pins,
 failed-start rollback and skill discovery after upgrade. Production releases need
 a maintainer-pinned signing key; never create an unsigned bypass to run a test.

@@ -608,7 +608,7 @@
     },
     {
       "path": "docs/MACOS.md",
-      "sha256": "4822438d29f0dec8a579684e9b26441da1e616268112c3643ecdd70b9686a9fb"
+      "sha256": "a74bfcaed5c12d326e97506af16e2f91327aa79bd24789f7a9c6de12d39ef38b"
     },
     {
       "path": "server/update-core.mjs",
@@ -648,7 +648,7 @@
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
-      "sha256": "665b8e4aa689642ec185ced1b60d365977ec28990493cc8d140d3484c0c0f0ba"
+      "sha256": "594d28956978b602b7a93efc1f694cb26091164b01fd793aa1ad27a0bac8b051"
     },
     {
       "path": "tests/reporting.test.mjs",
