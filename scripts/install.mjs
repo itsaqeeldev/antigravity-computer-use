@@ -82,7 +82,7 @@ export function install({bundle=here,target,home=os.homedir(),workspace=null,leg
  const sidecarSelected=sidecar;
  sidecar??=integration==='direct'&&!workspace&&previous?.sidecar===true;
  if(sidecar&&(workspace||integration!=='direct'))throw Error('The local sidecar belongs to the global direct install; project-local installs reuse it.');
- permissionMode??=previous?.integration===integration&&['standalone','host-managed'].includes(previous.permission_mode)?previous.permission_mode:integration==='mcp'?'host-managed':'standalone';
+ permissionMode??=previous?.integration===integration&&['standalone','host-managed'].includes(previous.permission_mode)?previous.permission_mode:(integration==='mcp'||sidecar)?'host-managed':'standalone';
  const liveFile=path.join(target,'data','desktop-session.json');
  for(const root of new Set([target,...previousRoots])){const sessionFile=path.join(root,'data','desktop-session.json');if(fs.existsSync(sessionFile)){
   const live=JSON.parse(fs.readFileSync(sessionFile,'utf8'));

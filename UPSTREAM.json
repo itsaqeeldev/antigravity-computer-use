@@ -348,7 +348,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "7770bd0d40cb9babd222d9a893a64eb0c1a3839daf070b79f0b4a0184f651aec"
+      "sha256": "ee7e190ccf71acf39dca1a5653398934d5b5a77389a4af75bcbb935d84fec578"
     },
     {
       "path": "scripts/rollback.mjs",
