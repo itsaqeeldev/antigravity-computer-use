@@ -44,14 +44,7 @@ function Assert-ComputerUsePath {
 function New-ComputerUseStaging {
     param([string]$CacheDirectory)
     if (!$CacheDirectory) {
-        $pointer = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.gemini/config/skills/computer-use/deployment.json'
-        if (Test-Path -LiteralPath $pointer) {
-            $installed = [IO.File]::ReadAllText($pointer) | ConvertFrom-Json
-            if ([IO.Path]::IsPathRooted($installed.target) -and (Test-Path -LiteralPath (Join-Path $installed.target 'installation.json'))) {
-                $CacheDirectory = Join-Path $installed.target 'backups/bootstrap-cache'
-            }
-        }
-        if (!$CacheDirectory -and (Test-Path -LiteralPath 'D:\')) {
+        if (Test-Path -LiteralPath 'D:\') {
             $hasher = [Security.Cryptography.SHA256]::Create()
             try { $sidHash = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes([Security.Principal.WindowsIdentity]::GetCurrent().User.Value))).Replace('-', '').ToLowerInvariant().Substring(0, 10) }
             finally { $hasher.Dispose() }
