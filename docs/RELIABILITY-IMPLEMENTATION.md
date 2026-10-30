@@ -1209,12 +1209,13 @@ into a human-only re-arm. A safe design must handle an expiry racing with Esc
 without overwriting a real Stop latch or allowing further queued input. The
 worker's per-input fence and an independent watchdog both need the same bound;
 neither a JavaScript deadline nor an in-process UI timer proves that property.
-An initial Windows-only candidate adds a per-boot `GetTickCount64` deadline to
-the guardian state and requires it in the worker fence, with a matching guardian
-UI expiry check. It rejects malformed or legacy active records and clamps the
-requested duration. Headless native tests cover the deadline arithmetic and
-refusal; the independent watchdog does not yet enforce this deadline, and the
-Mac adapter is not yet updated. Do not install or release this partial change.
+An initial candidate adds a per-boot deadline to the Windows and Mac guardian
+states and requires it in the worker fence, with matching guardian UI expiry
+checks. It rejects malformed or legacy active records and clamps requested
+durations. Windows headless native tests cover arithmetic and refusal; Mac
+compilation and the equivalent contract checks await CI. The independent
+watchdogs do not yet enforce these deadlines. Do not install or release this
+partial change.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

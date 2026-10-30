@@ -86,6 +86,7 @@ final class MacPanicMonitor {
 
 final class MacGuardian: NSObject {
     var state = "idle", token = "", until: Int64 = 0
+    var bootUntil: UInt64 = 0
     var grants = Set<String>()
     var watchdog: Process?
     var timer: Timer?
@@ -140,7 +141,7 @@ final class MacGuardian: NSObject {
     }
     func writeState() throws {
         let encoded = Data(grants.sorted().joined(separator: "\n").utf8).base64EncodedString()
-        try MacFence.write("\(state)|\(token)|\(until)|\(encoded)")
+        try MacFence.write("\(state)|\(token)|\(until)|\(encoded)|\(bootUntil)")
     }
     func set(_ next: String, reason: String = "") {
         if next == "active" && (!MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) || state == "stopped") { return }
@@ -162,10 +163,12 @@ final class MacGuardian: NSObject {
         if state == "active" { set("paused", reason: "requested_pause"); return }
         do { try ensureWatchdog() } catch { emit(["ev":"visual_warning", "message":String(describing:error)]); return }
         guard MacInputLedger.recover() else { return }
+        until = MacFenceState.now + Int64(MacContract.value["session_ms"] as? Int ?? 600_000) * 10_000
+        bootUntil = MacDeadline.create(requested: until, wallNow: MacFenceState.now, bootNow: MacDeadline.now, maximumMs: MacContract.value["session_ms"] as? Int ?? 600_000)
+        guard bootUntil > 0 else { return }
         if state == "stopped" && !MacFence.latch.isEmpty {
             do { if FileManager.default.fileExists(atPath: MacFence.latch) { try FileManager.default.removeItem(atPath: MacFence.latch) } } catch { return }
         }
-        until = MacFenceState.now + Int64(MacContract.value["session_ms"] as? Int ?? 600_000) * 10_000
         set(state == "paused" ? "active" : "idle", reason: "human_resume")
         emit(["ev": "human_resume", "state": state])
     }
@@ -176,7 +179,7 @@ final class MacGuardian: NSObject {
         if stored.state == "paused" && state == "active" { set("paused", reason: "human_takeover") }
         if state == "active" {
             if watchdog?.isRunning != true { stop("watchdog_exited"); return }
-            if MacFenceState.now >= until { set("idle", reason: "expired"); return }
+            if MacFenceState.now >= until || !MacDeadline.valid(bootUntil, now: MacDeadline.now) { set("idle", reason: "expired"); return }
             visuals.animate()
         }
         let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0
@@ -195,12 +198,17 @@ final class MacGuardian: NSObject {
             case "attach": reply(["registered": true]) // worker self-registers before reporting ready
             case "activate":
                 guard state != "stopped", state != "paused", MacInputLedger.recover() else { reply(["allowed": false]); return }
-                try ensureWatchdog(); token = str(message["token"]) ?? ""; until = Int64(str(message["deadline"]) ?? "0") ?? 0
-                guard !token.isEmpty, until > MacFenceState.now else { reply(["allowed": false]); return }
+                try ensureWatchdog(); let nextToken = str(message["token"]) ?? "", requested = Int64(str(message["deadline"]) ?? "0") ?? 0
+                let nextBoot = MacDeadline.create(requested: requested, wallNow: MacFenceState.now, bootNow: MacDeadline.now, maximumMs: MacContract.value["session_ms"] as? Int ?? 600_000)
+                guard !nextToken.isEmpty, nextBoot > 0 else { reply(["allowed": false]); return }
+                token = nextToken; until = requested; bootUntil = nextBoot
                 set("active"); reply(["allowed": state == "active"])
             case "resume":
                 guard hostManaged, state == "paused", MacInputLedger.recover() else { reply(["allowed": false]); return }
-                try ensureWatchdog(); until = MacFenceState.now + 6_000_000_000; set("active", reason: "host_authorized_resume")
+                try ensureWatchdog(); until = MacFenceState.now + 6_000_000_000
+                bootUntil = MacDeadline.create(requested: until, wallNow: MacFenceState.now, bootNow: MacDeadline.now, maximumMs: MacContract.value["session_ms"] as? Int ?? 600_000)
+                guard bootUntil > 0 else { reply(["allowed": false]); return }
+                set("active", reason: "host_authorized_resume")
                 emit(["ev": "host_resume", "state": state]); reply(["allowed": state == "active"])
             case "pause": set("paused", reason: "requested_pause")
             case "stop": stop("request")

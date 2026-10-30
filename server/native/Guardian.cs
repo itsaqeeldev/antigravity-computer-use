@@ -292,8 +292,10 @@ namespace Axon {
                 else {
                     try {ControlFence.Recover();}catch {}
                     if(InputLedger.HasHeld()){Emit(new {ev="visual_warning",message="Held-input cleanup is incomplete; control stays paused/stopped"});return;}
+                    deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));
+                    if(bootDeadline==0){Emit(new {ev="error",message="Cannot establish the native session deadline; control stays paused/stopped"});return;}
                     if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch))try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
-                    deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
+                    SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
                 }
             };
             stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate {

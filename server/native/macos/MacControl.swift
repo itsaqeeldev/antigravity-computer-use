@@ -70,10 +70,25 @@ func macFingerprint(_ op: String, _ args: [String: Any], _ label: String) throws
     return Data(SHA256.hash(data: input)).base64EncodedString()
 }
 
+enum MacDeadline {
+    // System-wide monotonic milliseconds, including time asleep.
+    static var now: UInt64 { clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1_000_000 }
+    static func create(requested: Int64, wallNow: Int64, bootNow: UInt64, maximumMs: Int) -> UInt64 {
+        guard wallNow >= 0, requested > wallNow, maximumMs > 0 else { return 0 }
+        let remaining = (requested - wallNow) / 10_000
+        guard remaining > 0 else { return 0 }
+        let duration = UInt64(min(remaining, Int64(maximumMs)))
+        let (deadline, overflow) = bootNow.addingReportingOverflow(duration)
+        return overflow ? 0 : deadline
+    }
+    static func valid(_ deadline: UInt64, now: UInt64) -> Bool { deadline > now }
+}
+
 struct MacFenceState {
     let state: String
     let token: String
     let until: Int64
+    let bootUntil: UInt64
     let grants: Set<String>
     init(_ text: String) throws {
         let parts = text.components(separatedBy: "|")
@@ -81,6 +96,12 @@ struct MacFenceState {
             throw AxonError("control_stopped", "Native control state is unavailable or invalid.")
         }
         state = parts[0]; token = parts[1]; until = ticks
+        if state == "active" {
+            guard parts.count >= 5, let monotonic = UInt64(parts[4]), monotonic > 0 else {
+                throw AxonError("control_stopped", "Active native control has no valid monotonic deadline.")
+            }
+            bootUntil = monotonic
+        } else { bootUntil = 0 }
         if parts.count > 3, let bytes = Data(base64Encoded: parts[3]), let text = String(data: bytes, encoding: .utf8) {
             grants = Set(text.components(separatedBy: "\n").filter { !$0.isEmpty })
         } else { grants = [] }
@@ -125,7 +146,8 @@ enum MacFence {
             throw AxonError("control_stopped", "Emergency Stop is latched; local human re-arm is required.")
         }
         let state = try read()
-        guard state.state == "active", state.token == str(current["__session"]), state.until > MacFenceState.now else {
+        guard state.state == "active", state.token == str(current["__session"]), state.until > MacFenceState.now,
+              MacDeadline.valid(state.bootUntil, now: MacDeadline.now) else {
             throw AxonError("control_stopped", "Control is paused, stopped or expired. Observe again after authorized resume.")
         }
         let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0

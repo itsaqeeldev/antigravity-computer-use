@@ -108,13 +108,23 @@ func macContractTest() throws {
         throw AxonError("contract_test_failed", "Value read-back classification differs.")
     }
     let token = "native-contract-test", grant = "123:birth:/app"
-    let text = "active|\(token)|\(MacFenceState.now + 10_000_000)|\(Data(grant.utf8).base64EncodedString())"
+    let bounded = MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 1000, maximumMs: 500)
+    guard bounded == 1500, MacDeadline.valid(bounded, now: 1499), !MacDeadline.valid(bounded, now: 1500),
+          MacDeadline.create(requested: 100, wallNow: 100, bootNow: 10, maximumMs: 500) == 0,
+          MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: UInt64.max - 1, maximumMs: 500) == 0 else {
+        throw AxonError("contract_test_failed", "Monotonic deadline arithmetic differs.")
+    }
+    let text = "active|\(token)|\(MacFenceState.now + 10_000_000)|\(Data(grant.utf8).base64EncodedString())|\(MacDeadline.now + 1000)"
     let state = try MacFenceState(text)
     guard state.state == "active", state.token == token, state.grants.contains(grant), state.until > MacFenceState.now else {
         throw AxonError("contract_test_failed", "Shared state decoding differs.")
     }
     do { _ = try MacFenceState("active|broken|NaN|"); throw AxonError("contract_test_failed", "Malformed state accepted.") }
     catch let error as AxonError { if error.code == "contract_test_failed" { throw error } }
+    for invalid in ["active|fixture|999|", "active|fixture|999||0", "active|fixture|999||invalid"] {
+        do { _ = try MacFenceState(invalid); throw AxonError("contract_test_failed", "Unbounded active state accepted.") }
+        catch let error as AxonError { if error.code == "contract_test_failed" { throw error } }
+    }
     let a = try macFingerprint("click", ["index": 1, "__session": "one"], "Button")
     let b = try macFingerprint("click", ["__session": "two", "index": 1], "Button")
     let c = try macFingerprint("click", ["index": 2], "Button")
@@ -129,7 +139,7 @@ func macContractTest() throws {
     // Refusals only: no fake live permission, application grant or input event.
     try MacFence.initialize()
     MacFence.current = ["__session": token]
-    let live = "active|\(token)|\(MacFenceState.now + 10_000_000)|"
+    let live = "active|\(token)|\(MacFenceState.now + 10_000_000)||\(MacDeadline.now + 1000)"
     func refused(_ state: String, _ description: String) throws {
         try MacFence.write(state)
         do { try MacFence.check(); throw AxonError("contract_test_failed", "Fence accepted \(description).") }
