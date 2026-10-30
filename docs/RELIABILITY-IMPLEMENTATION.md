@@ -1117,3 +1117,12 @@ that cleanup can reacquire the lock. This check sends no desktop input and is
 pending execution on hosted Macs. Event-dispatch interleavings and physical Mac
 input cleanup and Stop remain pending; the lock does not prove that a posted
 release reached macOS.
+
+Apple documents `CGEventPost` as returning no delivery result and describes
+Quartz event-source state tables as combined states. A released state alone
+therefore cannot distinguish our synthetic event from physical user input or
+prove delivery to a target application. See [CGEventPost](https://developer.apple.com/documentation/coregraphics/cgevent/post(tap:))
+and [event-source state](https://developer.apple.com/documentation/coregraphics/cgeventsourcestateid).
+The current native recovery still clears a nonempty journal after posting
+release events; that is a best-effort cleanup, not a verified release. Do not
+use it as evidence for physical Mac acceptance or safe recovered-task End.

@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "31ef369044ca3dd96fee431da1a5df1857d2c7142290047ebf4d75b65b85cf86"
+      "sha256": "9102e427e2fd956a172fb0eb0d2832a149aa3552b1f7de668de2b419df9d4311"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "04865415c47f4f3ff0ae817625874f014bbf4ead4bf20a40e6c174335644526d"
+      "sha256": "5518eee9a70ea2b1d119b4829efc33d009483a08b28d3bc3a8fc4f60f8ad9253"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
