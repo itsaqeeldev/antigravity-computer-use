@@ -141,10 +141,16 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   }catch(error){try{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}catch{}await shutdown();throw error;}
   expiry=setInterval(()=>{
     if(busy||closing||Date.now()-lastCall<=idleTimeoutMs)return;
+    // A long host/model decision gap is not task completion. In particular,
+    // never clear grants, close the service, or disturb a human pause while an
+    // explicitly open task awaits its next call.
+    let state;try{state=runtime.status();}catch{return;}
+    if(!state||typeof state!=='object'||state.task_open!==false||!['idle','active','paused','stopped'].includes(state.state))return;
+    if(state.state==='paused')return;
     if(idlePolicy==='shutdown'){shutdown().catch(()=>{});return;}
     // A local sidecar may keep its private listener, never its control grants.
     // Preserve a human Pause/Stop; this is not an automatic Resume/re-arm.
-    if(idleReleased||['stopped','paused'].includes(runtime.status().state))return;
+    if(idleReleased||state.state==='stopped')return;
     idleReleased=true;busy=true;
     Promise.resolve().then(()=>runtime.finish({preserveTask:true})).catch(()=>runtime.stop()).catch(()=>{}).finally(()=>{busy=false;});
   },idleCheckMs);expiry.unref();

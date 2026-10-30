@@ -67,13 +67,34 @@ test('CLI JSON survives legacy PowerShell stdout decoding without corrupting Uni
 
 test('a passive sidecar releases idle control and serves a later session without restarting',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-'));let state='active',finishes=0,resumed=0;
- const runtime={status:()=>({state}),async finish(){finishes++;state='idle';},async observe(){state='active';resumed++;return {metadata:{observation_id:'next-session'}};},async close(){}};
+ const runtime={status:()=>({state,task_open:false}),async finish(){finishes++;state='idle';},async observe(){state='active';resumed++;return {metadata:{observation_id:'next-session'}};},async close(){}};
  const service=await serveDesktop({directory:dir,runtime,idlePolicy:'release',idleTimeoutMs:25,idleCheckMs:5});const session=JSON.parse(fs.readFileSync(service.file));
  try{
   for(let i=0;i<30&&!finishes;i++)await new Promise(r=>setTimeout(r,10));assert.equal(finishes,1);assert(fs.existsSync(service.file));
   const status=await request(session,'status');assert.equal(status.state,'idle');assert.equal(status.listener_idle_policy,'release');
   assert.equal((await request(session,'snapshot',{hwnd:1})).metadata.observation_id,'next-session');assert.equal(resumed,1);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('idle cleanup cannot end an open or paused task during a long decision gap',async()=>{
+ for(const idlePolicy of ['release','shutdown']){
+  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-open-idle-'));let taskOpen=true,state='active',finishes=0,closes=0;
+  const runtime={status:()=>({state,task_open:taskOpen}),async finish(){finishes++;state='idle';},async close(){closes++;}};
+  const service=await serveDesktop({directory:dir,runtime,idlePolicy,idleTimeoutMs:10,idleCheckMs:5});
+  try{
+   await new Promise(r=>setTimeout(r,80));assert.equal(finishes,0);assert.equal(closes,0);assert(fs.existsSync(service.file));
+   taskOpen=false;state='paused';await new Promise(r=>setTimeout(r,60));assert.equal(finishes,0);assert.equal(closes,0);assert(fs.existsSync(service.file));
+   state='idle';for(let i=0;i<30&&finishes+closes===0;i++)await new Promise(r=>setTimeout(r,10));
+   assert.equal(idlePolicy==='release'?finishes:closes,1);
+  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+ }
+});
+test('idle cleanup defers if runtime task state cannot be read',async()=>{
+ for(const status of [()=>{throw Error('state unavailable');},()=>({state:'idle'}),()=>({state:'unknown',task_open:false})]){
+  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-idle-unknown-'));let closes=0;
+  const service=await serveDesktop({directory:dir,runtime:{status,async close(){closes++;}},idlePolicy:'shutdown',idleTimeoutMs:10,idleCheckMs:5});
+  try{await new Promise(r=>setTimeout(r,80));assert.equal(closes,0);assert(fs.existsSync(service.file));}
+  finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+ }
 });
 test('update reservation refuses an idle task and unavailable task state',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-task-fence-'));let taskOpen=true;

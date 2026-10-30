@@ -1156,6 +1156,13 @@ single-link, file-identity and bounded-read checks. A hard-linked empty ledger
 is refused in local regression tests. This does not qualify actual watchdog
 cleanup or physical crash recovery, which remain open under issue #9.
 
+Issue #13 records that the listener's idle timer could clear an open task's
+grants and frames or shut down a paused task during a long decision gap. The
+timer now defers both policies for open or paused tasks. Isolated IPC tests
+cover preservation and later cleanup; missing or unreadable task state also
+defers cleanup. The independent native session expiry
+still applies, and a real long-gap Antigravity test remains pending.
+
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or
