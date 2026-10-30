@@ -26,6 +26,35 @@ final class MacPanicMonitor {
     var baseline: CGPoint?
     var moved: Double = 0
     var at = Date()
+    var expiredKey: String?
+    var expiredSince: UInt64 = 0
+    var invalidSince: UInt64?
+    static func deadlineGraceElapsed(since: UInt64, now: UInt64) -> Bool {
+        now >= since && now - since >= 5000
+    }
+    func checkDeadline() {
+        guard let state = try? MacFence.read() else {
+            let now = MacDeadline.now
+            if invalidSince == nil { invalidSince = now; return }
+            if let since = invalidSince, now >= since, now - since >= 1000, (try? MacFence.read()) == nil {
+                MacFence.emergency("watchdog_state_unavailable"); invalidSince = nil
+            }
+            return
+        }
+        invalidSince = nil
+        guard state.state == "active",
+              !MacDeadline.valid(state.bootUntil, now: MacDeadline.now) else {
+            expiredKey = nil; expiredSince = 0; return
+        }
+        let key = state.token + "|" + String(state.bootUntil), now = MacDeadline.now
+        if expiredKey != key { expiredKey = key; expiredSince = now; return }
+        guard Self.deadlineGraceElapsed(since: expiredSince, now: now),
+              let latest = try? MacFence.read(), latest.state == "active",
+              latest.token == state.token, latest.bootUntil == state.bootUntil,
+              !MacDeadline.valid(latest.bootUntil, now: MacDeadline.now) else { return }
+        MacFence.emergency("watchdog_deadline_expired")
+        expiredKey = nil; expiredSince = 0
+    }
     func start() -> Bool {
         let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.mouseMoved.rawValue) |
             (1 << CGEventType.leftMouseDown.rawValue) | (1 << CGEventType.rightMouseDown.rawValue) | (1 << CGEventType.scrollWheel.rawValue)
@@ -70,15 +99,27 @@ final class MacPanicMonitor {
     }
     func run(guardian: pid_t, birth: String) -> Never {
         guard start() else { emit(["ev": "error", "message": "Input Monitoring permission is required for independent Stop."]); exit(1) }
-        try? Data("\(getpid())|\((try? macProcessStart(getpid())) ?? "")".utf8).write(to: URL(fileURLWithPath: MacFence.file + ".watchdog"), options: [.atomic])
+        do {
+            let marker = MacFence.file + ".watchdog"
+            try Data("\(getpid())|\(try macProcessStart(getpid()))".utf8).write(to: URL(fileURLWithPath: marker), options: [.atomic])
+            guard chmod(marker, 0o600) == 0 else { throw AxonError("stop_monitor_unavailable", "Cannot protect watchdog identity.") }
+            let fd = open(marker, O_RDWR | O_NOFOLLOW); guard fd >= 0 else { throw AxonError("stop_monitor_unavailable", "Cannot open watchdog identity.") }
+            defer { close(fd) }
+            var info = stat()
+            guard fstat(fd, &info) == 0, info.st_uid == getuid(), info.st_mode & S_IFMT == S_IFREG,
+                  info.st_mode & 0o077 == 0, info.st_nlink == 1, fsync(fd) == 0 else {
+                throw AxonError("stop_monitor_unavailable", "Cannot confirm watchdog identity.")
+            }
+        } catch { emit(["ev":"error", "message":"Independent Stop monitoring could not record its identity."]); exit(1) }
         emit(["watchdog_ready": true])
         Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0
             if (try? macProcessStart(guardian)) != birth || (try? macProcessStart(parent)) != MacFence.parentIdentity {
                 if (try? MacFence.read().state) != "idle" { MacFence.emergency("guardian_exited") }
-                else { macKillWorkers(); _ = MacInputLedger.recover() }
+                else { macKillWorkers(); if !MacInputLedger.recover() { MacFence.emergency("input_cleanup_failed") } }
                 exit(0)
             }
+            self.checkDeadline()
         }
         RunLoop.current.run(); exit(0)
     }

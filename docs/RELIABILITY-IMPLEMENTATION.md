@@ -1214,13 +1214,16 @@ states and requires it in the worker fence, with matching guardian UI expiry
 checks. It rejects malformed or legacy active records and clamps requested
 durations. Windows headless native tests cover arithmetic and refusal; Mac
 compilation and equivalent contract checks passed in CI run `40988442306` at
-`cb74627`. The Mac independent watchdog does not yet enforce this deadline. A Windows
-candidate now lets ordinary guardian cleanup complete, then escalates an
-unresolved expired/inactive state after five seconds or a persistently invalid
-state after one second. It retains crash monitoring until explicit disarm after
+`cb74627`. The Windows watchdog candidate allows ordinary guardian cleanup,
+then escalates an unresolved expired/inactive state after five seconds or a
+persistently invalid state after one second. It retains crash monitoring until explicit disarm after
 worker termination and ledger recovery. Headless classification and grace
 tests pass locally; native physical expiry/Stop races and Mac watchdog behavior
-remain unqualified. Do not install or release this partial change.
+remain unqualified. The Mac watchdog checks expired active and persistently
+unreadable state; it does not yet prove cleanup if the guardian writes idle and
+then stalls. Its startup now refuses if watchdog identity cannot be written and
+flushed. Mac compilation/CI for these changes is pending. Do not install or
+release this partial change.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

@@ -119,6 +119,11 @@ func macContractTest() throws {
           MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: UInt64.max - 1, maximumMs: 500) == 0 else {
         throw AxonError("contract_test_failed", "Monotonic deadline arithmetic differs.")
     }
+    guard !MacPanicMonitor.deadlineGraceElapsed(since: 100, now: 5099),
+          MacPanicMonitor.deadlineGraceElapsed(since: 100, now: 5100),
+          !MacPanicMonitor.deadlineGraceElapsed(since: 100, now: 99) else {
+        throw AxonError("contract_test_failed", "Watchdog expiry grace differs.")
+    }
     let text = "active|\(token)|\(MacFenceState.now + 10_000_000)|\(Data(grant.utf8).base64EncodedString())|\(MacDeadline.now + 1000)"
     let state = try MacFenceState(text)
     guard state.state == "active", state.token == token, state.grants.contains(grant), state.until > MacFenceState.now else {
