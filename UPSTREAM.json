@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "d58d199e754bf545182b121c9e1a770cce18ac6acff379a84de7742b784942ac"
+      "sha256": "6a0e4b042f317822bdf6c769b0d3747a7df1712d90d7589fe9e6716f74d654b0"
     },
     {
       "path": "server/mcp.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "56e8180a81b8182818ad8cc68f505ddd73a6ad477d075897c27e8b46ab9701cb"
+      "sha256": "77c7f7855545dd393b78c8a0d18db6d1baebee0126af4af0e83195fbae41b171"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "afc4119503a3c5cf4b2588a041140204fb70fae830f7b314f46bf7ad2340e247"
+      "sha256": "c616ad009557a34509fef06a227cdedb6b4b0a16fa1efe43b811958d239ad765"
     },
     {
       "path": "HANDOFF.md",

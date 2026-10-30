@@ -22,8 +22,12 @@ grace. A timeout starts worker retirement; the reply can precede confirmed
 exit, but the driver fences replacement and reports failed cleanup if the old
 worker cannot be confirmed stopped. Mocked worker and forwarding tests cover
 that boundary, including the actual JavaScript Driver with an inert worker that
-withholds its reply. Startup, grant, screenshot and real hung-provider behavior are
-not covered by this limit, so issue #25 remains open.
+withholds its reply. Wait screenshots also receive a remaining-budget driver
+timeout plus one second of grace; if the budget expires during overlay-capture
+preparation, the overlay is restored and no screenshot starts. Mocked tests
+cover both paths. Startup, grant, guardian capture preparation and real hung
+provider or screenshot behavior remain outside a hard deadline, so issue #25
+remains open.
 An isolated Windows test also calls the compiled host's budget policy and
 checks that a requested limit cannot widen the configured limit; it does not
 walk a real accessibility tree or prove provider cancellation.

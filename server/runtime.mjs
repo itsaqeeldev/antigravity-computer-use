@@ -272,7 +272,11 @@ export class Runtime {
     let image;
     if(args.with_image!==false){
       await this.guardian.request({op:'capture'});
-      try { image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80})).result; }
+      try {
+        if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the screenshot could start. Inspect the app; do not replay prior input.');
+        const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
+        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80},captureBudget!==null?{timeoutMs:captureBudget+1000}:undefined)).result;
+      }
       finally { this.guardian.send({op:'capture_end'}); }
       if(image.capture==='screen_occluded')fail('window_capture_unavailable','The native helper returned covering-window pixels. Discarded; bring the approved app to the front and observe again.');
       response.image={...image};delete response.image.data;

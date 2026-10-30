@@ -213,6 +213,18 @@ test('an expired wait budget refuses a new native snapshot after a slow grant',a
  await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+100,require_native_budget:true}),e=>e.code==='wait_observation_timeout');
  assert.equal(snapshots,0);
 });
+test('expired wait during capture preparation restores overlay without starting a screenshot',async()=>{
+ const sent=[];let screenshots=0;
+ const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(){await new Promise(resolve=>setTimeout(resolve,120));}},stamp(){return{};},frames:new Map(),driver:{async call(op){if(op==='screenshot')screenshots++;return{result:{snapshot_id:'s',nodes:[]}};}}};
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+100,require_native_budget:true}),e=>e.code==='wait_observation_timeout');
+ assert.equal(screenshots,0);assert(sent.includes('capture_end'));
+});
+test('wait screenshot gets a bounded driver timeout and restores overlay',async()=>{
+ const sent=[];let options;
+ const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(){}},stamp(){return{};},frames:new Map(),driver:{async call(op,args,opts){if(op==='snapshot')return{result:{snapshot_id:'s',nodes:[]}};options=opts;return{result:{capture:'window',data:'fixture',source:[0,0,800,600]}};}}};
+ await Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true});
+ assert(options.timeoutMs>=1100&&options.timeoutMs<=6000);assert(sent.includes('capture_end'));
+});
 
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{
  let snapshot={snapshot_id:'s',truncated:true,nodes:[{i:1,name:'Ready',role:'Button'}]};
