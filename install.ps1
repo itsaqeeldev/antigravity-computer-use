@@ -121,10 +121,10 @@ function Invoke-ComputerUseInstall {
         [Net.ServicePointManager]::SecurityProtocol = $oldTls -bor [Net.SecurityProtocolType]::Tls12
         Write-Host 'Installing Computer Use for Antigravity...' -ForegroundColor Cyan
         $archive = Join-Path $stage 'windows.zip'
-        Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.2/AntigravityComputerUse-0.3.0-beta.2-windows-x64.zip' -OutFile $archive
-        Assert-ComputerUseHash $archive 'e50012ecb9600bdf5da9078b8a77d43c1b7f3510872305e0be308e82690ba4b6'
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.3/AntigravityComputerUse-0.3.0-beta.3-windows-x64.zip' -OutFile $archive
+        Assert-ComputerUseHash $archive 'dcfdef5b53f808559a7783210210f70889d8280e486526394ef46321453cd23d'
         $helper = Join-Path $stage 'quick-install.mjs'
-        Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/shayann07/antigravity-computer-use/78be4b836f4119421a857ec61ca5cf22f8343de1/scripts/quick-install.mjs' -OutFile $helper
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/shayann07/antigravity-computer-use/4335f06a56d5bba0ba039ca887f7103a9210fe11/scripts/quick-install.mjs' -OutFile $helper
         Assert-ComputerUseHash $helper '4f2548620e136c7c84ea39b348a279ab611f302c9e53aa9d03d24553d1fc0889'
         $expanded = Join-Path $stage 'payload'
         Expand-ComputerUseBundle $archive $expanded
