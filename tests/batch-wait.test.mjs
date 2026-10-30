@@ -44,10 +44,10 @@ test('wait timeout stays bounded when the wall clock moves backwards',async()=>{
  finally{Date.now=original;}
 });
 test('change-wait timeout stays bounded when the wall clock moves backwards',async()=>{
- const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app),original=Date.now;
- const frames=new Map([['initial',{at:original(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'}]]);let reads=0,clock=original();
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app),original=Date.now;let clock=original(),ticks=0;
+ const frames=new Map([['initial',{at:clock,hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'}]]);let reads=0;
  const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){if(++reads>6)throw Error('unbounded wait');const id='s'+reads;frames.set(id,{key,workerEpoch:1});return {metadata:{observation_id:id,tree:id+' "App" hwnd=7\nLoading'}};}};
- try{Date.now=()=>clock-=10000;const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});assert.equal(result.timed_out,true);assert(reads<=6);}
+ try{Date.now=()=>++ticks===1?clock:(clock-=10000);const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});assert.equal(result.timed_out,true);assert(reads<=6);}
  finally{Date.now=original;}
 });
 

@@ -60,5 +60,5 @@ test('selector observation cache is bounded and drops expired or restarted-worke
  const frames=new Map([['expired',{at:0,workerEpoch:2}],['old-worker',{at:Date.now(),workerEpoch:1}]]);
  const r={frames,generation:1,async grant(){return{pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return{};},driver:{epoch:2,async call(){return{result:{snapshot_id:'s',nodes:[{i:7,name:'Settings',role:'Button'}]}};}}};
  for(let i=0;i<20;i++)await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false});
- assert.equal(frames.size,16);assert(!frames.has('expired'));assert(!frames.has('old-worker'));assert([...frames.values()].every(f=>f.elements[0].i===7&&f.workerEpoch===2));
+ assert.equal(frames.size,16);assert(!frames.has('expired'));assert(!frames.has('old-worker'));assert([...frames.values()].every(f=>f.elements[0].i===7&&f.workerEpoch===2&&Number.isFinite(f.atMono)));
 });

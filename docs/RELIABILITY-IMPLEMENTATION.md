@@ -1122,6 +1122,13 @@ These checks send no desktop input. Event-dispatch interleavings and physical Ma
 input cleanup and Stop remain pending; the lock does not prove that a posted
 release reached macOS.
 
+Issue #20 tracks wall-clock rollback making observation ages negative or too
+young. New observations carry an additional in-process monotonic timestamp and
+are invalidated if either age is invalid, backwards or expired. Local shared
+runtime tests pass. Existing in-process fixtures without the extra timestamp
+retain the older wall-clock check; no claim is made about native sleep/wake or
+physical stale-input qualification.
+
 The native Mac journal now refuses to proceed when it cannot flush the saved
 file before input dispatch. This is a file-flush check, not proof of directory
 metadata durability or power-loss survival: Apple's [fsync documentation](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fsync.2.html)

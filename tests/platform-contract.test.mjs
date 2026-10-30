@@ -31,6 +31,17 @@ test('observation lifetime and one-use semantics are platform independent',()=>{
  assert.throws(()=>requireObservation(frames,'f',1,contract.frame_ms+1),e=>e.code==='stale_observation');
  assert.equal(frames.size,0);
 });
+test('a backwards wall-clock adjustment invalidates an observation',()=>{
+ const frames=new Map([['future',{hwnd:1,at:1000}],['invalid',{hwnd:1,at:NaN}]]);
+ assert.throws(()=>requireObservation(frames,'future',1,999),e=>e.code==='stale_observation');
+ assert.throws(()=>requireObservation(frames,'invalid',1,999),e=>e.code==='stale_observation');assert.equal(frames.size,0);
+});
+test('monotonic frame age prevents a rewound clock from extending its lifetime',()=>{
+ const frames=new Map([['expired',{hwnd:1,at:1000,atMono:100}],['bad',{hwnd:1,at:1000,atMono:NaN}],['future',{hwnd:1,at:1000,atMono:200}]]);
+ assert.throws(()=>requireObservation(frames,'expired',1,1001,100+contract.frame_ms+1),e=>e.code==='stale_observation');
+ assert.throws(()=>requireObservation(frames,'bad',1,1001,100),e=>e.code==='stale_observation');
+ assert.throws(()=>requireObservation(frames,'future',1,1001,100),e=>e.code==='stale_observation');assert.equal(frames.size,0);
+});
 test('both adapters use the same batch failure boundary, with no later input',async()=>{
  for(const platform of ['win32','darwin']){
   const sent=[];const runtime={async action(op,args){sent.push(op);return {input_completed:true,verification_error:{code:'input_outcome_unknown'},metadata:{observation_id:'new'}};}};

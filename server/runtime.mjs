@@ -38,9 +38,12 @@ export function savedTakeoverMode(file,fallback){
   return fallback;
 }
 export function appKey(w,platform=process.platform){return `${w.pid}:${w.started}:${executableKey(w.path,platform)}`;}
-export function requireObservation(map,id,hwnd,now=Date.now()){
+export function requireObservation(map,id,hwnd,now=Date.now(),monoNow=performance.now()){
   const frame=map.get(id);map.delete(id);
-  if(!frame||frame.hwnd!==Number(hwnd)||now-frame.at>contract.frame_ms)fail('stale_observation','Observe again: missing, consumed or stale observation.');
+  const age=frame?now-frame.at:NaN;
+  const monoAge=frame&&Object.hasOwn(frame,'atMono')?monoNow-frame.atMono:null;
+  if(!frame||frame.hwnd!==Number(hwnd)||!Number.isFinite(frame.at)||!Number.isFinite(age)||age<0||age>contract.frame_ms||
+     (monoAge!==null&&(!Number.isFinite(frame.atMono)||!Number.isFinite(monoAge)||monoAge<0||monoAge>contract.frame_ms)))fail('stale_observation','Observe again: missing, consumed or stale observation.');
   return frame;
 }
 export function imagePoint(image,x,y){
@@ -240,6 +243,7 @@ export class Runtime {
     const rendered=renderSnapshot(tree,{maxRows:Math.min(args.max_nodes||80,500),textLimit:160,nodes})
       .replaceAll('raise max_nodes or use interactive_only','use query or raise max_nodes up to 500')
       .replace(/\[~\d+ tokens\. Re-read[^\]]+\]/g,'[Use query to return matching controls, or max_nodes up to 500 for more rows.]');
+    const capturedMono=performance.now();
     const response={observation_id:randomUUID(),hwnd:Number(args.hwnd),app:w.path,at:Date.now(),tree:rendered,elements:nodes};
     let image;
     if(args.with_image!==false){
@@ -251,9 +255,9 @@ export class Runtime {
     }
     this.check();
     if(generation!==this.generation||workerEpoch!==this.driver.epoch)fail('control_changed','Control or native worker changed during observation. Discard this frame and observe again.');
-    for(const [id,frame] of this.frames)if(Date.now()-frame.at>contract.frame_ms||frame.workerEpoch!==workerEpoch)this.frames.delete(id);
+    for(const [id,frame] of this.frames){const age=Date.now()-frame.at,monoAge=Object.hasOwn(frame,'atMono')?performance.now()-frame.atMono:null;if(!Number.isFinite(frame.at)||!Number.isFinite(age)||age<0||age>contract.frame_ms||(monoAge!==null&&(!Number.isFinite(frame.atMono)||!Number.isFinite(monoAge)||monoAge<0||monoAge>contract.frame_ms))||frame.workerEpoch!==workerEpoch)this.frames.delete(id);}
     while(this.frames.size>=16)this.frames.delete(this.frames.keys().next().value);
-    this.frames.set(response.observation_id,{at:response.at,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:comparableView(rendered),viewQuery:args.query,viewMaxNodes:args.max_nodes});
+    this.frames.set(response.observation_id,{at:response.at,atMono:capturedMono,hwnd:response.hwnd,key:appKey(w),snapshot:tree.snapshot_id,image,workerEpoch,elements:tree.nodes,viewTree:comparableView(rendered),viewQuery:args.query,viewMaxNodes:args.max_nodes});
     return {metadata:response,image};
   }
   async action(op,args){
