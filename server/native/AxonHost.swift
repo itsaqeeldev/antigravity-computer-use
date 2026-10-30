@@ -459,7 +459,7 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
     // Every attribute read is a message to the app; a slow one must not pin the
     // host. Past the budget the walk stops and says so, as the Windows host does.
     let budgetMs = int(a["time_budget_ms"], 4000)
-    let started = Date()
+    let started = MacDeadline.now
 
     var nodes: [[String: Any]] = []
     var elements: [AXUIElement] = []
@@ -469,7 +469,7 @@ func opSnapshot(_ a: [String: Any]) throws -> [String: Any] {
     var stack: [(AXUIElement, Int)] = [(win, 0)]
     while !stack.isEmpty {
         if nodes.count >= maxNodes { truncated = true; break }
-        if Int(Date().timeIntervalSince(started) * 1000) > budgetMs { overBudget = true; break }
+        if MacDeadline.walkBudgetExceeded(start: started, now: MacDeadline.now, budgetMs: budgetMs) { overBudget = true; break }
         let (el, depth) = stack.removeLast()
 
         let rect = axRect(el)

@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "0775a1b628019f7efca1553fb8b24481c954e2faa42dcf2d28495fe6cb456c1b",
+      "local_sha256": "53e49dcbbc1ad02a213b6261342091547b07f73c929218d5cdd690346644c70f",
       "modified": true
     },
     {
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "814a126455b1df6fc8b6f1465d985d188bb225a21fce4c132b740c0e064f3b0d"
+      "sha256": "292126648f63acd59b7ad0e2d259798809f3607c81c3f444f71fecdef9b74ec4"
     },
     {
       "path": "HANDOFF.md",
@@ -568,7 +568,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "9bd359d02095bbab37bfa70635c5082934e3ad9cf9556e05d62d1a0ab62060fc"
+      "sha256": "fc115f1b676fa71673d1e2b067686c13de9ce072aff8dc2346346a21b1e19aa6"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "2c09c12bdd60c89dd8ecdf654c6abe161a0cde71ebac7aead4f6cd87c752548a"
+      "sha256": "13f928f795c98790acd0105645b307e964fd894624715a8e92a97811f96dbd2a"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",

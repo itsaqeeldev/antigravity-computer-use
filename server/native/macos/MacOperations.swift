@@ -122,6 +122,14 @@ func macContractTest() throws {
     guard symlink(latchProbe + ".missing", latchProbe) == 0 else { throw AxonError("contract_test_failed", "Cannot create latch-link fixture.") }
     guard MacFence.latchBlocks(latchProbe) else { throw AxonError("contract_test_failed", "Dangling latch link was treated as absent.") }
     guard unlink(latchProbe) == 0 else { throw AxonError("contract_test_failed", "Cannot remove latch-link fixture.") }
+    guard !MacDeadline.walkBudgetExceeded(start: 100, now: 200, budgetMs: 100),
+          MacDeadline.walkBudgetExceeded(start: 100, now: 201, budgetMs: 100),
+          MacDeadline.walkBudgetExceeded(start: 100, now: 0, budgetMs: 100),
+          MacDeadline.walkBudgetExceeded(start: 100, now: 99, budgetMs: 100),
+          MacDeadline.walkBudgetExceeded(start: 0, now: 100, budgetMs: 100),
+          MacDeadline.walkBudgetExceeded(start: 100, now: 100, budgetMs: -1) else {
+        throw AxonError("native_contract_mismatch", "Snapshot walk budget did not fail closed.")
+    }
     let bounded = MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 1000, maximumMs: 500)
     guard bounded == 1500, MacDeadline.valid(bounded, now: 1499), !MacDeadline.valid(bounded, now: 1500),
           !MacDeadline.valid(bounded, now: 0),

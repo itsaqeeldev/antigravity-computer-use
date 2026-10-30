@@ -5,10 +5,11 @@ to the native accessibility walk. Windows caps it by the existing configured
 walk budget; macOS caps it at its existing 4-second default. Truncated or unread
 change-wait views stop instead of counting as an application change. This is a
 cooperative limit between accessibility calls, not a hard deadline for a hung
-provider, grant, screenshot, or cleanup. Swift currently measures its native
-walk with wall time; clock changes and real-app latency remain unqualified.
-Focused mocked forwarding and incomplete-view tests passed, and Windows native
-compilation passed. Mac compilation and actual application checks are pending.
+provider, grant, screenshot, or cleanup. The Mac candidate now measures its
+native walk using the shared monotonic clock and stops on an unavailable or
+backwards clock. Focused mocked forwarding and incomplete-view tests passed,
+and Windows native compilation passed. Mac native CI, real sleep/wake and
+actual application checks remain pending.
 An isolated Windows test also calls the compiled host's budget policy and
 checks that a requested limit cannot widen the configured limit; it does not
 walk a real accessibility tree or prove provider cancellation.

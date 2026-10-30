@@ -82,6 +82,10 @@ enum MacDeadline {
         return overflow ? 0 : deadline
     }
     static func valid(_ deadline: UInt64, now: UInt64) -> Bool { now > 0 && deadline > now }
+    static func walkBudgetExceeded(start: UInt64, now: UInt64, budgetMs: Int) -> Bool {
+        guard start > 0, now >= start, budgetMs >= 0 else { return true }
+        return now - start > UInt64(budgetMs)
+    }
 }
 
 struct MacFenceState {
