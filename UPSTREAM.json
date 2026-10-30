@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "ba91603ff6be80b82942f7b9153cedb137586c7aef3340541e2a20f2f343165f"
+      "sha256": "032e632b23a6d5338064cc76fa73e27004201d53cea39c43f409f400cf98fff4"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "4787c2578fa856a52c9b828ba6461803f851c52f5ac0e3acde21638f57e5aba1"
+      "sha256": "434d4bdfe590bebae9b6a736785d97832cde77c4dcaf2f4d4b80523e485f944f"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "057c62474f36a8cc0f206160ccca6317380359c7d62c2df1fcbd01f99d514f38"
+      "sha256": "803234d08be301caab260a299a718783e6ab08ea59d08c75a41072163b34c7c2"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

@@ -1,5 +1,10 @@
 # Reliability and updates implementation log
 
+Wait failure, incomplete-view and timeout responses now give the agent explicit
+inspect-without-replay guidance, including after an earlier batch input. An
+authenticated IPC fixture checks the incomplete-view path and skipped action;
+the corresponding real-model response remains unqualified.
+
 Intel CI job `123898938830` at `f9aa5c2` failed compiling the Mac storage
 helper with no compiler output. The prior 60-second spawn result discarded its
 error and signal, so the log cannot establish whether the compiler timed out,

@@ -29,6 +29,7 @@ export function recoveryAdvice(result){
  const code=result.error?.code||result.verification_error?.code;
  if(code==='input_cleanup_failed')return {next_action:'inspect_input_cleanup',replay_allowed:false};
  if(result.delivery_unknown===true||result.input_completed===true&&code||code==='input_outcome_unknown')return {next_action:'inspect_effect_without_replay',replay_allowed:false};
+ if(['wait_failure_observed','wait_observation_incomplete','wait_condition_timeout','wait_change_timeout'].includes(code))return {next_action:'inspect_effect_without_replay',replay_allowed:false};
  if(['stale_observation','element_stale','window_moved','no_image','control_changed','focus_changed'].includes(code))return {next_action:'observe_again',replay_allowed:false};
  if(code==='window_minimized')return {next_action:'focus_target_then_observe',replay_allowed:false};
  if(code==='desktop_context_unavailable')return {next_action:'human_start_on_visible_desktop',replay_allowed:false};

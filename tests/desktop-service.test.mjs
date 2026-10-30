@@ -306,6 +306,15 @@ test('direct IPC retains real wait metrics after a later batch action',async()=>
   assert.equal(reply.ok,true);assert.equal(reply.batch.completed[0].wait_metrics.observations,2);assert.equal(reply.batch.completed[0].wait_metrics.polling_budget_ms,1000);assert(reply.batch.completed[0].wait_metrics.elapsed_ms>=0);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('an incomplete batch wait tells the agent to inspect without replay over IPC',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-wait-recovery-'));let inputs=0;
+ const runtime={status:()=>({state:'active'}),async close(){},async action(){inputs++;return{};},async wait(){return{matched:false,incomplete:true,metadata:{observation_id:'fresh'}};}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Observe',steps:[{kind:'click',name:'Start'},{kind:'wait',until:'Ready',abort_on:['Failed']},{kind:'click',name:'Continue'}]});
+  assert.equal(inputs,1);assert.equal(reply.verification_error.code,'wait_observation_incomplete');assert.equal(reply.next_action,'inspect_effect_without_replay');assert.equal(reply.replay_allowed,false);assert.equal(reply.batch.skipped,1);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('a disconnected app-discovery client does not stop an active task',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;
  const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
