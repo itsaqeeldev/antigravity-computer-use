@@ -360,7 +360,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "79684e932f51ef6644e584b59fde5ca73765e32485b7991ebcd97e58fd46569f"
+      "sha256": "ce44a56a483e14d2bcf1b53e11f47df037a383afb398eaf76821414c55b3d841"
     },
     {
       "path": "tests/install.test.mjs",

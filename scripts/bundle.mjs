@@ -44,7 +44,11 @@ else {
 // companion. Source builds omit it and retain the explicit compatibility path.
 const liquidGlassHelper=process.env.AGCU_LIQUIDGLASS_HELPER_BUILD;
 if(process.platform==='win32'&&liquidGlassHelper&&fs.existsSync(liquidGlassHelper)){
-  fs.cpSync(liquidGlassHelper,path.join(out,'liquidglass'),{recursive:true});
+  const destination=path.join(out,'liquidglass');fs.mkdirSync(destination,{recursive:true});
+  for(const name of ['LiquidGlass.Host.exe','libSkiaSharp.dll']){
+    const source=path.join(liquidGlassHelper,name);if(!fs.existsSync(source))throw new Error('LiquidGlass helper is missing '+name);
+    fs.copyFileSync(source,path.join(destination,name));
+  }
 }
 console.log(out);
 const files={};
