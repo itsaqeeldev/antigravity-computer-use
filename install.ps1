@@ -122,7 +122,7 @@ function Invoke-ComputerUseInstall {
         Write-Host 'Installing Computer Use for Antigravity...' -ForegroundColor Cyan
         $archive = Join-Path $stage 'windows.zip'
         Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/shayann07/antigravity-computer-use/releases/download/v0.3.0-beta.3/AntigravityComputerUse-0.3.0-beta.3-windows-x64.zip' -OutFile $archive
-        Assert-ComputerUseHash $archive 'b5f54ac2ad4ae94b37cc6df41647bc1d454d94567f7e057a0adefdaeb51ab3a3'
+        Assert-ComputerUseHash $archive '19d49f6abf3f35b5efd549d1e88115af120187a08afa77f2e13f022d0196c162'
         $helper = Join-Path $stage 'quick-install.mjs'
         Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/shayann07/antigravity-computer-use/4335f06a56d5bba0ba039ca887f7103a9210fe11/scripts/quick-install.mjs' -OutFile $helper
         Assert-ComputerUseHash $helper '4f2548620e136c7c84ea39b348a279ab611f302c9e53aa9d03d24553d1fc0889'
