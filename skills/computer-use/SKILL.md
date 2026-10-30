@@ -11,6 +11,26 @@ Antigravity is the agent; the local native runtime supplies screenshots, accessi
 {{DESKTOP_COMMAND}} ready
 ```
 
+## Mandatory weak-model fast path
+
+The first controller call is always the installed command above. Run exactly one
+`ready` call before doing anything else. Do **not** open a terminal, search the
+repository, read source files, inspect historical evidence, or enumerate
+`.localdata` to decide how to operate the desktop. The `ready` reply is the
+runtime's authority.
+
+- If `ready:true`, continue directly with `apps`/`launch`, then `snapshot`,
+  action/verification and `end`.
+- If `ready:false`, perform only the returned `next_action` (for example
+  `awaiting_human_rearm`, `human_start_on_visible_desktop`,
+  `inspect_diagnostics`, or `resolve_version_mismatch`), then stop or wait as
+  instructed. Do not invent a recovery path.
+- If the command cannot be resolved or returns an error, report that exact
+  error and stop. Source exploration is never a substitute for the controller.
+
+This short path is mandatory for Flash, low-effort and other models that may
+otherwise turn a desktop task into repository analysis.
+
 Run `ready` once. Follow `next_action`:
 
 If `update_notice` is returned, mention its short message once. Do not dump update
