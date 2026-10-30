@@ -32,7 +32,8 @@ elapsed time includes its initial app-identity check before polling begins.
 
 Windows CI job `123905322677` showed an unexpected extra poll. Early timer
 wakeup before a fractional target is a plausible cause, not directly measured
-in that run. The candidate now waits until the
+in that run. Mac CI jobs `123905322766` and `123905322484` also observed extra
+polls in the text/change wait fixture. The candidate now waits until the
 monotonic target is reached before polling again. This addresses the observed
 early-wakeup path; focused reruns and fresh CI are needed before treating the
 failure as resolved.
