@@ -116,6 +116,12 @@ struct MacFenceState {
 }
 
 enum MacFence {
+    static func latchBlocks(_ path: String) -> Bool {
+        guard !path.isEmpty else { return true }
+        var info = stat()
+        if lstat(path, &info) == 0 { return true }
+        return errno != ENOENT
+    }
     static func resolvedState(_ proposed: String, latched: Bool) -> String {
         latched ? "stopped" : proposed
     }
@@ -151,7 +157,7 @@ enum MacFence {
         return try MacFenceState(String(contentsOfFile: file, encoding: .utf8))
     }
     static func check() throws {
-        if !latch.isEmpty && FileManager.default.fileExists(atPath: latch) {
+        if latchBlocks(latch) {
             throw AxonError("control_stopped", "Emergency Stop is latched; local human re-arm is required.")
         }
         let state = try read()
@@ -272,7 +278,7 @@ enum MacWorkerLifetime {
         Thread.detachNewThread {
             while true {
                 gate.lock(); let active = wasActive; gate.unlock()
-                if !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) { _exit(0) }
+                if MacFence.latchBlocks(MacFence.latch) { _exit(0) }
                 if let state = try? MacFence.read() {
                     if state.state == "stopped" || state.state == "paused" || (state.state == "idle" && active) { _exit(0) }
                     if state.state == "active" {

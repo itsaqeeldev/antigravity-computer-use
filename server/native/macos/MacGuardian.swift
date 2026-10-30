@@ -204,7 +204,7 @@ final class MacGuardian: NSObject {
         visuals.onToggle = { [weak self] in self?.humanToggle() }
         visuals.onStop = { [weak self] in self?.stop("button") }
         visuals.onMode = { [weak self] mode in self?.saveMode(mode) }
-        state = !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) ? "stopped" : "idle"
+        state = MacFence.latchBlocks(MacFence.latch) ? "stopped" : "idle"
         try writeState(); visuals.hide()
         emit(["ev": "settings", "takeover_mode": takeoverMode()])
         emit(["ev": "ready", "pid": Int(getpid()), "hotkey": false, "presence": false, "platform": "darwin"])
@@ -247,7 +247,7 @@ final class MacGuardian: NSObject {
         try MacFence.write("\(state)|\(token)|\(until)|\(encoded)|\(bootUntil)|\(cleanupPending ? 1 : 0)")
     }
     func set(_ next: String, reason: String = "") {
-        if next == "active" && (!MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) || state == "stopped") { return }
+        if next == "active" && (MacFence.latchBlocks(MacFence.latch) || state == "stopped") { return }
         var effectiveReason = reason
         state = next
         cleanupPending = next != "active"
@@ -256,7 +256,7 @@ final class MacGuardian: NSObject {
         // The independent watchdog may latch Stop while this transition is
         // being published. Recheck after the write so a stale idle/paused
         // transition cannot leave the local UI claiming control is available.
-        let resolved = MacFence.resolvedState(state, latched: !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch))
+        let resolved = MacFence.resolvedState(state, latched: MacFence.latchBlocks(MacFence.latch))
         if resolved != state {
             state = resolved; cleanupPending = true; grants.removeAll(); effectiveReason = "emergency_stop"
             do { try writeState() } catch { MacFence.emergency("state_write_failed") }
@@ -267,7 +267,7 @@ final class MacGuardian: NSObject {
             else {
                 cleanupPending = false
                 do { try writeState() } catch { state = "stopped"; effectiveReason = "state_write_failed"; MacFence.emergency(effectiveReason) }
-                let final = MacFence.resolvedState(state, latched: !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch))
+                let final = MacFence.resolvedState(state, latched: MacFence.latchBlocks(MacFence.latch))
                 if final != state { state = final; grants.removeAll(); effectiveReason = "emergency_stop"; do { try writeState() } catch { MacFence.emergency("state_write_failed") } }
             }
             visuals.releaseCursor()
@@ -284,8 +284,9 @@ final class MacGuardian: NSObject {
         until = MacFenceState.now + Int64(MacContract.value["session_ms"] as? Int ?? 600_000) * 10_000
         bootUntil = MacDeadline.create(requested: until, wallNow: MacFenceState.now, bootNow: MacDeadline.now, maximumMs: MacContract.value["session_ms"] as? Int ?? 600_000)
         guard bootUntil > 0 else { return }
-        if state == "stopped" && !MacFence.latch.isEmpty {
-            do { if FileManager.default.fileExists(atPath: MacFence.latch) { try FileManager.default.removeItem(atPath: MacFence.latch) } } catch { return }
+        if state == "stopped" {
+            guard !MacFence.latch.isEmpty else { return }
+            if unlink(MacFence.latch) != 0 && errno != ENOENT { return }
         }
         set(state == "paused" ? "active" : "idle", reason: "human_resume")
         emit(["ev": "human_resume", "state": state])
@@ -353,7 +354,7 @@ final class MacGuardian: NSObject {
                     allowed = alert.runModal() == .alertSecondButtonReturn
                     expiry.invalidate(); prompt = nil; visuals.finishCapture(state)
                 }
-                if state == "stopped" || !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch) { allowed = false }
+                if state == "stopped" || MacFence.latchBlocks(MacFence.latch) { allowed = false }
                 var result: [String: Any] = ["allowed": allowed, "decision": allowed ? (hostManaged ? "host-authorized" : "allowed") : "denied"]
                 if allowed && kind == "app", let identity = identity {
                     let current = try macIdentity(pid_t(identity["pid"] as! Int))

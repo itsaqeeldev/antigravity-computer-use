@@ -113,6 +113,15 @@ func macContractTest() throws {
           MacFence.resolvedState("idle", latched: false) == "idle" else {
         throw AxonError("contract_test_failed", "Latched Stop was lost during state resolution.")
     }
+    let latchProbe = MacFence.file + ".latch-probe-" + UUID().uuidString
+    defer { try? FileManager.default.removeItem(atPath: latchProbe) }
+    guard MacFence.latchBlocks(""), !MacFence.latchBlocks(latchProbe) else { throw AxonError("contract_test_failed", "Missing latch classification differs.") }
+    try Data("x".utf8).write(to:URL(fileURLWithPath:latchProbe));
+    guard MacFence.latchBlocks(latchProbe + "/child") else { throw AxonError("contract_test_failed", "Unreadable latch was treated as absent.") }
+    try FileManager.default.removeItem(atPath:latchProbe)
+    guard symlink(latchProbe + ".missing", latchProbe) == 0 else { throw AxonError("contract_test_failed", "Cannot create latch-link fixture.") }
+    guard MacFence.latchBlocks(latchProbe) else { throw AxonError("contract_test_failed", "Dangling latch link was treated as absent.") }
+    guard unlink(latchProbe) == 0 else { throw AxonError("contract_test_failed", "Cannot remove latch-link fixture.") }
     let bounded = MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 1000, maximumMs: 500)
     guard bounded == 1500, MacDeadline.valid(bounded, now: 1499), !MacDeadline.valid(bounded, now: 1500),
           !MacDeadline.valid(bounded, now: 0),

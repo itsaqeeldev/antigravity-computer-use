@@ -1272,6 +1272,10 @@ candidate checks a Stop generation and latch during publication; the Mac
 candidate rechecks the latch after publication. Pure native resolution checks
 are not proof of cross-process atomicity, failed-latch behavior or physical
 Esc/re-arm. Mac CI and real-device race qualification remain pending.
+Issue #23 tracks Mac Stop-latch checks that could treat a dangling link or an
+inspection error as absent. The candidate uses `lstat` and treats only ENOENT
+as absent; human re-arm uses `unlink` rather than recursive removal. Headless
+Mac contract checks and real physical re-arm/Stop qualification are pending.
 
 Issue #17 tracks action budget consumed before input-fence acquisition. The
 candidate rechecks the deadline and budget inside the fence and counts only an
