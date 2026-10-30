@@ -1,5 +1,11 @@
 # Reliability and updates implementation log
 
+Failure-aware waits also check the captured node names and text before display
+shortening or row pruning; only the caller's matching label is returned. This
+can conservatively stop on an old or hidden matching label and does not detect
+text never supplied by the application or omitted by the native walk. An inert
+regression covers a failure hidden by rendering; real-app behavior is pending.
+
 Wait failure, incomplete-view and timeout responses now give the agent explicit
 inspect-without-replay guidance, including after an earlier batch input. An
 authenticated IPC fixture checks the incomplete-view path and skipped action;

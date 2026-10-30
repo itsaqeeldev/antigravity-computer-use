@@ -121,6 +121,14 @@ test('failure-aware wait stops a batch when the verified tree is incomplete',asy
  assert.equal(inputs,1);assert.equal(result.incomplete,true);assert.equal(result.verification_error.code,'wait_observation_incomplete');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v2');
 });
 
+test('failure-aware wait catches captured failure text omitted from the displayed tree',async()=>{
+ let inputs=0;const frames=new Map();
+ const runtime={frames,check(){},async action(){inputs++;return{};},async observe(){frames.set('v',{});return{metadata:{observation_id:'v',tree:'Ready',elements:[{name:'A long message with a Failed result omitted by rendering'}]}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'wait',until:'Ready',abort_on:['Failed']},{kind:'click',name:'Continue'}]));
+ assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.batch.skipped,1);assert.equal(inputs,0);
+});
+
 test('wait rechecks the returned frame and aborts a batch if failure replaces a transient success',async()=>{
  let input=0,reads=0;const frames=new Map();
  const runtime={frames,check(){},async action(){input++;return{metadata:{observation_id:'post-action'}};},

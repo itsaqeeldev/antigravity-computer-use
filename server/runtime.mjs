@@ -21,6 +21,14 @@ import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
+function waitFailure(observation,labels){
+  if(!labels?.length)return undefined;
+  const tree=String(observation.metadata.tree||'').toLowerCase();
+  // Search captured text before renderer shortening or row pruning too. Only
+  // return the caller's label, never additional app text from hidden rows.
+  const fields=(observation.metadata.elements||[]).flatMap(node=>[node.name,node.text,typeof node.state?.value==='string'?node.state.value:null]).filter(value=>typeof value==='string').map(value=>value.toLowerCase());
+  return (labels||[]).find(label=>{const needle=label.toLowerCase();return tree.includes(needle)||fields.some(value=>value.includes(needle));});
+}
 const persistenceFailure=reason=>['stop_persistence_failed','guard_persistence_failed'].includes(reason);
 function initializeInputLedger(guardFile){
   const ledger=guardFile+'.inputs';let fd;
@@ -337,10 +345,10 @@ export class Runtime {
     do {
       this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
-      const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
+      const failure=waitFailure(latest,args.abort_on);
       if(failure){
         if(args.with_image===false)return finish({matched:false,aborted:true,abort_match:failure,...latest});
-        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image})});
+        this.frames.delete(latest.metadata.observation_id);return finish({matched:false,aborted:true,abort_match:failure,...await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,max_nodes:500})});
       }
       if(tree.includes(args.until.toLowerCase())){
         // Do not authorize the next batch step based on a transient match in
@@ -348,7 +356,7 @@ export class Runtime {
         this.frames.delete(latest.metadata.observation_id);
         const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
-        const verifiedFailure=(args.abort_on||[]).find(text=>verifiedTree.includes(text.toLowerCase()));
+        const verifiedFailure=waitFailure(verified,args.abort_on);
         if(verifiedFailure)return finish({matched:false,aborted:true,abort_match:verifiedFailure,...verified});
         if(args.abort_on?.length&&verified.metadata.tree_incomplete)return finish({matched:false,incomplete:true,...verified});
         if(verifiedTree.includes(args.until.toLowerCase()))return finish({matched:true,...verified});
@@ -365,9 +373,8 @@ export class Runtime {
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
-    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image});
-    const finalTree=final.metadata.tree.toLowerCase();
-    const finalFailure=(args.abort_on||[]).find(text=>finalTree.includes(text.toLowerCase()));
+    const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
+    const finalFailure=waitFailure(final,args.abort_on);
     if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
     return finish({matched:false,timed_out:true,...final});
   }
