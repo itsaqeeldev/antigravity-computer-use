@@ -29,7 +29,7 @@ namespace Axon {
         [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr obj);
         [DllImport("user32.dll")] static extern bool SystemParametersInfo(uint action,uint value,IntPtr data,uint flags);
         static Process watchdog;
-        static bool applied;
+        static bool applied,monitoring;
         static readonly object gate=new object();
         internal static bool Applied { get { lock(gate)return applied; } }
         internal static int WatchdogPid {get {lock(gate)return watchdog!=null&&!watchdog.HasExited?watchdog.Id:0;}}
@@ -62,11 +62,13 @@ namespace Axon {
             lock(gate) {
                 if(applied && watchdog!=null && !watchdog.HasExited)return true;
                 try {
+                    monitoring=false;
                     if(!EnsureWatchdog())return false;
                     // The watchdog must be armed BEFORE changing shared cursors.
                     watchdog.StandardInput.WriteLine("arm");watchdog.StandardInput.Flush();
                     Task<string> acknowledgement=Task.Factory.StartNew(delegate {return watchdog.StandardOutput.ReadLine();});
                     if(!acknowledgement.Wait(2000)||acknowledgement.Result!="armed")throw new InvalidOperationException("Cursor watchdog did not arm");
+                    monitoring=true;
                     if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|")){Restore();return false;}
                     int size=Math.Max(32,GetSystemMetrics(13));
                     foreach(uint role in new uint[]{32512,32649,32513,32650})
@@ -86,7 +88,13 @@ namespace Axon {
                     }
                     if(!File.ReadAllText(ControlFence.FileName).StartsWith("active|")){Restore();return false;}
                     return true;
-                }catch {Restore();return false;}
+                }catch {
+                    // A cursor rendering failure must not disarm the independent
+                    // crash monitor. If arming itself failed, monitoring remains
+                    // false and the guardian refuses control.
+                    if(applied || watchdog!=null)SystemParametersInfo(0x57,0,IntPtr.Zero,0);
+                    applied=false;return false;
+                }
             }
         }
         internal static void Restore() {
@@ -96,10 +104,11 @@ namespace Axon {
                 if(applied || watchdog!=null)SystemParametersInfo(0x57,0,IntPtr.Zero,0);
                 applied=false;
                 try {if(watchdog!=null&&!watchdog.HasExited){watchdog.StandardInput.WriteLine("disarm");watchdog.StandardInput.Flush();}}catch {}
+                monitoring=false;
             }
         }
         internal static bool CheckWatchdog() {
-            lock(gate) {if(applied && (watchdog==null||watchdog.HasExited)){Restore();return false;}return true;}
+            lock(gate) {if(!monitoring||watchdog==null||watchdog.HasExited){Restore();return false;}return true;}
         }
         internal static void Close() {
             lock(gate) {

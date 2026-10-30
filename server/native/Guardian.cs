@@ -123,8 +123,20 @@ namespace Axon {
             if (state.Length < 3 || state[0] != "active" || state[1] != Token ||
                 !Int64.TryParse(state[2], out until) || DateTime.UtcNow.Ticks >= until)
                 throw new AxonError("control_stopped", "Control is paused, stopped or expired. Use the local controls.", null);
+            CheckWatchdogIdentity(FileName);
             if(!(bool)DesktopContext.Inspect()["interactive"])
                 throw new AxonError("desktop_context_unavailable","The input desktop changed. No further automation is allowed; return to the normal desktop and use local human controls.",null);
+        }
+        // The worker checks the independent watchdog's process identity itself;
+        // stale metadata or an exited watchdog must never permit input.
+        internal static void CheckWatchdogIdentity(string file) {
+            try {
+                string[] watcher=File.ReadAllText(file+".watchdog").Split('|');int pid;long started;
+                if(watcher.Length!=2||!Int32.TryParse(watcher[0],out pid)||pid<=0||!Int64.TryParse(watcher[1],out started)||started<=0)throw new Exception();
+                using(Process p=Process.GetProcessById(pid)) {
+                    if(p.HasExited||p.StartTime.ToUniversalTime().Ticks!=started||!String.Equals(p.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))throw new Exception();
+                }
+            } catch { throw new AxonError("stop_monitor_unavailable","Independent cleanup watchdog is unavailable. No further input is allowed.",null); }
         }
         internal static void Before(string op, Dictionary<string, object> a, string label, bool readOnly=false) {
             if (String.IsNullOrEmpty(FileName)) throw new AxonError("no_native_guard", "Native approval runtime required.", null);
@@ -409,7 +421,10 @@ namespace Axon {
                     try {RefreshHud();}catch {}
                 }
             }
-            else if(!CursorSafety.Apply())Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
+            else if(!CursorSafety.Apply()) {
+                if(!CursorSafety.CheckWatchdog()) { Emergency("watchdog_unavailable"); return; }
+                Emit(new {ev="visual_warning",message="Custom pointer unavailable; Windows pointer retained"});
+            }
             if(updateVisibility) {
                 if(state=="active"||state=="paused")ShowControls(0);
                 else if(state=="stopped")ShowControls(8000);

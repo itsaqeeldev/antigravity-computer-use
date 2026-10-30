@@ -240,11 +240,11 @@
     },
     {
       "path": "tests/NativeWatchdogMetadataTests.cs",
-      "sha256": "cd03152a9e5d8292fa6edff603dc7daa67b162ef4a9cdfcb9160c3968f5b7c77"
+      "sha256": "9bdc81882f06498036535cf9e87b7f7707df9f8ad40bc5715ae4a2122a4e5821"
     },
     {
       "path": "tests/native-watchdog-metadata.test.mjs",
-      "sha256": "fdab03fe87eb3f895f0c6baca7e9a9fae3d31ed071256eaadf0b1fbda41bf4df"
+      "sha256": "d4cfa5d55eadacd758651062c60bd6eb65087b60449470c9c4f0bc89d3153a08"
     },
     {
       "path": "tests/session-safety.test.mjs",
@@ -268,11 +268,11 @@
     },
     {
       "path": "server/native/Guardian.cs",
-      "sha256": "6e185bd3b9b8226056e618c8989e3acab4fec8faf210eeae4aa159b1235b0457"
+      "sha256": "731b0a25cc58074ae75a5f4d5af60ce2b1206d7aed324b386f665752817fd46d"
     },
     {
       "path": "server/native/CursorSafety.cs",
-      "sha256": "dd896cebb3605d8721656b3b48355a4a336451eb5d6e5964c312d7680a6167fb"
+      "sha256": "f72ea66a344f88c52869a10f8aa7c4d18a626fa2750a9465e4d93118da9aef2d"
     },
     {
       "path": "server/native/DesktopVisuals.cs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "9a8b2c877a7e2016d23cd5e60a2d4a3161cce9cbce9e4950c626348ea76c045a"
+      "sha256": "a9df784320f16624cb9470f52f03c70262363ebc9427a814b6eaa8ae869fe871"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

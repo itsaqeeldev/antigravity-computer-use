@@ -1197,6 +1197,16 @@ or legacy active state, and safe handling of restart and suspend. Checking only
 the guardian UI timer is insufficient. These are design inputs, not completed
 implementation or physical sleep/wake evidence.
 
+Issue #19 tracks Windows control previously remaining active when its crash
+watchdog failed to arm. The candidate now stops when monitoring is unavailable,
+keeps an armed monitor if only cursor rendering fails, and checks the recorded
+watchdog PID, birth time and executable in the native input fence. An isolated
+native test verifies absent, malformed, wrong-birth and exited-process refusal
+without sending input; 100 successful identity checks took 23.1 ms on one local
+run. This is not end-to-end action latency. Lost arm acknowledgements, cosmetic
+failure, actual held-input crashes and physical Stop still need native/real-app
+qualification before issue #19 can close.
+
 Issue #17 tracks action budget consumed before input-fence acquisition. The
 candidate rechecks the deadline and budget inside the fence and counts only an
 attempted native dispatch; busy, cancelled and pre-dispatch failures do not
