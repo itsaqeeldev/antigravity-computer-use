@@ -296,7 +296,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "faf5f4f53542cc7e213357e72100f76a6d33efc002ea455a306c4b1b7b77bd40"
+      "sha256": "5afa80f42fcddb8ada54ce8b4de2fbb42fc7add184c25607e856b86464fddaea"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -604,7 +604,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "b66d4e1dc6e739a11532e6ffbbf3b5eb1d35f83571687acd8631b3715b5753fa"
+      "sha256": "5fefc5055cbe49cb9570d97ac61e7093d4a4601c1debb30663cb57e72966b39e"
     },
     {
       "path": "docs/MACOS.md",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "6a0583a11858aaa089c910a8b867b861646e2d94cec22793545d91c28aeab44f"
+      "sha256": "e19ba3b7ff0fbac73024529098a5b48a94634a974f6f0394a36b95541aeb61ef"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

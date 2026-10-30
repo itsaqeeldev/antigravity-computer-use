@@ -1379,3 +1379,8 @@ still finishes or times out, and the normal one-operation limit remains in
 force. An IPC test disconnects a discovery client during an active fixture
 task and confirms Stop is not called; the existing action-timeout test still
 confirms cancellation. This is not a diagnosis of the user's live pauses.
+
+The skill and batch description now identify wait limits as polling budgets,
+not guaranteed end-to-end deadlines. A slow observation may exceed the budget;
+the agent must wait for a known outcome and avoid replay. The underlying hard
+deadline and native-worker cleanup problem remains open in issue #25.
