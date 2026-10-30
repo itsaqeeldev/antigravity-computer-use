@@ -1,5 +1,11 @@
 # Reliability and updates implementation log
 
+On 30 October at 10:06 a.m. Pakistan time, a read-only Codex window inventory
+returned no targetable Antigravity or Upscaly window on the current desktop.
+Antigravity processes still existed, but process existence does not establish
+desktop ownership or availability. No window was launched, restored or clicked;
+real-app qualification was deferred rather than disturbing another session.
+
 Failure-aware waits also check the captured node names and text before display
 shortening or row pruning; only the caller's matching label is returned. This
 can conservatively stop on an old or hidden matching label and does not detect
