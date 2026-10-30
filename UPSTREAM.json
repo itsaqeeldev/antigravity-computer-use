@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "6976553cf0af9398b83e23dcc93a1048edae7a27e8ee33802b3d3f399dbab778",
+      "local_sha256": "d88686bcf6f48b11d72011d6880d280147238f615aeae1be5152f30674828def",
       "modified": true
     },
     {
@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "9b9c219d4e0f1fbad1b9a1caaa0bbc0640f80d3c07364f7bdc92e2005defcc30"
+      "sha256": "31ef369044ca3dd96fee431da1a5df1857d2c7142290047ebf4d75b65b85cf86"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "5cdeab79f828cb8b10b07c7b8171e1c1d669776d4f056ae06acdeb10f9d50466"
+      "sha256": "04865415c47f4f3ff0ae817625874f014bbf4ead4bf20a40e6c174335644526d"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

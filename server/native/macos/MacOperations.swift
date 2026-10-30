@@ -151,6 +151,23 @@ func macContractTest() throws {
         guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Concurrent input cleanup bypassed the held lock.") }
     }
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed","Input lock was not released.") }
+    // Exercise the kernel lock across actual native processes, including owner
+    // death. The child posts no desktop events and holds the lock until killed.
+    let holder = Process(), output = Pipe(), input = Pipe()
+    holder.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    holder.arguments = ["--contract-lock-holder"]
+    holder.environment = ProcessInfo.processInfo.environment
+    holder.standardOutput = output; holder.standardInput = input; holder.standardError = FileHandle.standardError
+    try holder.run()
+    defer { if holder.isRunning { kill(holder.processIdentifier, SIGKILL); holder.waitUntilExit() } }
+    let ready = DispatchSemaphore(value: 0); var message: String?
+    DispatchQueue.global().async { message = String(data: output.fileHandleForReading.availableData, encoding: .utf8); ready.signal() }
+    guard ready.wait(timeout: .now() + 5) == .success, message?.contains("lock_held") == true else {
+        throw AxonError("contract_test_failed", "Native input-lock holder did not start.")
+    }
+    guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup overlapped another process's input lock.") }
+    kill(holder.processIdentifier, SIGKILL); holder.waitUntilExit()
+    guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup did not recover after lock-owner death.") }
     try Data("invalid journal".utf8).write(to:URL(fileURLWithPath:MacInputLedger.path))
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Malformed input journal was accepted.") }
     try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])

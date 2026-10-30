@@ -1111,5 +1111,9 @@ the final dispatch fence check and event journaling/posting with guardian and
 watchdog recovery. Lock acquisition is bounded and fails closed. The macOS
 native contract checks include contended and released lock cases without posting
 desktop input; hosted macOS compilation and checks must validate this change.
-Cross-process crash/interleaving tests and Mac physical input cleanup and Stop
-remain pending; the lock does not prove that a posted release reached macOS.
+A further native contract check starts a separate lock-holder process, requires
+cleanup to refuse while it holds the lock, kills that process, and then checks
+that cleanup can reacquire the lock. This check sends no desktop input and is
+pending execution on hosted Macs. Event-dispatch interleavings and physical Mac
+input cleanup and Stop remain pending; the lock does not prove that a posted
+release reached macOS.

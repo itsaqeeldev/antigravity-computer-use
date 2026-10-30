@@ -1285,6 +1285,11 @@ func readLoop() {
             if args.contains("--warmup") { emit(["event": "warm"]); return }
             if args.contains("--setup") { macSetup(); return }
             if args.contains("--contract-test") { try macContractTest(); return }
+            if args.contains("--contract-lock-holder") {
+                try MacFence.initialize(requireDirectParent: false)
+                try MacInputLedger.withLock { emit(["lock_held": true]); _ = readLine() }
+                return
+            }
             try MacFence.initialize(requireDirectParent: !args.contains("--mac-watchdog"))
             if args.contains("--release-inputs") { exit(MacInputLedger.recover() ? 0 : 1) }
             if let at = args.firstIndex(of: "--mac-watchdog"), args.count > at+2,
