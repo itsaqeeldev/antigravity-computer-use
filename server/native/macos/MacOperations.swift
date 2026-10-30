@@ -147,6 +147,10 @@ func macContractTest() throws {
     }
     try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed","Empty input cleanup failed.") }
+    try MacInputLedger.withLock {
+        guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Concurrent input cleanup bypassed the held lock.") }
+    }
+    guard MacInputLedger.recover() else { throw AxonError("contract_test_failed","Input lock was not released.") }
     try Data("invalid journal".utf8).write(to:URL(fileURLWithPath:MacInputLedger.path))
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Malformed input journal was accepted.") }
     try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])

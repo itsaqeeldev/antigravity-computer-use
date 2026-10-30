@@ -66,7 +66,7 @@
     {
       "path": "server/native/AxonHost.swift",
       "upstream_sha256": "b50c68feff8bd783ba2f92580358c69491c0ffee31f6182b76543f3aba9f962f",
-      "local_sha256": "81e5ad02e03dc1aced50a3a0f5784d63c36eff2ff73fdec626e04bc11c997e72",
+      "local_sha256": "6976553cf0af9398b83e23dcc93a1048edae7a27e8ee33802b3d3f399dbab778",
       "modified": true
     },
     {
@@ -568,7 +568,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "a13451aea4900b283756346f192748f2c12b842a06c18887772250005439d8be"
+      "sha256": "adbbbda88205340f5fff677bf5cfc147c1cb4ac73750e9a86985b5fa350b0c69"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "4b7910a287be2c5e89dc3a0c3d5996c15aa770a2c7ba84dffcba39d7a53dc85e"
+      "sha256": "9b9c219d4e0f1fbad1b9a1caaa0bbc0640f80d3c07364f7bdc92e2005defcc30"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "44c7914f6b0c175b6e22548f184357872281012a8af495a35bda5cdc2b84514a"
+      "sha256": "5cdeab79f828cb8b10b07c7b8171e1c1d669776d4f056ae06acdeb10f9d50466"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

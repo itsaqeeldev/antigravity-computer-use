@@ -1106,4 +1106,10 @@ deadline or acceptance requirement was changed.
 
 Source inspection found a possible macOS race between input dispatch and
 uncoordinated guardian/watchdog ledger recovery, tracked in issue #11. It is
-not yet reproduced or fixed. Mac physical input cleanup and Stop remain pending.
+not yet reproduced on a physical device. A proposed native lock now serializes
+the final dispatch fence check and event journaling/posting with guardian and
+watchdog recovery. Lock acquisition is bounded and fails closed. The macOS
+native contract checks include contended and released lock cases without posting
+desktop input; hosted macOS compilation and checks must validate this change.
+Cross-process crash/interleaving tests and Mac physical input cleanup and Stop
+remain pending; the lock does not prove that a posted release reached macOS.

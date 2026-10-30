@@ -644,9 +644,11 @@ func post(_ e: CGEvent?) throws {
     if [.leftMouseDown,.rightMouseDown,.otherMouseDown,.leftMouseDragged,.rightMouseDragged,.otherMouseDragged,.scrollWheel].contains(event.type) {
         try macCheckTargetPoint(event.location,MacFence.current)
     }
-    try MacInputLedger.record(event, before: true)
-    try MacFence.dispatched(); event.post(tap: .cghidEventTap)
-    try MacInputLedger.record(event, before: false)
+    try MacInputLedger.withLock {
+        try MacInputLedger.record(event, before: true)
+        try MacFence.dispatched(); event.post(tap: .cghidEventTap)
+        try MacInputLedger.record(event, before: false)
+    }
 }
 
 // What the element looks like now the action has landed, so the caller does not
