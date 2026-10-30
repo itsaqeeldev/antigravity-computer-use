@@ -1,6 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {spawnSync} from 'node:child_process';
 import {install} from './install.mjs';import {storageOperation} from '../server/storage.mjs';
-import {verifyRelease,verifyStaged,downloadFile,updateSettings,acquireUpdateLock,newerVersion,readBoundedJSON,deploymentPinned} from '../server/update-core.mjs';
+import {verifyRelease,verifyStaged,verifyUpdateBundle,downloadFile,updateSettings,acquireUpdateLock,newerVersion,readBoundedJSON,deploymentPinned} from '../server/update-core.mjs';
 import {nativePlatform} from '../server/platform.mjs';
 import {randomUUID} from 'node:crypto';
 import {diagnostics} from './diagnostics.mjs';
@@ -106,7 +106,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
    try{
    const required=Object.values(m.files).reduce((n,f)=>n+f.size,0)*2+100*1024*1024;const disk=adapters.diskInfo?adapters.diskInfo(stage):fs.statfsSync(stage);if(disk.bavail*disk.bsize<required)throw Error('update_insufficient_space');
    for(const [name,f]of Object.entries(m.files)){const destination=path.join(stage,name);fs.mkdirSync(path.dirname(destination),{recursive:true});await downloadFile(f.url,destination,{size:f.size,hash:f.sha256,fetcher});if(process.platform!=='win32'&&(name==='node'||name.startsWith('bin/')||name.endsWith('.command')))fs.chmodSync(destination,0o700);}
-   verifyStaged(stage,m);save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,available_version:m.version,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
+   verifyStaged(stage,m);verifyUpdateBundle(stage,m,nativePlatform());save({...state,attempt_at:Date.now(),checked_at:Date.now(),staged:stage,envelope,available:true,available_version:m.version,last_error:null});return {available:true,version:m.version,next_action:settings.mode==='automatic'?'apply_when_idle':'update_available'};
    }catch(error){
     // Only this invocation's freshly created stage may be removed. Never touch
     // retained releases, rollback journals, previous stages or user folders.
@@ -151,8 +151,7 @@ async function updateLocked(target,command,{fetcher,adapters}){
   if(path.dirname(state.staged)!==path.join(target,'updates'))throw Error('update_stage_outside_installation');
   storage('verify-tree',target);verifyStaged(state.staged,m);
   if(m.sequence<=(state.sequence||0)||!newerVersion(m.version,bundle.version))throw Error('update_downgrade_refused');
-  const stagedBundle=JSON.parse(fs.readFileSync(path.join(state.staged,'bundle-manifest.json')));
-  if(stagedBundle.build_id!==m.build_id||stagedBundle.version!==m.version||stagedBundle.platform!==m.platform||stagedBundle.arch!==m.arch)throw Error('update_bundle_identity_mismatch');
+  verifyUpdateBundle(state.staged,m,nativePlatform());
   const registry=JSON.parse(fs.readFileSync(path.join(target,'deployments.json')));
   if(!Object.values(registry).some(scope=>!deploymentPinned(scope,registry.global)))return {deferred:true,next_action:'all_deployments_pinned'};
   if(!await reserve())return {deferred:true,next_action:'wait_for_task_end'};

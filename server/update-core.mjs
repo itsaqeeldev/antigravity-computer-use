@@ -29,6 +29,20 @@ export function deploymentPinned(scope,global){
  // existed. Do not silently enrol a divergent legacy scope in global updates.
  return !!scope?.workspace&&!!global&&scope.release!==global.release;
 }
+// A correctly signed inventory can still describe an accidentally incomplete
+// release. Refuse it before reserving or shutting down the current controller.
+export function verifyUpdateBundle(directory,m,{node,host,storage}={}){
+ const bundle=JSON.parse(fs.readFileSync(path.join(directory,'bundle-manifest.json')));
+ if(bundle.build_id!==m.build_id||bundle.version!==m.version||bundle.platform!==m.platform||bundle.arch!==m.arch)throw Error('update_bundle_identity_mismatch');
+ const required=[node,'bin/'+host,'bin/'+storage,'skills/computer-use/SKILL.md',
+  ...'index desktop-service service-lease desktop-tools receipts incidents update-core storage deployment mcp runtime guardian driver build sessions policy render upstream-utils version platform macos-build auto-update recovery update-notice atomic-json'.split(' ').map(name=>'server/'+name+'.mjs'),
+  'server/control-contract.json','scripts/desktop.mjs','scripts/arguments.mjs','scripts/diagnostics.mjs','scripts/install.mjs','scripts/update.mjs','scripts/rollback.mjs','scripts/sidecar.mjs','release-public-key.pem',
+  ...(m.platform==='win32'?['install.cmd']:['install.command','Setup Mac Permissions.command'])];
+ if(!bundle.files||typeof bundle.files!=='object'||Array.isArray(bundle.files)||required.some(name=>!Object.hasOwn(bundle.files,name)))throw Error('update_bundle_incomplete');
+ const names=Object.keys(bundle.files),signed=Object.keys(m.files).filter(name=>name!=='bundle-manifest.json');
+ if(names.length!==signed.length||names.some(name=>!Object.hasOwn(m.files,name)||bundle.files[name]!==m.files[name].sha256))throw Error('update_bundle_inventory_mismatch');
+ if(sha256(JSON.stringify(bundle.files))!==bundle.build_id)throw Error('update_bundle_identity_mismatch');
+}
 export function acquireUpdateLock(target){const file=path.join(target,'update.lock');const fd=fs.openSync(file,'wx',0o600);fs.writeFileSync(fd,JSON.stringify({pid:process.pid,at:new Date().toISOString()}));return ()=>{fs.closeSync(fd);fs.unlinkSync(file);};}
 export function verifyStaged(directory,m){
  const actual=[];const walk=folder=>{for(const entry of fs.readdirSync(folder,{withFileTypes:true})){const file=path.join(folder,entry.name);if(entry.isSymbolicLink())throw Error('release_payload_link');if(entry.isDirectory())walk(file);else if(entry.isFile())actual.push(path.relative(directory,file).replaceAll('\\','/'));else throw Error('release_payload_invalid');}};

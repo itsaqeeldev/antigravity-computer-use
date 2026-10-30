@@ -1343,3 +1343,13 @@ Reporting also reconciles an existing issue by its exact incident marker and
 platform when a legacy code is now sanitized, avoiding a duplicate or a stuck
 unknown-submission state after the upgrade. This is tested with mocked GitHub
 responses; live reporting from a consented installation remains unqualified.
+
+Signed updates now preflight the required shared runtime, skill, native helpers,
+updater scripts and platform launchers, and compare the inner bundle inventory
+with the signed payload inventory and computed build identity. This runs both
+after staging and immediately before a switch, before the running controller is
+reserved or stopped. Tests use signed inert bundles; real release transport and
+interactive update acceptance remain pending.
+The locally built Windows candidate also passed the new inventory preflight
+across 110 packaged files (build `1aadd80279beb51e60016f8fc9a8f7f66b3dfdd80a8c88c6810fdb21ecea8b82`).
+That check did not sign, publish or install the candidate.

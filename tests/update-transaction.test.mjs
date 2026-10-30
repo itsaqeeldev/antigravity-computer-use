@@ -6,14 +6,17 @@ import {spawnSync} from 'node:child_process';
 import {updateNotice} from '../server/update-notice.mjs';
 import {install} from '../scripts/install.mjs';import {rollback} from '../scripts/rollback.mjs';import {update} from '../scripts/update.mjs';
 import {sha256,newerVersion,updateSettings} from '../server/update-core.mjs';import {nativePlatform} from '../server/platform.mjs';import {testDirectory} from './paths.mjs';
-function fixture(){
+function fixture({omitFresh=null,badFreshHash=false}={}){
  const directory=fs.mkdtempSync(path.join(testDirectory('tmp'),'update-transaction-')),target=path.join(directory,'installed'),home=path.join(directory,'home');
  const native=nativePlatform(),storage=()=>({ok:true,private_storage:true});
  const createBundle=(name,version)=>{
   const bundle=path.join(directory,name);fs.mkdirSync(bundle,{recursive:true});
   const data={[native.node]:'inert node fixture',['bin/'+native.host]:'inert host fixture',['bin/'+native.storage]:'inert storage fixture','skills/computer-use/SKILL.md':'Use {{DESKTOP_COMMAND}} ready '+version,'scripts/desktop.mjs':'inert CLI fixture'};
+  for(const module of 'index desktop-service service-lease desktop-tools receipts incidents update-core storage deployment mcp runtime guardian driver build sessions policy render upstream-utils version platform macos-build auto-update recovery update-notice atomic-json'.split(' '))data['server/'+module+'.mjs']='inert fixture';
+  for(const file of ['server/control-contract.json','scripts/arguments.mjs','scripts/diagnostics.mjs','scripts/install.mjs','scripts/update.mjs','scripts/rollback.mjs','scripts/sidecar.mjs','release-public-key.pem',...(process.platform==='win32'?['install.cmd']:['install.command','Setup Mac Permissions.command'])])data[file]='inert fixture';
+  if(name==='fresh'&&omitFresh)delete data[omitFresh];
   for(const [name,bytes]of Object.entries(data)){const file=path.join(bundle,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,bytes);}
-  const files=Object.fromEntries(Object.entries(data).map(([name,bytes])=>[name,sha256(bytes)]));const build_id=sha256(JSON.stringify(files));
+  const files=Object.fromEntries(Object.entries(data).map(([name,bytes])=>[name,sha256(bytes)]));if(name==='fresh'&&badFreshHash)files['server/runtime.mjs']='0'.repeat(64);const build_id=sha256(JSON.stringify(files));
   fs.writeFileSync(path.join(bundle,'bundle-manifest.json'),JSON.stringify({version,build_id,platform:process.platform,arch:process.arch,files}));return {bundle,build_id};
  };
  const old=createBundle('old','1.0.0'),fresh=createBundle('fresh','1.1.0');
@@ -27,6 +30,19 @@ function fixture(){
  const fetcher=async url=>{fetches++;if(url.includes('api.github.com'))return {ok:true,json:async()=>({assets:[{name:`update-${process.platform}-${process.arch}.json`,browser_download_url:'https://github.com/shayann07/antigravity-computer-use/releases/download/v1.1.0/metadata.json'}]})};if(url.endsWith('/metadata.json'))return {ok:true,text:async()=>JSON.stringify(envelope)};return {ok:true,body:(async function*(){yield payload[url];})()};};
  return {directory,target,home,old,fresh,adapters,fetcher,calls,setState:v=>state=v,setFailHealth:()=>failHealth=true,fetches:()=>fetches,cleanup:()=>fs.rmSync(directory,{recursive:true,force:true})};
 }
+test('signed incomplete bundle is refused before shutdown or configuration changes',async()=>{
+ const f=fixture({omitFresh:'server/runtime.mjs'});try{
+  const before=fs.readFileSync(path.join(f.target,'installation.json'),'utf8');
+  await assert.rejects(update(f.target,'check',f),/update_bundle_incomplete/);
+  assert.equal(fs.readFileSync(path.join(f.target,'installation.json'),'utf8'),before);assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available!==true,true);
+ }finally{f.cleanup();}
+});
+test('signed payload with conflicting bundle inventory is refused before shutdown',async()=>{
+ const f=fixture({badFreshHash:true});try{
+  await assert.rejects(update(f.target,'check',f),/update_bundle_inventory_mismatch/);
+  assert(!f.calls.includes('shutdown'));assert.equal((await update(f.target,'status',f)).available!==true,true);
+ }finally{f.cleanup();}
+});
 test('signed full-bundle update preserves settings and Stop, then rollback restores old pins',async()=>{
  const f=fixture();try{
   const config=path.join(f.home,'.gemini/config/config.json');const before=JSON.parse(fs.readFileSync(config));before.unrelated={keep:true};fs.writeFileSync(config,JSON.stringify(before));
