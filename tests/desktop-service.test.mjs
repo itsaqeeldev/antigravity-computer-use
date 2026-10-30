@@ -325,6 +325,16 @@ test('failure matching does not expose captured text omitted from the rendered v
   assert.equal(reply.aborted,true);assert.equal(reply.abort_match,'Failed');assert.equal(reply.metadata.elements,undefined);assert(!JSON.stringify(reply).includes(privateText));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('IPC wait propagates its budget to snapshots and stops on native truncation',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-wait-budget-'));let inputs=0;const budgets=[];
+ const runtime={frames:new Map(),generation:1,status:()=>({state:'active'}),check(){},stamp(){return{};},guardian:{send(){}},async close(){},async grant(){return{hwnd:7,pid:9,started:'one',path:'fixture.exe'};},driver:{epoch:1,async call(op,a){assert.equal(op,'snapshot');budgets.push(a.time_budget_ms);return{result:{snapshot_id:'s'+budgets.length,truncated:true,nodes:[{i:1,role:'Button',name:'Ready'}]}};}},async action(){inputs++;return{};}};
+ runtime.observe=Runtime.prototype.observe.bind(runtime);runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Observe',steps:[{kind:'wait',until:'Ready',abort_on:['Failed'],timeout_ms:1000},{kind:'click',name:'Continue'}]});
+  assert.equal(reply.verification_error.code,'wait_observation_incomplete');assert.equal(reply.metadata.tree_incomplete,true);assert.equal(reply.batch.skipped,1);assert.equal(inputs,0);assert.equal(budgets.length,2);assert(budgets.every(value=>value>=100&&value<=1000));
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('a disconnected app-discovery client does not stop an active task',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;
  const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
