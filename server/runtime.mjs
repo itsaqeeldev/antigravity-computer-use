@@ -336,7 +336,10 @@ export class Runtime {
     // native walk's cooperative budget. Retire the worker if that snapshot
     // exceeds the budget plus transport grace; Driver fences its replacement
     // until the old process and any held-input cleanup are confirmed.
-    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})},walkBudget!==null?{timeoutMs:walkBudget+1000}:undefined)).result;
+    // Keep transport grace bounded and proportional. A full extra second per
+    // observation dominates short waits and makes the caller's deadline look
+    // much slower than the native walk itself.
+    const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500),...(walkBudget!==null?{time_budget_ms:walkBudget}:{})},walkBudget!==null?{timeoutMs:walkBudget+100}:undefined)).result;
     const nodes=queryNodes(tree.nodes,query);
     const rowLimit=Math.min(args.max_nodes||80,500);
     // This marks known loss, not proof that every visual error is accessible.
@@ -355,7 +358,7 @@ export class Runtime {
         if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the screenshot could start. Inspect the app; do not replay prior input.');
         const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;
         const needsOcr=process.platform==='darwin'&&(nodes.length<=2||rendered.includes('BLIND TREE'));
-        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80,...(needsOcr?{ocr:true}:{})},captureBudget!==null?{timeoutMs:captureBudget+1000}:undefined)).result;
+        image=(await this.driver.call('screenshot',{...metadata,max_width:Math.min(args.max_width||1400,targetImageSize(w.rect[2],w.rect[3])[0]),quality:80,...(needsOcr?{ocr:true}:{})},captureBudget!==null?{timeoutMs:captureBudget+100}:undefined)).result;
       }
       catch(error){
         if(['window_capture_unavailable','other_desktop','window_fullscreen','window_minimized','window_hidden','mac_permissions_required'].includes(error.code)){
@@ -502,6 +505,10 @@ export class Runtime {
       }
       this.frames.delete(latest.metadata.observation_id);
     }while(true);
+    // Once the deadline has elapsed, the last completed observation is the
+    // only trustworthy frame. Starting another capture here adds latency and
+    // can change the answer after the wait has already timed out.
+    if(latest)return finish({matched:false,timed_out:true,...latest});
     const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
     const finalFailure=waitFailure(final,args.abort_on);
     if(finalFailure)return finish({matched:false,aborted:true,abort_match:finalFailure,...final});
