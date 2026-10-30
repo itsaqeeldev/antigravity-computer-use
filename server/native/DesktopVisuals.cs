@@ -109,7 +109,10 @@ namespace Axon {
             // compatibility adapter. The adapter keeps this safety-critical
             // layered window dependency-free and never captures foreign pixels.
             using(GraphicsPath shape=Overlay.RoundRect(panel,21)) {
-                LiquidGlassMaterial.DrawSurface(g,shape,panel,accent,Math.Max(.72f,Math.Min(1f,(float)BreathLevel)),1f);
+                using(Bitmap packageSurface=LiquidGlassPackageClient.Surface(state,(int)panel.Width,(int)panel.Height)) {
+                    if(packageSurface!=null) g.DrawImage(packageSurface,panel);
+                    else LiquidGlassMaterial.DrawSurface(g,shape,panel,accent,Math.Max(.72f,Math.Min(1f,(float)BreathLevel)),1f);
+                }
             }
             string detail=state=="active"?(String.IsNullOrEmpty(activity)?"Antigravity is working":activity+" with Antigravity"):state=="paused"?"Paused · you have control":state=="stopped"?"Stopped · re-arm to begin":"Antigravity is ready";
             Label(g,detail,9,FontStyle.Regular,Color.FromArgb(240,243,246),new RectangleF(28,6,238,40));

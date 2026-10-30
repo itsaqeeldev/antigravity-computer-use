@@ -24,6 +24,7 @@ const WIN_SOURCES = [
   path.join(HERE, 'native', 'ControlContract.cs'),
   path.join(HERE, 'native', 'DesktopVisuals.cs'),
   path.join(HERE, 'native', 'LiquidGlassMaterial.cs'),
+  path.join(HERE, 'native', 'LiquidGlassPackageClient.cs'),
   path.join(HERE, 'native', 'CursorSafety.cs'),
   path.join(HERE, 'native', 'TakeoverPolicy.cs'),
   path.join(HERE, 'native', 'CursorMotion.cs'),
