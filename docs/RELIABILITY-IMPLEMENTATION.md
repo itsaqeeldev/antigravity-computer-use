@@ -1320,6 +1320,9 @@ effectful request was submitted. The driver now reports `input_outcome_unknown`
 for those requests and directs the agent to inspect without replay; read-only
 observations retain their specific transport errors. This also covers launch,
 open, close and clipboard operations. Input cleanup still runs independently.
+An effectful pipe write that throws also retires the native worker even for
+operations such as launch that do not hold physical inputs, preventing a
+possibly partially delivered command from continuing on a reused worker.
 Driver fixture and IPC/batch regression coverage does not establish physical
 Stop behavior or real-app delivery; those acceptance checks remain pending.
 If cleanup itself fails after a submitted action, the response now retains both

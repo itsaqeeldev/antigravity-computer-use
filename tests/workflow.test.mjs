@@ -88,9 +88,18 @@ test('lost worker responses mark effects unknown without misclassifying observat
 test('timeouts and failed writes do not invite replay of effectful operations',async()=>{
  for(const failure of ['timeout','write'])for(const op of ['click','launch','snapshot']){
   const driver=new Driver({timeoutMs:10});driver.info={};driver.proc={stdin:{write(){if(failure==='write')throw Error('broken pipe');}}};
-  driver.abort=async()=>{};
+  let aborts=0;driver.abort=async()=>{aborts++;};
   await assert.rejects(driver.call(op,{}),e=>e.code===(op==='snapshot'?(failure==='write'?'host_write_failed':'op_timeout'):'input_outcome_unknown'));
+  assert.equal(aborts,failure==='timeout'||op!=='snapshot'?1:0);
  }
+});
+test('partial launch write prevents worker replacement until prior exit',async()=>{
+ const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={write(){throw Error('partial write');},destroy(){}};child.kill=()=>false;
+ const driver=new Driver();driver.proc=child;driver.info={};driver.exitTimeoutMs=1000;let starts=0;
+ driver._launch=async()=>{starts++;return {pid:456};};
+ await assert.rejects(driver.call('launch',{}),e=>e.code==='input_outcome_unknown');
+ const restart=driver.start();await new Promise(resolve=>setImmediate(resolve));assert.equal(starts,0);
+ child.exitCode=1;child.emit('exit',1);assert.deepEqual(await restart,{pid:456});assert.equal(starts,1);
 });
 test('driver observes a real child exit before reporting cleanup',async()=>{
  const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:['pipe','ignore','ignore'],windowsHide:true});const closed=new Promise(resolve=>child.once('close',resolve));

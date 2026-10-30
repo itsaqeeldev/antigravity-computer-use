@@ -202,7 +202,10 @@ export class Driver {
       } catch (err) {
         this.pending.delete(id);
         clearTimeout(timer);
-        if (input) this.abort().catch(() => {});
+        // The write can throw after a partial delivery. Even operations that do
+        // not hold keyboard/mouse input (such as launch or close) must retire
+        // the worker before another operation can start.
+        if (effectful) this.abort().catch(() => {});
         reject(effectful ? unknownOutcome() : new HostError('host_write_failed', err.message));
       }
     });
