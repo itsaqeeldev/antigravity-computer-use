@@ -568,15 +568,15 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "9c7fe1ba278a9c4bd02c80d4ca0cfc5e4157cd8426cb172c17b91541638d00bd"
+      "sha256": "8ca3124f33024f2ecd3bde3100e716f9cd2e6dc27538840ab642490f325d942f"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
-      "sha256": "713a1eb21b72d12042f31e3beec4dfaa4337ab3ec9c833a62740abc0e39f6838"
+      "sha256": "b249182683814a75345968686187bd145a0e7053b76c1687947212fc1852d9ca"
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "ba69747321ef40bddf5669138aaccf813d4ffb026a5b09440b0c1f3aae0d941e"
+      "sha256": "6057c872fcc0f9a9c6c30ac914fc34609e0fc24a139e52d39440588812eed7e6"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "423bb50e9d197aac8c6c67c9f1ddd5a02af0315bb0442e701ea1e69708a060ff"
+      "sha256": "e272e9066621052835c0bed41e620d1c1d09137a148c06dbe14bc99eff67a53b"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

@@ -154,7 +154,8 @@ final class MacPanicMonitor {
         }
         if deliberate {
             try? MacFence.write("paused|\(state.token)|\(state.until)|\(Data(state.grants.sorted().joined(separator: "\n").utf8).base64EncodedString())")
-            macKillWorkers(); _ = MacInputLedger.recover()
+            let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+            if !workersStopped || !inputsRecovered { MacFence.emergency("input_cleanup_failed") }
         }
     }
     func run(guardian: pid_t, birth: String) -> Never {
@@ -176,7 +177,7 @@ final class MacPanicMonitor {
             let parent = pid_t(ProcessInfo.processInfo.environment["AGCU_PARENT_PID"] ?? "0") ?? 0
             if (try? macProcessStart(guardian)) != birth || (try? macProcessStart(parent)) != MacFence.parentIdentity {
                 if (try? MacFence.read().state) != "idle" { MacFence.emergency("guardian_exited") }
-                else { macKillWorkers(); if !MacInputLedger.recover() { MacFence.emergency("input_cleanup_failed") } }
+                else { let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover(); if !workersStopped || !inputsRecovered { MacFence.emergency("input_cleanup_failed") } }
                 exit(0)
             }
             self.checkDeadline()
@@ -261,8 +262,8 @@ final class MacGuardian: NSObject {
             do { try writeState() } catch { MacFence.emergency("state_write_failed") }
         }
         if state != "active" {
-            macKillWorkers()
-            if !MacInputLedger.recover() { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }
+            let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+            if !workersStopped || !inputsRecovered { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }
             else {
                 cleanupPending = false
                 do { try writeState() } catch { state = "stopped"; effectiveReason = "state_write_failed"; MacFence.emergency(effectiveReason) }

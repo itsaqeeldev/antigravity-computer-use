@@ -223,6 +223,30 @@ func macContractTest() throws {
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup overlapped another process's input lock.") }
     guard MacWorkers.terminateBeforeRetry(holder, expectedBirth: try macProcessStart(holder.processIdentifier)) else { throw AxonError("contract_test_failed", "Lock-holder exit was not confirmed.") }
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup did not recover after lock-owner death.") }
+    // The guardian's worker registry must also confirm a real child has exited
+    // before it can acknowledge cleanup. No desktop event is posted here.
+    let worker = Process(), workerOutput = Pipe(), workerInput = Pipe()
+    worker.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    worker.arguments = ["--contract-lock-holder"]; worker.environment = ProcessInfo.processInfo.environment
+    worker.standardOutput = workerOutput; worker.standardInput = workerInput; worker.standardError = FileHandle.standardError
+    try worker.run()
+    let workerMarker = MacFence.file + ".worker-\(worker.processIdentifier)"
+    defer { if worker.isRunning { kill(worker.processIdentifier, SIGKILL); worker.waitUntilExit() }; try? FileManager.default.removeItem(atPath: workerMarker) }
+    let workerReady = DispatchSemaphore(value: 0); var workerMessage: String?
+    DispatchQueue.global().async { workerMessage = String(data: workerOutput.fileHandleForReading.availableData, encoding: .utf8); workerReady.signal() }
+    guard workerReady.wait(timeout: .now() + 5) == .success, workerMessage?.contains("lock_held") == true else { throw AxonError("contract_test_failed", "Worker fixture did not start.") }
+    let workerBirth = try macProcessStart(worker.processIdentifier)
+    try Data("0.0".utf8).write(to: URL(fileURLWithPath: workerMarker), options: [.atomic]); chmod(workerMarker, 0o600)
+    guard macKillWorkers(), worker.isRunning else { throw AxonError("contract_test_failed", "A reused PID was killed.") }
+    try Data(workerBirth.utf8).write(to: URL(fileURLWithPath: workerMarker), options: [.atomic])
+    guard chmod(workerMarker, 0o600) == 0, macKillWorkers() else { throw AxonError("contract_test_failed", "Worker termination was not confirmed.") }
+    worker.waitUntilExit(); try FileManager.default.removeItem(atPath: workerMarker)
+    guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup failed after confirmed worker exit.") }
+    let invalidWorker = MacFence.file + ".worker-invalid"
+    try Data("invalid".utf8).write(to: URL(fileURLWithPath: invalidWorker), options: [.atomic]); chmod(invalidWorker, 0o600)
+    defer { try? FileManager.default.removeItem(atPath: invalidWorker) }
+    guard !macKillWorkers() else { throw AxonError("contract_test_failed", "Malformed worker registry was accepted.") }
+    try FileManager.default.removeItem(atPath: invalidWorker)
     // Replacing the private root while its original inode is locked must not
     // let a contender acquire a different directory lock and claim cleanup.
     let root = URL(fileURLWithPath: MacFence.file).deletingLastPathComponent().path

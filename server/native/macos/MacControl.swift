@@ -255,8 +255,8 @@ enum MacFence {
     static func emergency(_ reason: String) {
         if !latch.isEmpty { try? Data("stopped".utf8).write(to: URL(fileURLWithPath: latch), options: [.atomic]) }
         try? write("stopped||0||0|1")
-        macKillWorkers()
-        if !MacInputLedger.recover() { emit(["ev": "visual_warning", "message": "Input cleanup is incomplete; control stays stopped."]) }
+        let workersStopped = macKillWorkers(), inputsRecovered = MacInputLedger.recover()
+        if !workersStopped || !inputsRecovered { emit(["ev": "visual_warning", "message": "Input cleanup is incomplete; control stays stopped."]) }
     }
 }
 
@@ -362,16 +362,36 @@ func macRegisterWorker() throws {
     try Data((try macProcessStart(getpid())).utf8).write(to: URL(fileURLWithPath: file), options: [.atomic])
     chmod(file, 0o600)
 }
-func macKillWorkers() {
+@discardableResult func macKillWorkers() -> Bool {
     let root = URL(fileURLWithPath: MacFence.file).deletingLastPathComponent()
     let prefix = URL(fileURLWithPath: MacFence.file).lastPathComponent + ".worker-"
-    for name in (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? [] where name.hasPrefix(prefix) {
+    guard let names = try? FileManager.default.contentsOfDirectory(atPath: root.path) else { return false }
+    var confirmed = true, pending: [(pid_t, String)] = []
+    for name in names where name.hasPrefix(prefix) {
         let file = root.appendingPathComponent(name)
-        if let pid = pid_t(name.dropFirst(prefix.count)), pid != getpid(),
-           let expected = try? String(contentsOf: file, encoding: .utf8), (try? macProcessStart(pid)) == expected {
-            kill(pid, SIGKILL)
-            let deadline = Date().addingTimeInterval(1)
-            while Date() < deadline && (try? macProcessStart(pid)) == expected { Thread.sleep(forTimeInterval: 0.005) }
-        }
+        guard let pid = pid_t(name.dropFirst(prefix.count)), pid > 0, pid != getpid(),
+              let info = try? MacPrivateStorage.info(file.path), info.st_uid == getuid(),
+              info.st_mode & S_IFMT == S_IFREG, info.st_mode & 0o077 == 0, info.st_nlink == 1, info.st_size <= 128,
+              let expected = try? String(contentsOf: file, encoding: .utf8), !expected.isEmpty else { confirmed = false; continue }
+        if let actual = try? macProcessStart(pid) {
+            if actual != expected { continue } // PID was reused; never kill the new process.
+            if kill(pid, SIGKILL) != 0 && errno != ESRCH { confirmed = false }
+            pending.append((pid, expected))
+        } else if kill(pid, 0) == 0 || errno != ESRCH { confirmed = false }
     }
+    guard !pending.isEmpty else { return confirmed }
+    let start = MacDeadline.now
+    guard start > 0 else { return false }
+    while !pending.isEmpty {
+        pending.removeAll { item in
+            let (pid, expected) = item
+            if let actual = try? macProcessStart(pid) { return actual != expected }
+            return kill(pid, 0) != 0 && errno == ESRCH
+        }
+        if pending.isEmpty { break }
+        let now = MacDeadline.now
+        if now == 0 || now < start || now - start >= 1000 { break }
+        Thread.sleep(forTimeInterval: 0.005)
+    }
+    return confirmed && pending.isEmpty
 }
