@@ -1213,8 +1213,8 @@ An initial candidate adds a per-boot deadline to the Windows and Mac guardian
 states and requires it in the worker fence, with matching guardian UI expiry
 checks. It rejects malformed or legacy active records and clamps requested
 durations. Windows headless native tests cover arithmetic and refusal; Mac
-compilation and the equivalent contract checks await CI. The independent
-Mac's independent watchdog does not yet enforce this deadline. A Windows
+compilation and equivalent contract checks passed in CI run `40988442306` at
+`cb74627`. The Mac independent watchdog does not yet enforce this deadline. A Windows
 candidate now lets ordinary guardian cleanup complete, then escalates an
 unresolved expired/inactive state after five seconds or a persistently invalid
 state after one second. It retains crash monitoring until explicit disarm after
@@ -1233,6 +1233,12 @@ checks after this change; the earlier run took 23.1 ms. These are not
 end-to-end action latency. Lost arm acknowledgements, cosmetic
 failure, actual held-input crashes and physical Stop still need native/real-app
 qualification before issue #19 can close.
+
+Issue #21 tracks a Stop racing with guardian state publication. A Windows
+candidate checks a Stop generation and latch during publication; the Mac
+candidate rechecks the latch after publication. Pure native resolution checks
+are not proof of cross-process atomicity, failed-latch behavior or physical
+Esc/re-arm. Mac CI and real-device race qualification remain pending.
 
 Issue #17 tracks action budget consumed before input-fence acquisition. The
 candidate rechecks the deadline and budget inside the fence and counts only an

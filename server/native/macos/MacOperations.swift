@@ -108,6 +108,11 @@ func macContractTest() throws {
         throw AxonError("contract_test_failed", "Value read-back classification differs.")
     }
     let token = "native-contract-test", grant = "123:birth:/app"
+    guard MacFence.resolvedState("idle", latched: true) == "stopped",
+          MacFence.resolvedState("active", latched: true) == "stopped",
+          MacFence.resolvedState("idle", latched: false) == "idle" else {
+        throw AxonError("contract_test_failed", "Latched Stop was lost during state resolution.")
+    }
     let bounded = MacDeadline.create(requested: 100_000_000, wallNow: 0, bootNow: 1000, maximumMs: 500)
     guard bounded == 1500, MacDeadline.valid(bounded, now: 1499), !MacDeadline.valid(bounded, now: 1500),
           MacDeadline.create(requested: 100, wallNow: 100, bootNow: 10, maximumMs: 500) == 0,

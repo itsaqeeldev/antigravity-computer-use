@@ -254,7 +254,7 @@ namespace Axon {
         readonly HashSet<string> grants = new HashSet<string>();
         Form activePrompt; bool captureHidden; bool captureExcluded; bool recordVisuals;
         bool controlsRequested, initialized; DateTime controlsUntil=DateTime.MaxValue;
-        long visibilityEpoch;
+        long visibilityEpoch,stopEpoch;
         readonly List<Process> workers=new List<Process>();
         readonly object workerLock=new object();
         readonly bool hostManaged=Environment.GetEnvironmentVariable("AGCU_PERMISSION_MODE")=="host-managed";
@@ -290,12 +290,15 @@ namespace Axon {
             toggle=ButtonAt(1,DesktopVisuals.ToggleRect); toggle.Click += delegate {
                 if(state=="active")SetState("paused");
                 else {
+                    long humanEpoch=Interlocked.Read(ref stopEpoch);
                     try {ControlFence.Recover();}catch {}
                     if(InputLedger.HasHeld()){Emit(new {ev="visual_warning",message="Held-input cleanup is incomplete; control stays paused/stopped"});return;}
                     deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));
                     if(bootDeadline==0){Emit(new {ev="error",message="Cannot establish the native session deadline; control stays paused/stopped"});return;}
+                    if(Interlocked.Read(ref stopEpoch)!=humanEpoch)return;
                     if(state=="stopped"&&!String.IsNullOrEmpty(StopLatch))try {File.Delete(StopLatch);}catch {Emit(new {ev="error",message="Cannot clear the emergency latch; control stays stopped"});return;}
-                    SetState(state=="stopped"||state=="idle"?"idle":"active");Emit(new {ev="human_resume",state=state});
+                    if(Interlocked.Read(ref stopEpoch)!=humanEpoch){ControlFence.LatchStop();return;}
+                    SetState(state=="stopped"||state=="idle"?"idle":"active",null,true,humanEpoch);if(state!="stopped")Emit(new {ev="human_resume",state=state});
                 }
             };
             stopButton=ButtonAt(2,DesktopVisuals.StopRect); stopButton.Click += delegate {
@@ -414,18 +417,26 @@ namespace Axon {
             SetPropW(f.Handle, "ComputerUseOverlayWindow", new IntPtr(1));
             SetWindowDisplayAffinity(f.Handle, 0x11);
         }
-        void WriteState() { lock(stateLock) {
+        internal static string ResolveGuardState(string proposed,long capturedStop,long currentStop,bool latched) {
+            return proposed!="stopped"&&(capturedStop!=currentStop||latched)?"stopped":proposed;
+        }
+        void WriteState(long capturedStop=-1) { lock(stateLock) {
+            if(capturedStop>=0) {
+                state=ResolveGuardState(state,capturedStop,Interlocked.Read(ref stopEpoch),!String.IsNullOrEmpty(StopLatch)&&File.Exists(StopLatch));
+                if(state=="stopped")grants.Clear();
+            }
             string f = ControlFence.FileName;
             if (String.IsNullOrEmpty(f)) return;
             string temp = f + ".tmp";
             File.WriteAllText(temp, state+"|"+token+"|"+deadline.ToString()+"|"+Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Join("\n",grants)))+"|"+bootDeadline.ToString());
             if (File.Exists(f)) File.Replace(temp, f, null); else File.Move(temp,f);
         } }
-        void SetState(string next,string reason=null,bool updateVisibility=true) {
-            if (state == "stopped" && next == "active") return;
+        void SetState(string next,string reason=null,bool updateVisibility=true,long humanRearmEpoch=-1) {
+            long capturedStop=humanRearmEpoch>=0?humanRearmEpoch:Interlocked.Read(ref stopEpoch);
+            if (state == "stopped" && next != "stopped" && humanRearmEpoch<0) return;
             if(next=="stopped")ControlFence.LatchStop();
             state = next; if(state=="stopped")grants.Clear(); takeover.Reset(Presence.Capture());
-            try { WriteState(); }
+            try { WriteState(capturedStop); }
             catch {
                 // A failed state transition must never skip cleanup or leave a
                 // newly active session usable on an older native fence.
@@ -458,6 +469,7 @@ namespace Axon {
         }
         void Emergency(string reason="request") {
             // Hook thread invalidates the native fence BEFORE waiting for the UI thread.
+            Interlocked.Increment(ref stopEpoch);
             state="stopped"; ControlFence.LatchStop(); try { WriteState(); } catch { }
             GuardCleanup.Run(StopWorkers,ControlFence.Recover); Emit(new { ev="state", state="stopped", reason=reason });
             long emergencyEpoch=Interlocked.Increment(ref visibilityEpoch);
@@ -526,7 +538,7 @@ namespace Axon {
                 // a chat-directed Resume. Emergency Stop remains human-only.
                 try {ControlFence.Recover();}catch {}
                 bool resumeAllowed=hostManaged && state=="paused" && !InputLedger.HasHeld();
-                if(resumeAllowed) {deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));if(bootDeadline==0)resumeAllowed=false;else {SetState("active","host_authorized_resume");Emit(new {ev="host_resume",state=state});}}
+                if(resumeAllowed) {deadline=DateTime.UtcNow.AddMinutes(10).Ticks;bootDeadline=NativeDeadline.Create(deadline,DateTime.UtcNow.Ticks,NativeDeadline.GetTickCount64(),ControlContract.Number("session_ms",600000));if(bootDeadline==0)resumeAllowed=false;else {SetState("active","host_authorized_resume");resumeAllowed=state=="active";if(resumeAllowed)Emit(new {ev="host_resume",state=state});}}
                 Emit(new {id=id,allowed=resumeAllowed,state=state});return;
             }
             if (op == "pause") { SetState("paused","requested_pause"); return; }

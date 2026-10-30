@@ -12,6 +12,9 @@ class NativeWatchdogMetadataTests {
             var host=Assembly.LoadFrom(args[0]);var type=host.GetType("Axon.CursorSafety",true);
             var write=type.GetMethod("WriteWatchdogRecord",BindingFlags.Static|BindingFlags.NonPublic);
             var check=host.GetType("Axon.ControlFence",true).GetMethod("CheckWatchdogIdentity",BindingFlags.Static|BindingFlags.NonPublic);
+            var transition=host.GetType("Axon.Guardian",true).GetMethod("ResolveGuardState",BindingFlags.Static|BindingFlags.NonPublic);
+            Func<string,long,long,bool,string> resolve=delegate(string state,long before,long after,bool latched){return (string)transition.Invoke(null,new object[]{state,before,after,latched});};
+            if(resolve("idle",1,2,false)!="stopped"||resolve("active",1,1,true)!="stopped"||resolve("idle",2,2,false)!="idle"||resolve("stopped",1,2,false)!="stopped")throw new Exception("emergency stop transition lost");
             var watchdogState=type.GetMethod("WatchdogState",BindingFlags.Static|BindingFlags.NonPublic);
             Func<string,ulong,string> classify=delegate(string value,ulong now){return (string)watchdogState.Invoke(null,new object[]{value,now});};
             if(classify("active|token|10000||500",499)!="active"||classify("active|token|10000||500",500)!="expired"||

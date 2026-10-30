@@ -149,6 +149,14 @@ final class MacGuardian: NSObject {
         state = next
         if next == "stopped" || next == "idle" { grants.removeAll() }
         do { try writeState() } catch { state = "stopped"; MacFence.emergency("state_write_failed") }
+        // The independent watchdog may latch Stop while this transition is
+        // being published. Recheck after the write so a stale idle/paused
+        // transition cannot leave the local UI claiming control is available.
+        let resolved = MacFence.resolvedState(state, latched: !MacFence.latch.isEmpty && FileManager.default.fileExists(atPath: MacFence.latch))
+        if resolved != state {
+            state = resolved; grants.removeAll(); effectiveReason = "emergency_stop"
+            do { try writeState() } catch { MacFence.emergency("state_write_failed") }
+        }
         if state != "active" {
             macKillWorkers()
             if !MacInputLedger.recover() { state = "stopped"; grants.removeAll(); effectiveReason = "input_cleanup_failed"; MacFence.emergency(effectiveReason) }

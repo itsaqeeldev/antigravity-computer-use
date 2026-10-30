@@ -110,6 +110,9 @@ struct MacFenceState {
 }
 
 enum MacFence {
+    static func resolvedState(_ proposed: String, latched: Bool) -> String {
+        latched ? "stopped" : proposed
+    }
     static var file: String { ProcessInfo.processInfo.environment["AGCU_GUARD_FILE"] ?? "" }
     static var latch: String { ProcessInfo.processInfo.environment["AGCU_STOP_LATCH"] ?? "" }
     static var current: [String: Any] = [:]
