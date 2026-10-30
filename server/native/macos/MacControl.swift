@@ -231,18 +231,18 @@ enum MacFence {
 
 enum MacInputLedger {
     static var path: String { MacFence.file + ".inputs" }
-    // All processes use the same private lock, including the watchdog. Hold it
-    // across the final Stop check, journaling and event post so cleanup cannot
-    // pass an in-flight dispatch. A dead process releases its kernel lock.
+    // Lock the pinned private directory itself, so unlinking a separate lock
+    // file cannot create two independent locks. A dead process releases flock.
     static func withLock<T>(_ body: () throws -> T) throws -> T {
         guard !MacFence.file.isEmpty else { throw AxonError("input_cleanup_failed", "Input lock has no control state.") }
-        let lockPath = path + ".lock"
-        let fd = open(lockPath, O_RDWR | O_CREAT | O_NOFOLLOW, 0o600)
+        let root = URL(fileURLWithPath: MacFence.file).deletingLastPathComponent().path
+        let fd = open(root, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard fd >= 0 else { throw AxonError("input_cleanup_failed", "Cannot open the input lock.") }
         defer { close(fd) }
         var held = stat()
-        guard fstat(fd, &held) == 0, held.st_uid == getuid(), held.st_mode & S_IFMT == S_IFREG,
-              held.st_mode & 0o077 == 0, held.st_nlink == 1 else {
+        guard let pinned = MacFence.rootIdentity, fstat(fd, &held) == 0,
+              held.st_uid == getuid(), held.st_mode & S_IFMT == S_IFDIR,
+              held.st_mode & 0o077 == 0, held.st_dev == pinned.0, held.st_ino == pinned.1 else {
             throw AxonError("input_cleanup_failed", "The input lock is not private.")
         }
         let deadline = ProcessInfo.processInfo.systemUptime + 1.0
@@ -254,9 +254,9 @@ enum MacInputLedger {
             Thread.sleep(forTimeInterval: 0.005)
         }
         defer { flock(fd, LOCK_UN) }
-        let current = try MacPrivateStorage.info(lockPath)
-        guard current.st_dev == held.st_dev, current.st_ino == held.st_ino, current.st_nlink == 1 else {
-            throw AxonError("input_cleanup_failed", "The input lock was replaced.")
+        let current = try MacPrivateStorage.info(root)
+        guard current.st_dev == held.st_dev, current.st_ino == held.st_ino, current.st_mode & S_IFMT == S_IFDIR else {
+            throw AxonError("input_cleanup_failed", "The input lock directory was replaced.")
         }
         return try body()
     }

@@ -168,23 +168,22 @@ func macContractTest() throws {
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup overlapped another process's input lock.") }
     kill(holder.processIdentifier, SIGKILL); holder.waitUntilExit()
     guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup did not recover after lock-owner death.") }
-    // Links must not redirect the shared lock or create another name for it.
-    let lockPath = MacInputLedger.path + ".lock", backup = lockPath + ".contract-backup"
-    try FileManager.default.moveItem(atPath: lockPath, toPath: backup)
-    var lockFixtureActive = true
-    defer {
-        if lockFixtureActive {
-            try? FileManager.default.removeItem(atPath: lockPath)
-            try? FileManager.default.moveItem(atPath: backup, toPath: lockPath)
+    // Replacing the private root while its original inode is locked must not
+    // let a contender acquire a different directory lock and claim cleanup.
+    let root = URL(fileURLWithPath: MacFence.file).deletingLastPathComponent().path
+    let backup = root + ".contract-backup"
+    try MacInputLedger.withLock {
+        guard rename(root, backup) == 0 else { throw AxonError("contract_test_failed", "Cannot move lock directory fixture.") }
+        var replaced = false
+        defer {
+            if replaced { _ = rmdir(root) }
+            _ = rename(backup, root)
         }
+        guard mkdir(root, 0o700) == 0 else { throw AxonError("contract_test_failed", "Cannot replace lock directory fixture.") }
+        replaced = true
+        guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup accepted a replaced lock directory.") }
     }
-    guard symlink(backup, lockPath) == 0 else { throw AxonError("contract_test_failed", "Cannot construct lock symlink fixture.") }
-    guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup accepted a lock symlink.") }
-    guard unlink(lockPath) == 0, link(backup, lockPath) == 0 else { throw AxonError("contract_test_failed", "Cannot construct lock hard-link fixture.") }
-    guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Cleanup accepted a multiply-linked input lock.") }
-    guard unlink(lockPath) == 0 else { throw AxonError("contract_test_failed", "Cannot remove lock hard-link fixture.") }
-    try FileManager.default.moveItem(atPath: backup, toPath: lockPath)
-    lockFixtureActive = false
+    guard MacInputLedger.recover() else { throw AxonError("contract_test_failed", "Restored lock directory is unavailable.") }
     try Data("invalid journal".utf8).write(to:URL(fileURLWithPath:MacInputLedger.path))
     guard !MacInputLedger.recover() else { throw AxonError("contract_test_failed","Malformed input journal was accepted.") }
     try MacInputLedger.save(["keys":[Int](),"buttons":[Int]()])
