@@ -103,6 +103,13 @@ test('Stop still aborts input when both guardian delivery and latch persistence 
  try{runtime.state='active';await assert.rejects(runtime.stop(),e=>e.code==='stop_persistence_failed');assert.equal(runtime.state,'stopped');assert.equal(aborts,1);assert.equal(runtime.lastControlReason,'stop_persistence_failed');}
  finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('ready prioritizes unconfirmed input cleanup over an unconfirmed guardian Stop',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-cleanup-priority-')),latch=path.join(dir,'stop');
+ const guardian=new EventEmitter();guardian.send=()=>{throw Error('broken pipe');};const driver={inputMayBeHeld:true,async abort(){throw Object.assign(Error('unconfirmed'),{code:'input_cleanup_failed'});}};
+ const runtime=new Runtime({guardian,driver,sessions:{register(){}},latchFile:latch});
+ try{runtime.state='active';await assert.rejects(runtime.stop(),e=>e.code==='input_cleanup_failed');const ready=await runtime.ready();assert.equal(ready.next_action,'inspect_input_cleanup');assert.equal(ready.error.code,'input_cleanup_failed');assert.equal(ready.replay_allowed,false);}
+ finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('guardian timeout still rejects when its Stop write throws',async()=>{
  const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);if(m.op==='stop')throw Error('closed pipe');};
  await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');

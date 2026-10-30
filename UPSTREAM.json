@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "22750e8469ede343f074678657742028d2c506d93b19378d4220f00a19e65472"
+      "sha256": "cde5dc0b1536635411764f762b3b6cc79169c98c699bf66da721d8747b00f494"
     },
     {
       "path": "server/mcp.mjs",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "2f8ed41d94c71c745ca55506759a94caa4fecaa0ceaa3cb5be1bcd8283d0cb32"
+      "sha256": "4b6af1b4d4208099e08e474d3ad0658140893e8de3b0c026460694da81cd7531"
     },
     {
       "path": "tests/update-transaction.test.mjs",
