@@ -41,6 +41,23 @@ test('post-launch Stop and observation failure retain delivery evidence without 
 });
 test('legacy launch remains a launch-only operation',async()=>{
  const {r,counts}=harness([]);const result=await Runtime.prototype.launch.call(r,{app,reason:'test'});assert.deepEqual(result,{pid:123,path:app});assert.deepEqual(counts(),{launches:1,observations:0});
+ assert.equal(r.remaining,199);
+});
+test('launch respects an exhausted session budget before native dispatch',async()=>{
+ const {r,counts}=harness([]);r.token='existing';r.deadline=Date.now()+10000;r.remaining=0;
+ await assert.rejects(Runtime.prototype.launch.call(r,{app,reason:'test'}),e=>e.code==='session_limit');assert.equal(counts().launches,0);
+});
+test('launch rechecks the budget after waiting for the input fence',async()=>{
+ const {r,counts}=harness([]);r.sessions.withInput=async(_op,_target,run)=>{r.remaining=0;return run();};
+ await assert.rejects(Runtime.prototype.launch.call(r,{app,reason:'test'}),e=>e.code==='session_limit');assert.equal(counts().launches,0);
+});
+test('launch does not spend budget when the input fence is unavailable',async()=>{
+ const {r,counts}=harness([]);r.sessions.withInput=async()=>{throw Object.assign(Error('busy'),{code:'another_session_busy'});};
+ await assert.rejects(Runtime.prototype.launch.call(r,{app,reason:'test'}),e=>e.code==='another_session_busy');assert.equal(r.remaining,200);assert.equal(counts().launches,0);
+});
+test('a launch with unknown delivery still spends one action',async()=>{
+ const {r}=harness([]);r.driver.call=async()=>{throw Object.assign(Error('unknown'),{code:'input_outcome_unknown'});};
+ await assert.rejects(Runtime.prototype.launch.call(r,{app,reason:'test'}),e=>e.code==='input_outcome_unknown');assert.equal(r.remaining,199);
 });
 test('Stop while launch waits for input ownership prevents process creation',async()=>{
  const {r,counts}=harness([]);r.sessions.withInput=async(_op,_target,run)=>{r.state='stopped';r.generation++;return run();};

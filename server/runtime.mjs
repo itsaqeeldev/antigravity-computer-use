@@ -418,6 +418,7 @@ export class Runtime {
     const activationGeneration=this.generation;
     const active=await this.guardian.request({op:'activate',token:this.token,deadline:(BigInt(this.deadline)*10000n+621355968000000000n).toString()});
     if(!active.allowed||this.state==='stopped'||this.state==='paused'||this.generation!==activationGeneration)fail('control_inactive','Control changed during activation. Use local controls and observe again.');this.state='active';this.check();
+    if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
     const payload={app,args:args.args||[],...this.stamp(),__risk:'sensitive'};
     await this.driver.start();
     this.guardian.send({op:'attach',pid:this.driver.info.pid});
@@ -427,7 +428,9 @@ export class Runtime {
     this.check();const launchGeneration=this.generation;
     const result=await this.sessions.withInput('launch',{title:path.basename(app)},async()=>{
       this.check();if(launchGeneration!==this.generation)fail('control_changed','Cancelled before launch.');
-      Runtime.prototype.recordDispatch.call(this);return (await this.driver.call('launch',{...payload,__permit:a.permit})).result;
+      if(Date.now()>=this.deadline||this.remaining<=0)fail('session_limit','Session expired or action budget exhausted. End and obtain a new human grant.');
+      Runtime.prototype.recordDispatch.call(this);this.remaining--;
+      return (await this.driver.call('launch',{...payload,__permit:a.permit})).result;
     });
     if(!args.observe)return result;
     // Launch already happened. An unavailable/ambiguous window is never an
