@@ -9,12 +9,13 @@ host-managed/manual policy, sidecar and configuration backups; verification
 passed for 109 files and the skill pointer.
 
 A real Antigravity `/computer-use` Notepad smoke task passed through the direct
-skill: readiness, discovery, launch, fresh observation, click, typing and End.
-Independent desktop observation confirmed the requested text. No fallback was
-used. The Antigravity conversation card remained visually stuck on its last
-tool while the controller was already idle; this host presentation-lag issue is
-pending a separate fix. Upscaly, physical Stop/re-arm, updater and release
-qualification remain pending.
+skill on the earlier `89b355e` installation: readiness, discovery, launch,
+fresh observation, click, typing and End. Independent desktop observation
+confirmed the requested text. No fallback was used. This is historical evidence
+and is superseded by the later `1960190` Stop-marker installation. The
+Antigravity conversation card remained visually stuck on its last tool while the
+controller was already idle; this host presentation-lag issue is pending a
+separate fix.
 
 The same installed candidate subsequently completed a real stable Upscaly PNG
 workflow through Antigravity. Native Vulkan Real-ESRGAN `realesr-general-x4v3`

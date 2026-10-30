@@ -19,8 +19,10 @@ receipt journal. Antigravity's conversation view remained on a stale running
 tool card after the controller had returned idle, so host/model presentation
 completion is recorded as a defect boundary rather than a clean host pass.
 
-This is a real smoke qualification of the installed candidate, not Upscaly AI
-qualification, physical Stop/re-arm qualification, or release approval.
+This was a real smoke qualification of the earlier `89b355e` installation. It
+is historical evidence only; it is superseded by the later `1960190` Stop-marker
+installation below and does not qualify that newer build, physical Stop/re-arm,
+Upscaly AI, or release approval.
 
 The Stop-marker candidate from source `1960190` is now installed through the
 supported installer. Exact installed build is
