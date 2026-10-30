@@ -1,20 +1,20 @@
 # Installation, update and removal
 
-Version **0.3.0-beta.2** is the published Windows direct `/computer-use` prerelease with bundled Node and native helpers. Download the [complete Windows ZIP and checksums](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). General orchestration latency and hardware/input qualification remain open; see [HANDOFF.md](../HANDOFF.md). Historical v0.2.0 uses the older MCP route, including the recording labelled as such in the README.
+Version **0.3.0-beta.3** is the Windows direct `/computer-use` prerelease with bundled Node and native helpers. Download the [complete Windows ZIP and checksums](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.3). External-display, Gatekeeper and published-update transport limits remain documented in [HANDOFF.md](../HANDOFF.md). Historical v0.2.0 uses the older MCP route, including the recording labelled as such in the README.
 
 For the **experimental macOS candidate**, including architecture-matched prebuilt
 downloads and human OS permission setup, see [Mac installation](MACOS.md).
 The Windows command below does not install the Mac candidate.
 
 The development branch also contains control-recovery and signed-updater work.
-It is not part of the pinned beta.2 download. See
+It is not part of the pinned beta.3 download. See
 [implementation and qualification status](RELIABILITY-IMPLEMENTATION.md) before
 using a CI candidate. An old installation needs one supported upgrade before it
 can check for signed automatic updates; installing a skill file alone cannot
 upgrade its runtime. The signing trust root is configured and signed assets have
 passed development CI, but they are not a published updater release. Automatic
 distribution and the public bootstrap pin remain gated by native/real-device
-acceptance; the one-line command below still installs beta.2.
+acceptance; the one-line command below installs beta.3 after publication.
 
 ## Quick install
 
@@ -24,7 +24,7 @@ Paste this in Windows PowerShell:
 irm https://raw.githubusercontent.com/shayann07/antigravity-computer-use/main/install.ps1 | iex
 ```
 
-It downloads the pinned beta.2 archive and pinned helper, verifies SHA-256, and
+It downloads the pinned beta.3 archive and pinned helper, verifies SHA-256, and
 installs the global direct skill and Sidecar. A matching installation is verified
 and reused without shutting down a running session. Existing permission policy and
 emergency Stop are retained. Source: [install.ps1](../install.ps1). On unsafe
@@ -32,7 +32,7 @@ replaceable cache ancestors the installer refuses rather than changing parent AC
 
 ## Windows portable bundle (manual)
 
-1. Download the complete Windows ZIP and SHA256 checksums from [the beta.2 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
+1. Download the complete Windows ZIP and SHA256 checksums from [the beta.3 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.3). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
 2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
 3. For App-managed startup, run `install.cmd --integration direct --sidecar`. Direct integration is the default; omitting `--sidecar` uses manual local startup. Sidecar installs default to `host-managed` permission mode so Antigravity's host/Turbo policy can authorize ordinary actions without repeated native approval modals; an existing explicit mode is preserved. The installer prints the release and exact backup paths.
 4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
@@ -76,7 +76,7 @@ To include them in a real demo, open the control bar's three-dot menu and enable
 desktop action requests cannot enable it. Permission dialogs stay excluded.
 The controller continues to hide its own chrome from agent screenshots. Turn the
 option off afterward if you want clean recordings. It does not start a recorder.
-This option was added after the published beta.2 bundle.
+This option is included in the beta.3 bundle.
 
 ## Verify an installed development bundle
 

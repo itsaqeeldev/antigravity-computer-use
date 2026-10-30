@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <b><a href="https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2">Download for Windows</a></b> ·
+  <b><a href="https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.3">Download for Windows</a></b> ·
   <a href="#see-it-in-action">Demo</a> ·
   <a href="#install">Install</a> ·
   <a href="docs/INSTALLATION.md">Documentation</a> ·
@@ -30,22 +30,24 @@ dialogs, and operate custom canvases through screenshots. It works in the
 **Antigravity Agent Manager App**. No separate LLM, extra model subscription,
 browser extension or required MCP server.
 
-> **Windows beta.** The current release is **v0.3.0-beta.2**. Real desktop tasks
-> have passed, but overall orchestration speed and wider reliability qualification
-> remain unfinished. See [what is verified](#status-and-limits) before installing.
+> **Windows beta.** The current release candidate is **v0.3.0-beta.3**. Real
+> desktop safety, AI image export, Mac qualification and signed candidate checks
+> have passed; external-display and published-release transport limits remain.
+> See [what is verified](#status-and-limits) before installing.
 
-**macOS development:** an experimental Apple Silicon/Intel adapter shares the
-same controller, tool schemas and `/computer-use` skill. It is undergoing native
-CI and installation checks; actual Mac desktop acceptance is still pending.
-[Mac candidate and qualification details](docs/MACOS.md).
+**macOS experimental support:** Apple Silicon/Intel adapters share the same
+controller, tool schemas and `/computer-use` skill. Intel Mac physical
+qualification passed on a single Retina display; external-display, sleep/wake
+and permission-revocation hardware checks remain pending.
+[Mac qualification details](docs/MACOS-QUALIFICATION.md).
 
-The unreleased beta.3 work in [PR #1](https://github.com/shayann07/antigravity-computer-use/pull/1)
-adds control recovery, sanitized failure reports and signed whole-bundle updates.
+The beta.3 line adds control recovery, sanitized failure reports and signed
+whole-bundle updates.
 The development branch also supports structured, unverified agent feedback;
 automatic issue reporting is opt-in and requires GitHub authentication. Models
 can miss problems, while runtime errors are logged independently. It shares the
 runtime with the Mac adapter. [Implementation and acceptance status](docs/RELIABILITY-IMPLEMENTATION.md).
-The Windows download and one-line installer below remain pinned to beta.2.
+The Windows download and one-line installer below are pinned to beta.3.
 Our [public CI guide](docs/CI.md) explains the fork checks, local commands and
 the separate maintainer signing workflow.
 
@@ -139,12 +141,12 @@ this project adds no separate model service or telemetry. [Security model](SECUR
 
 | Area | Verified evidence and remaining work |
 | --- | --- |
-| **Published beta.2 source snapshot** | 139 passed, zero failed, five explicit installation-ACL skips. For the changing development candidate, inspect PR #1 and its implementation log. Skips are not qualification passes. |
-| **Beta.2 lifecycle** | Actual native checks cover hidden startup, explicit controls, End, capture cleanup, stopped-state refusal and automatic dismissal. Automatic Antigravity-managed startup and read-only native discovery also passed on the installed beta.2 build. |
-| **Real app workflow** | Earlier beta.1 controller/helper completed actual Antigravity-driven Upscaly AI PNG/JPEG exports with independent output, database and native-engine verification. Full AI acceptance has not been repeated on the changed beta.2 helper. |
+| **Beta.3 source and candidate** | 446 local tests, 435 passed, zero failed, 11 explicit ACL qualification skips; exact-head Windows, macOS ARM and Intel CI passed. Skips are not ACL qualification passes. |
+| **Physical safety** | Windows held-drag Esc, persisted Stop, human Re-arm, second task and clean End passed. Intel Mac Stop/re-arm and second Calculator task passed. |
+| **Real app workflow** | Current installed Windows beta.3 completed genuine native-AI Upscaly PNG and JPG exports after bounded GPU-OOM recovery; independent dimensions and hashes are recorded in the handoff. |
 | **Speed** | The earlier High-effort Antigravity tasks took **4m29s PNG / 4m33s JPEG**. Host/model orchestration dominates the remaining delay. These are historical witnesses, not a current speed guarantee. |
 | **Still open** | Live physical queued/held-input interruption on the final helper, real mixed-DPI/multi-monitor hardware, broader applications and cursor/glow feedback. |
-| **Platforms** | Windows first. macOS/Linux are not qualified release targets. Development binaries are unsigned. |
+| **Platforms** | Windows x64 is the primary beta target. macOS ARM/Intel is experimental with single-display qualification; Linux is unsupported. Published notarization/Gatekeeper distribution remains pending. |
 
 [Current handoff and TODOs](HANDOFF.md) · [Validation](VALIDATION.md) ·
 [Performance measurements](docs/PERFORMANCE.md) · [Project status](PROJECT-STATUS.md)
