@@ -356,7 +356,8 @@ enum MacInputLedger {
     }
 }
 
-// Birth-time-bound registry: a watchdog never kills a reused unrelated PID.
+// Birth-time-bound registry. A mismatched PID is skipped, but checking and
+// signalling are not atomic; see issue #11 before release qualification.
 func macRegisterWorker() throws {
     let file = MacFence.file + ".worker-\(getpid())"
     try Data((try macProcessStart(getpid())).utf8).write(to: URL(fileURLWithPath: file), options: [.atomic])
