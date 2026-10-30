@@ -567,3 +567,8 @@ hardware/re-arm gates; and publishing only after those checks. Emergency Stop
 re-arm remains human-only. Do not claim the release complete from this
 checkpoint alone.
 
+GitHub review state checked 31 October 2026: PR #29 and PR #30 remain OPEN,
+both report `mergeStateStatus: DIRTY`, and neither has a current check run in
+the API. Their commits are present in this local `main`, but that is not the
+same as merged upstream review or current CI evidence.
+
