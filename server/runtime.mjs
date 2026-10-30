@@ -241,6 +241,7 @@ export class Runtime {
     }
     if(w.other_desktop)fail('other_desktop','Target is still running on another virtual desktop. Bring that app to the current desktop before requesting pixels; do not relaunch or click the visible desktop.');
     if(w.minimized)fail('window_minimized','Target is minimized. Focus it, then take a fresh observation.');
+    if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the snapshot could start. Inspect the app; do not replay prior input.');
     this.guardian.send({op:'activity',action:'observe'});
     const metadata={...this.stamp(),hwnd:Number(args.hwnd),__pid:w.pid,__started:w.started};
     const query=String(args.query||'').trim().toLowerCase();
@@ -346,7 +347,7 @@ export class Runtime {
     const observe=async options=>{observations++;return this.observe(options);};
     const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
     do {
-      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
+      this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_deadline:until,require_native_budget:true,...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=waitFailure(latest,args.abort_on);
       if(failure){
@@ -357,7 +358,7 @@ export class Runtime {
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
         this.frames.delete(latest.metadata.observation_id);
-        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
+        const verified=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,require_native_budget:true,...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
         const verifiedFailure=waitFailure(verified,args.abort_on);
         if(verifiedFailure)return finish({matched:false,aborted:true,abort_match:verifiedFailure,...verified});
@@ -375,6 +376,7 @@ export class Runtime {
         if(performance.now()>=until)break;
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
+      if(performance.now()>=until)break;
     }while(true);
     const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
     const finalFailure=waitFailure(final,args.abort_on);
@@ -395,15 +397,17 @@ export class Runtime {
     const until=performance.now()+budget;
     do {
       this.check();
-      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_deadline:until});
+      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason,native_snapshot_deadline:until,require_native_budget:true});
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
       if(latest.metadata.tree_incomplete)return finish({changed:false,incomplete:true,...latest});
       if(comparableView(latest.metadata.tree)!==baseline.viewTree)return finish({changed:true,...latest});
       if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
-      this.frames.delete(latest.metadata.observation_id);
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
+      this.check();if(generation!==this.generation||this.driver.epoch!==baseline.workerEpoch)fail('control_changed','Control or native worker changed while waiting. Observe again.');
+      if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
+      this.frames.delete(latest.metadata.observation_id);
     }while(true);
   }
   async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();

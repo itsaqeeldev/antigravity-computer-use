@@ -195,6 +195,22 @@ test('wait_change refuses incomplete baselines and does not treat truncated obse
  assert.equal(result.changed,false);assert.equal(result.incomplete,true);assert.equal(result.metadata.observation_id,'new');
 });
 
+test('change wait cannot return its retained frame after control changes during sleep',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);
+ const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'}]]);
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){frames.set('v',{key,workerEpoch:1});setTimeout(()=>{this.generation++;this.frames.clear();},20);return{metadata:{observation_id:'v',tree:'s1 "App" hwnd=7\nLoading'}};}};
+ await assert.rejects(Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100}),e=>e.code==='control_changed');
+ assert.equal(frames.size,0);
+});
+
+test('change wait returns its last valid frame if the budget expires during sleep',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app);let reads=0;
+ const frames=new Map([['initial',{at:Date.now(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'}]]);
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){reads++;frames.set('v',{key,workerEpoch:1});return{metadata:{observation_id:'v',tree:'s1 "App" hwnd=7\nLoading'}};}};
+ const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});
+ assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v');assert.equal(reads,1);assert(frames.has('v'));
+});
+
 test('an incomplete change wait never dispatches the following batch action',async()=>{
  let inputs=0;const runtime={async waitChange(){return{changed:false,incomplete:true,metadata:{observation_id:'new'}};},async action(){inputs++;return{};}};
  const result=await call(runtime,'computer_run',args([{kind:'wait_change',timeout_ms:1000},{kind:'click',name:'Continue'}]));

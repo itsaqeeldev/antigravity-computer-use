@@ -11,8 +11,11 @@ backwards clock. Focused mocked forwarding and incomplete-view tests passed,
 and Windows native compilation passed. Mac native CI, real sleep/wake and
 actual application checks remain pending.
 The walk's remaining budget is calculated after grant and app-identity checks;
-a mocked slow-grant regression covers that ordering. The 100 ms minimum and
-post-deadline final captures mean the polling budget is still not a hard limit.
+a mocked slow-grant regression covers that ordering. If the budget expires
+before a polling or success-verification snapshot starts, the wait now stops
+with explicit inspect-without-replay guidance rather than starting that walk.
+The 100 ms minimum and post-deadline failure or timeout captures mean the
+polling budget is still not a hard limit.
 An isolated Windows test also calls the compiled host's budget policy and
 checks that a requested limit cannot widen the configured limit; it does not
 walk a real accessibility tree or prove provider cancellation.

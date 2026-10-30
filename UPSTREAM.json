@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b260d1764736e2c51288ae94c392cb6a6059be0f78f64dc51acb1ab0d9786ae4"
+      "sha256": "cddba98ed9bea57fcb66d5b623e961c67da1e4afda36f607013865fd9319fd6f"
     },
     {
       "path": "server/mcp.mjs",
@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "e39be245a07c57251f8764da5140c9db40c91a70904d0fa01d7135ff0cfa6ee6"
+      "sha256": "493c0d46c858cef42d0e69147096653b9dc164c2d9020c322c189e2f088c2b69"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "c5e42787527a386ae85957e446d75f54cde6730753f66b8d2913acbf27240a40"
+      "sha256": "335559b56307854f044ef5b3ec0dd78cc5498c8a0d0a7b1f0502b8f611c097d5"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "41abf8585d63d590a0fd68ec02c7eff0c39c41f7719291d7217e14906d59746b"
+      "sha256": "88da889a4b02425d04b26e2b3b11d755b54b6902f1da1bf248bad47a671c61e9"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "57a86fcd1849bb2d1f389e684720d80a826fd1a934297ebf0751834d2ea85010"
+      "sha256": "e5ec40e4e6495d94bff76eea3ee0d889b9dc8ab4188a0b3d83f482b4b7ea30a6"
     },
     {
       "path": "HANDOFF.md",
@@ -620,7 +620,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "f87db9404ef3d0fada6e3ac38d2e23a16c8c555b7ec62cdb1bb65e7ba7115e20"
+      "sha256": "7e03d0fcb6b056be5b1f031fec976e1a5c0c06369408e8d23174ffea5dc4f904"
     },
     {
       "path": "scripts/update.mjs",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "803234d08be301caab260a299a718783e6ab08ea59d08c75a41072163b34c7c2"
+      "sha256": "3646e39f62715d05fd7376181f16f85c6169febe6bc948e8d3fe176fbff5a560"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

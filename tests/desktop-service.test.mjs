@@ -335,6 +335,16 @@ test('IPC wait propagates its budget to snapshots and stops on native truncation
   assert.equal(reply.verification_error.code,'wait_observation_incomplete');assert.equal(reply.metadata.tree_incomplete,true);assert.equal(reply.batch.skipped,1);assert.equal(inputs,0);assert.equal(budgets.length,2);assert(budgets.every(value=>value>=100&&value<=1000));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('expired budget after a slow grant skips the snapshot and later batch input',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-wait-slow-grant-'));let inputs=0,snapshots=0;
+ const runtime={frames:new Map(),generation:1,status:()=>({state:'active'}),check(){},stamp(){return{};},guardian:{send(){}},async close(){},async grant(){await new Promise(resolve=>setTimeout(resolve,120));return{hwnd:7,pid:9,started:'one',path:'fixture.exe'};},driver:{epoch:1,async call(){snapshots++;return{result:{snapshot_id:'s',nodes:[]}};}},async action(){inputs++;return{};}};
+ runtime.observe=Runtime.prototype.observe.bind(runtime);runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const reply=await request(session,'run',{hwnd:7,observation_id:'initial',reason:'Observe',steps:[{kind:'wait',until:'Ready',timeout_ms:100},{kind:'click',name:'Continue'}]});
+  assert.equal(reply.error.code,'wait_observation_timeout');assert.equal(reply.next_action,'inspect_effect_without_replay');assert.equal(reply.replay_allowed,false);assert.equal(reply.skipped,1);assert.equal(snapshots,0);assert.equal(inputs,0);
+ }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('a disconnected app-discovery client does not stop an active task',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;
  const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);

@@ -192,6 +192,12 @@ test('native wait budget is recalculated after a slow grant',async()=>{
  assert(received.time_budget_ms>=100&&received.time_budget_ms<=450);
 });
 
+test('an expired wait budget refuses a new native snapshot after a slow grant',async()=>{
+ let snapshots=0;const r={async grant(){await new Promise(resolve=>setTimeout(resolve,120));return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(){snapshots++;return {result:{snapshot_id:'s',nodes:[]}};}}};
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,with_image:false,native_snapshot_deadline:performance.now()+100,require_native_budget:true}),e=>e.code==='wait_observation_timeout');
+ assert.equal(snapshots,0);
+});
+
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{
  let snapshot={snapshot_id:'s',truncated:true,nodes:[{i:1,name:'Ready',role:'Button'}]};
  const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(){return {result:snapshot};}}};
