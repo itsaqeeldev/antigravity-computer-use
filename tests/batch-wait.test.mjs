@@ -157,6 +157,21 @@ test('text-only timeout returns the last observed frame without a second slow ca
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
  assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(frames.has('v1'));assert.equal(result.wait_metrics.observations,1);assert.equal(result.wait_metrics.polling_budget_ms,100);assert(result.wait_metrics.elapsed_ms>=100);
 });
+test('text-only wait reuses its last frame when the budget expires during sleep',async()=>{
+ let reads=0;const frames=new Map();
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async observe(){const id='v'+(++reads);frames.set(id,{});return{metadata:{observation_id:id,tree:'Loading'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
+ assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert.equal(result.wait_metrics.observations,1);assert(frames.has('v1'));
+});
+test('text-only wait discards its retained frame if control changes during sleep',async()=>{
+ const frames=new Map();const runtime={frames,generation:1,driver:{epoch:1},check(){},async observe(){frames.set('v',{});setTimeout(()=>{this.generation++;this.frames.clear();},20);return{metadata:{observation_id:'v',tree:'Loading'}};}};
+ await assert.rejects(Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false}),e=>e.code==='control_changed');assert.equal(frames.size,0);
+});
+test('text-only wait retains the verification frame after a transient match',async()=>{
+ let reads=0;const frames=new Map();const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});return{metadata:{observation_id:id,tree:reads===1?'Ready':'Loading'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
+ assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v2');assert.equal(reads,2);assert(!frames.has('v1'));assert(frames.has('v2'));
+});
 test('a text-only timeout in a real batch never sends the next action',async()=>{
  let reads=0,inputs=0;const frames=new Map();
  const runtime={frames,check(){},async action(){inputs++;return {};},async observe(){const id='v'+(++reads);frames.set(id,{});await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:'Loading'}};}};

@@ -30,6 +30,13 @@ elapsed time includes its initial app-identity check before polling begins.
 
 ## Text-only timeout observation
 
+If the polling budget expires during a delay, the candidate now returns the
+last valid text-only observation instead of issuing a further capture. A
+control or worker change during that delay invalidates the frame. Failure text
+that appears after the retained snapshot is not detected by this timeout;
+the agent must inspect the current app before continuing. Fixture tests cover
+the frame and cancellation behavior; real-app impact remains unmeasured.
+
 When a text-only wait exhausts its polling budget without a match, it now
 returns the last observed frame instead of starting another capture. An inert
 probe with a 100 ms budget and a 250 ms observation went from 525 ms with two

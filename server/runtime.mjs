@@ -343,7 +343,7 @@ export class Runtime {
     catch(error){return {result,input_completed:true,verification_required:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message,...(error.hint?{hint:error.hint}:{})}};}
   }
   async wait(args){
-    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget;let latest,observations=0;
+    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget,generation=this.generation,workerEpoch=this.driver?.epoch;let latest,observations=0;
     const observe=async options=>{observations++;return this.observe(options);};
     const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
     do {
@@ -365,18 +365,22 @@ export class Runtime {
         if(args.abort_on?.length&&verified.metadata.tree_incomplete)return finish({matched:false,incomplete:true,...verified});
         if(verifiedTree.includes(args.until.toLowerCase()))return finish({matched:true,...verified});
         if(args.with_image===false&&performance.now()>=until)return finish({matched:false,timed_out:true,...verified});
-        this.frames.delete(verified.metadata.observation_id);
-        if(performance.now()>=until)break;
+        latest=verified;
+        if(performance.now()>=until){this.frames.delete(latest.metadata.observation_id);break;}
       } else {
         // A text-only timeout already has an observation to return. Starting
         // a second potentially slow capture after the budget is exhausted can
         // add latency without changing the fact that the wait must stop.
         if(args.with_image===false&&performance.now()>=until)return finish({matched:false,timed_out:true,...latest});
-        this.frames.delete(latest.metadata.observation_id);
-        if(performance.now()>=until)break;
+        if(performance.now()>=until){this.frames.delete(latest.metadata.observation_id);break;}
       }
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
-      if(performance.now()>=until)break;
+      this.check();if(this.generation!==generation||this.driver?.epoch!==workerEpoch)fail('control_changed','Control or native worker changed while waiting. Observe again.');
+      if(performance.now()>=until){
+        if(args.with_image===false)return finish({matched:false,timed_out:true,...latest});
+        this.frames.delete(latest.metadata.observation_id);break;
+      }
+      this.frames.delete(latest.metadata.observation_id);
     }while(true);
     const final=await observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,native_snapshot_deadline:until,...(args.abort_on?.length?{max_nodes:500}:{})});
     const finalFailure=waitFailure(final,args.abort_on);
