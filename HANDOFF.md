@@ -1,5 +1,27 @@
 # Antigravity Computer Use: handoff
 
+## 30 October release-candidate installation checkpoint
+
+Candidate source `89b355e` was installed through the supported installer on the
+Windows machine at `D:\AntigravityComputerUse-ed035f9812`. The exact installed
+build is `9966ffaeb573294af5133921035cb2fa848c77f445cacf3f726a5702eef517fd`,
+version `0.3.0-beta.3`, with the existing direct host-managed/manual policy and
+sidecar configuration preserved. `verify-install.mjs` passed for 109 files and
+the skill pointer matched.
+
+An actual Antigravity `/computer-use` smoke task then used that installation:
+`ready`, app discovery, Notepad launch, fresh snapshot, click, text entry,
+verification and `computer_end` all returned successful receipts. Independent
+desktop inspection showed the exact text `AGCU candidate 89b355e real task`.
+The task used the direct skill and no fallback; receipts are retained in the
+private `.localdata/antigravity-smoke-20261030.json` record and the installed
+receipt journal. Antigravity's conversation view remained on a stale running
+tool card after the controller had returned idle, so host/model presentation
+completion is recorded as a defect boundary rather than a clean host pass.
+
+This is a real smoke qualification of the installed candidate, not Upscaly AI
+qualification, physical Stop/re-arm qualification, or release approval.
+
 Updated **30 October 2026**, Asia/Karachi. Published track: **v0.3.0-beta.2**,
 Windows x64 prerelease. Development work is on `codex/review-intel-mac`;
 check its current commit and CI before using any checkpoint below.

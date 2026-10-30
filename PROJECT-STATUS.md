@@ -1,5 +1,21 @@
 # Current qualification status — 29 October 2026
 
+## Candidate installation and Antigravity smoke — 30 October 2026
+
+Candidate source `89b355e` is installed at `D:\AntigravityComputerUse-ed035f9812`
+with build `9966ffaeb573294af5133921035cb2fa848c77f445cacf3f726a5702eef517fd`
+(`0.3.0-beta.3`). The supported installer preserved the existing direct
+host-managed/manual policy, sidecar and configuration backups; verification
+passed for 109 files and the skill pointer.
+
+A real Antigravity `/computer-use` Notepad smoke task passed through the direct
+skill: readiness, discovery, launch, fresh observation, click, typing and End.
+Independent desktop observation confirmed the requested text. No fallback was
+used. The Antigravity conversation card remained visually stuck on its last
+tool while the controller was already idle; this host presentation-lag issue is
+pending a separate fix. Upscaly, physical Stop/re-arm, updater and release
+qualification remain pending.
+
 **Incomplete; development candidate only.** The review branch integrates Mac
 PR #5 with additional marker protection. Windows CI passed at `fc2b9ac`; Mac
 checks and exact-head checks for later commits must be inspected independently.
