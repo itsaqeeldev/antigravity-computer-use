@@ -713,6 +713,11 @@ namespace Axon
             catch { return fallback; }
         }
 
+        static int SnapshotWalkBudget(int configured, object requested)
+        {
+            return requested == null ? configured : Math.Min(configured, Math.Max(100, Int(requested, configured)));
+        }
+
         static long Long(object o, long fallback)
         {
             if (o == null) return fallback;
@@ -1543,8 +1548,7 @@ namespace Axon
             WalkIds usedIdx = new WalkIds();
 
             System.Diagnostics.Stopwatch walkClock = System.Diagnostics.Stopwatch.StartNew();
-            int walkBudgetMs = EnvInt("CU_SNAPSHOT_MS", 8000);
-            if (Get(a, "time_budget_ms") != null) walkBudgetMs = Math.Min(walkBudgetMs, Math.Max(100, Int(Get(a, "time_budget_ms"), walkBudgetMs)));
+            int walkBudgetMs = SnapshotWalkBudget(EnvInt("CU_SNAPSHOT_MS", 8000), Get(a, "time_budget_ms"));
 
             if (web)
             {

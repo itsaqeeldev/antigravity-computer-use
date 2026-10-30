@@ -60,7 +60,7 @@
     {
       "path": "server/native/AxonHost.cs",
       "upstream_sha256": "bef101afecbdf8f75df2a1f8b45d224eade39f09e3c8e25cf7b450e3fa49a8ef",
-      "local_sha256": "14ede521df8702a3c78210009e2f409e158a3d6f9d1f4ca6d7126e3fc6bdafcd",
+      "local_sha256": "9a0df61c987633e379bc7ea58c5c22fdf73ade577dc6f7d34e1d3bdb368874db",
       "modified": true
     },
     {
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "19331090319973307d36784620a23acb6c17892902b2ace0f899d30d33a86a45"
+      "sha256": "814a126455b1df6fc8b6f1465d985d188bb225a21fce4c132b740c0e064f3b0d"
     },
     {
       "path": "HANDOFF.md",
@@ -781,6 +781,14 @@
     {
       "path": "docs/CI.md",
       "sha256": "9551fc3ad937b064463c5457d1853db38ef92d75b7d2d2c8477b9b1d891b0b14"
+    },
+    {
+      "path": "tests/NativeSnapshotBudgetTests.cs",
+      "sha256": "02e39a8e58a470965622902f902abac97e65661f8867e0fc0caac71c252932fd"
+    },
+    {
+      "path": "tests/native-snapshot-budget.test.mjs",
+      "sha256": "984b0f58c2061bb0f2c60234a2e97488074bda8ff4a5f37c0860e2230d0f1a87"
     }
   ]
 }

@@ -9,6 +9,9 @@ provider, grant, screenshot, or cleanup. Swift currently measures its native
 walk with wall time; clock changes and real-app latency remain unqualified.
 Focused mocked forwarding and incomplete-view tests passed, and Windows native
 compilation passed. Mac compilation and actual application checks are pending.
+An isolated Windows test also calls the compiled host's budget policy and
+checks that a requested limit cannot widen the configured limit; it does not
+walk a real accessibility tree or prove provider cancellation.
 
 `wait` and `wait_change` replies include `wait_metrics`: elapsed monotonic milliseconds,
 observation count and polling budget. Successful batch steps retain the same
