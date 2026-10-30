@@ -276,7 +276,7 @@
     },
     {
       "path": "server/native/DesktopVisuals.cs",
-      "sha256": "c77cb735d4d9c929f78d4ae2a965f84724c535cede5875c7b3fbcd65a6b2877d"
+      "sha256": "fd5ee2400a679da7be6cdff98814a00fe1c0627c2b76b09fd6c4672b34a75031"
     },
     {
       "path": "server/native/InputLedger.cs",

@@ -93,10 +93,10 @@ namespace Axon {
                 using(Pen face=new Pen(Color.FromArgb(242,215,238,250),1.8f)){face.StartCap=face.EndCap=LineCap.Round;g.DrawPath(face,beam);}
             }
         }
-        internal const int HudWidth=384,HudHeight=44;
-        internal static Rectangle ToggleRect {get {return new Rectangle(254,6,32,32);}}
-        internal static Rectangle StopRect {get {return new Rectangle(294,6,78,32);}}
-        internal static Rectangle ModeRect {get {return new Rectangle(214,6,32,32);}}
+        internal const int HudWidth=470,HudHeight=52;
+        internal static Rectangle ToggleRect {get {return new Rectangle(326,8,36,36);}}
+        internal static Rectangle StopRect {get {return new Rectangle(374,8,88,36);}}
+        internal static Rectangle ModeRect {get {return new Rectangle(278,8,36,36);}}
         static void Label(Graphics g,string text,float size,FontStyle style,Color color,RectangleF box) {
             using(Font font=new Font(Overlay.UiFont,size,style))
             using(SolidBrush brush=new SolidBrush(color))
@@ -128,28 +128,23 @@ namespace Axon {
                 using(Pen outer=new Pen(Color.FromArgb(104,213,231,246),1f))g.DrawPath(outer,shape);
                 using(Pen inner=new Pen(Color.FromArgb(28,255,255,255),1f))g.DrawPath(inner,Overlay.RoundRect(new RectangleF(2,2,HudWidth-4,HudHeight-4),20));
             }
-            using(GraphicsPath dotShape=new GraphicsPath()) {
-                dotShape.AddEllipse(10,13,18,18);
-                using(PathGradientBrush dotGlow=new PathGradientBrush(dotShape)) {
-                    int alpha=state=="active"?(int)(BreathLevel*112):54;dotGlow.CenterColor=Color.FromArgb(alpha,accent);dotGlow.SurroundColors=new[]{Color.Transparent};g.FillPath(dotGlow,dotShape);
-                }
-            }
-            using(SolidBrush dot=new SolidBrush(Color.FromArgb(state=="active"?(int)(BreathLevel*255):220,accent)))g.FillEllipse(dot,16,19,6,6);
             string detail=state=="active"?(String.IsNullOrEmpty(activity)?"Antigravity is working":activity+" with Antigravity"):state=="paused"?"Paused · you have control":state=="stopped"?"Stopped · re-arm to begin":"Antigravity is ready";
-            Label(g,detail,9,FontStyle.Regular,Color.FromArgb(234,237,239),new RectangleF(32,5,178,34));
+            Label(g,detail,9,FontStyle.Regular,Color.FromArgb(240,243,246),new RectangleF(28,6,238,40));
             Rectangle hot=hover==1?ToggleRect:hover==2?StopRect:ModeRect;
             if(hover!=0)using(GraphicsPath r=Overlay.RoundRect(hot,16))using(LinearGradientBrush b=new LinearGradientBrush(hot,hover==2?Color.FromArgb(114,107,52,65):Color.FromArgb(86,90,113,137),hover==2?Color.FromArgb(72,59,31,42):Color.FromArgb(54,45,61,78),90f))g.FillPath(b,r);
-            using(SolidBrush dots=new SolidBrush(Color.FromArgb(166,175,183)))for(int i=0;i<3;i++)g.FillEllipse(dots,223+i*5,21,2,2);
-            using(Pen icon=new Pen(Color.FromArgb(220,227,232),1.6f)) {
-                icon.StartCap=icon.EndCap=LineCap.Round;
-                if(state=="active"){g.DrawLine(icon,267,17,267,27);g.DrawLine(icon,273,17,273,27);}
-                else {g.DrawPolygon(icon,new Point[]{new Point(266,16),new Point(266,28),new Point(275,22)});}
+            using(Pen icon=new Pen(Color.FromArgb(232,239,245),1.8f)) {
+                icon.StartCap=icon.EndCap=LineCap.Round;icon.LineJoin=LineJoin.Round;
+                // Hand-drawn settings sliders: the icon describes the menu's job.
+                g.DrawLine(icon,286,19,306,19);g.DrawLine(icon,286,26,306,26);g.DrawLine(icon,286,33,306,33);
+                using(SolidBrush knob=new SolidBrush(Color.FromArgb(232,239,245))) {g.FillEllipse(knob,291,16,6,6);g.FillEllipse(knob,300,23,6,6);g.FillEllipse(knob,294,30,6,6);}
+                if(state=="active"){g.DrawLine(icon,339,18,339,34);g.DrawLine(icon,349,18,349,34);}
+                else {using(GraphicsPath play=new GraphicsPath()){play.AddLine(337,17,352,26);play.AddLine(352,26,337,35);play.CloseFigure();g.FillPath(Brushes.White,play);}}
             }
-            using(Pen divider=new Pen(Color.FromArgb(40,180,193,202)))g.DrawLine(divider,290,13,290,31);
+            using(Pen divider=new Pen(Color.FromArgb(52,210,222,234),1))g.DrawLine(divider,366,16,366,36);
             if(state=="stopped") {
-                using(Pen close=new Pen(Color.FromArgb(192,202,211),1.4f)){g.DrawLine(close,306,19,312,25);g.DrawLine(close,312,19,306,25);}
-            } else using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(245,159,165):Color.FromArgb(192,202,211)))g.FillRectangle(b,306,19,6,6);
-            Label(g,state=="stopped"?"Hide":"Stop",8.5f,FontStyle.Regular,Color.FromArgb(212,219,225),new RectangleF(320,6,42,32));
+                using(Pen close=new Pen(Color.FromArgb(224,232,239),1.8f)){close.StartCap=close.EndCap=LineCap.Round;g.DrawLine(close,392,20,404,32);g.DrawLine(close,404,20,392,32);}
+            } else using(GraphicsPath stop=Overlay.RoundRect(new RectangleF(392,20,12,12),2)){using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(248,159,165):Color.FromArgb(224,232,239)))g.FillPath(b,stop);}
+            Label(g,state=="stopped"?"Hide":"Stop",8.5f,FontStyle.Regular,Color.FromArgb(222,230,237),new RectangleF(412,7,50,38));
         }
         internal static void Export(string directory) {
             Directory.CreateDirectory(directory);
