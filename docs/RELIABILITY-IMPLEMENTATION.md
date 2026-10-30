@@ -1,5 +1,11 @@
 # Reliability and updates implementation log
 
+The timeout-frame candidate initially captured the worker epoch before its
+first observation, which could mistake a normal first worker start for a
+restart. It now binds to the epoch after that observation and rejects a change
+during later verification or the polling delay. Inert tests cover first start,
+restart and frame invalidation; real controller startup remains unqualified.
+
 When a scheduled-update or reporting timestamp is in the future after a wall
 clock correction, the candidate rebases it to the current time without an
 immediate network request. This avoids an indefinite future wait and preserves

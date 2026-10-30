@@ -163,6 +163,19 @@ test('text-only wait reuses its last frame when the budget expires during sleep'
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
  assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert.equal(result.wait_metrics.observations,1);assert(frames.has('v1'));
 });
+test('a wait can start its first worker without misclassifying startup as a restart',async()=>{
+ const frames=new Map();const runtime={frames,generation:1,driver:{epoch:0},check(){},async observe(){this.driver.epoch=1;frames.set('v',{});return{metadata:{observation_id:'v',tree:'Loading'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
+ assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v');assert(frames.has('v'));
+});
+test('a worker restart during a wait invalidates the retained frame',async()=>{
+ const frames=new Map();const runtime={frames,generation:1,driver:{epoch:1},check(){},async observe(){frames.set('v',{});setTimeout(()=>{this.driver.epoch++;this.frames.clear();},20);return{metadata:{observation_id:'v',tree:'Loading'}};}};
+ await assert.rejects(Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false}),e=>e.code==='control_changed');assert.equal(frames.size,0);
+});
+test('a worker restart during success verification discards the new frame',async()=>{
+ let reads=0;const frames=new Map();const runtime={frames,generation:1,driver:{epoch:1},check(){},async observe(){const id='v'+(++reads);if(reads===2)this.driver.epoch++;frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready'}};}};
+ await assert.rejects(Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:1000,with_image:false}),e=>e.code==='control_changed');assert.equal(frames.size,0);
+});
 test('text-only wait discards its retained frame if control changes during sleep',async()=>{
  const frames=new Map();const runtime={frames,generation:1,driver:{epoch:1},check(){},async observe(){frames.set('v',{});setTimeout(()=>{this.generation++;this.frames.clear();},20);return{metadata:{observation_id:'v',tree:'Loading'}};}};
  await assert.rejects(Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false}),e=>e.code==='control_changed');assert.equal(frames.size,0);

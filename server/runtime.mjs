@@ -343,8 +343,15 @@ export class Runtime {
     catch(error){return {result,input_completed:true,verification_required:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message,...(error.hint?{hint:error.hint}:{})}};}
   }
   async wait(args){
-    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget,generation=this.generation,workerEpoch=this.driver?.epoch;let latest,observations=0;
-    const observe=async options=>{observations++;return this.observe(options);};
+    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000),until=started+budget,generation=this.generation;let latest,observations=0,workerEpoch;
+    const observe=async options=>{
+      observations++;const result=await this.observe(options),currentEpoch=this.driver?.epoch;
+      // The first observation may start a previously absent worker. Bind to
+      // its resulting epoch, and refuse a restart during later observations.
+      if(observations===1)workerEpoch=currentEpoch;
+      else if(currentEpoch!==workerEpoch){this.frames.delete(result.metadata?.observation_id);fail('control_changed','The native worker changed while waiting. Observe again.');}
+      return result;
+    };
     const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
     do {
       this.check();latest=await observe({hwnd:args.hwnd,with_image:false,query:args.query,native_snapshot_deadline:until,require_native_budget:true,...(args.abort_on?.length?{max_nodes:500}:{})});
