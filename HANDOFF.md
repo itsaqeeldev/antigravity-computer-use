@@ -22,6 +22,27 @@ completion is recorded as a defect boundary rather than a clean host pass.
 This is a real smoke qualification of the installed candidate, not Upscaly AI
 qualification, physical Stop/re-arm qualification, or release approval.
 
+## Real Antigravity Upscaly qualification — 30 October 2026
+
+The installed candidate also completed the real stable Upscaly workflow through
+Antigravity `/computer-use`. It launched the stable `upscaly.exe`, waited for
+GPU/main UI readiness, changed the output directory, selected General Real-World
+`realesr-general-x4v3`, imported the requested portrait through the native file
+dialog, clicked Upscale, verified the completion UI and split view, closed only
+the owned app and ended control.
+
+The native Vulkan witness invoked `realesrgan-ncnn-vulkan.exe` with `-g 1`,
+`-s 4`, model `realesr-general-x4v3`, and no CPU/software fallback. The decoded
+PNG is 2800×4496 RGB, 14,171,211 bytes, SHA-256
+`f846a3934a00d603a7fcf0b840d70f63ced0621148acdbd0ced2170710de05a4`. The AI
+engine wrote the output in 4.53 seconds; the Upscale-to-completion observation
+took 21.65 seconds and the launch-to-End session took 2 minutes 22.5 seconds.
+Original settings were restored and the controller ended idle with no grants.
+
+This qualifies one real PNG workflow on the installed Windows candidate. It does
+not qualify JPEG, matched Flash/Sonnet speed, physical Stop/re-arm, mixed DPI or
+the signed updater.
+
 Updated **30 October 2026**, Asia/Karachi. Published track: **v0.3.0-beta.2**,
 Windows x64 prerelease. Development work is on `codex/review-intel-mac`;
 check its current commit and CI before using any checkpoint below.

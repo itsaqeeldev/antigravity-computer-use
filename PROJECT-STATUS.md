@@ -16,6 +16,16 @@ tool while the controller was already idle; this host presentation-lag issue is
 pending a separate fix. Upscaly, physical Stop/re-arm, updater and release
 qualification remain pending.
 
+The same installed candidate subsequently completed a real stable Upscaly PNG
+workflow through Antigravity. Native Vulkan Real-ESRGAN `realesr-general-x4v3`
+ran on GPU 1 at 4× with no software fallback. The decoded output was 2800×4496
+RGB, 14,171,211 bytes, SHA-256
+`f846a3934a00d603a7fcf0b840d70f63ced0621148acdbd0ced2170710de05a4`; completion
+UI and split view were verified, settings restored, and control ended idle. The
+engine took 4.53 seconds and the full launch-to-End session took 2 minutes 22.5
+seconds. JPEG, matched model speed, physical safety and updater qualification
+remain pending.
+
 **Incomplete; development candidate only.** The review branch integrates Mac
 PR #5 with additional marker protection. Windows CI passed at `fc2b9ac`; Mac
 checks and exact-head checks for later commits must be inspected independently.
