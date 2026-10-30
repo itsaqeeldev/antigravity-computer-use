@@ -57,15 +57,32 @@ test('bounded guardian capture timeout sends Stop and discards its pending reque
  assert.equal(sent[0].op,'capture');assert.equal(sent[1].op,'stop');assert.equal(guardian.pending.size,0);
 });
 test('guardian write failure clears its timer and attempts Stop even if Stop also throws',async()=>{
- const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);throw Error('closed pipe');};
+ const sent=[],states=[];const guardian=new Guardian({});guardian.on('state',(state,reason)=>states.push({state,reason}));guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);throw Error('closed pipe');};
  await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed'&&/do not replay/i.test(e.message));
- assert.deepEqual(sent,['capture','stop']);assert.equal(guardian.pending.size,0);
+ assert.deepEqual(sent,['capture','stop']);assert.equal(guardian.pending.size,0);assert.deepEqual(states,[{state:'stopped',reason:'guardian_unresponsive'}]);
  await new Promise(resolve=>setTimeout(resolve,130));assert.deepEqual(sent,['capture','stop']);
+});
+test('an unconfirmed guardian Stop invalidates runtime control and aborts its driver',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-write-stop-')),latch=path.join(dir,'stop');let aborts=0;
+ const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=()=>{throw Error('closed pipe');};
+ const runtime=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){}},latchFile:latch});
+ try{
+  runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
+  await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed');
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(runtime.lastControlReason,'stop_persistence_failed');assert.equal(aborts,1);
+  guardian.emit('state','active');guardian.emit('resume','idle','human_resume');assert.equal(runtime.state,'stopped');
+ }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('guardian timeout still rejects when its Stop write throws',async()=>{
  const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>{sent.push(m.op);if(m.op==='stop')throw Error('closed pipe');};
  await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');
  assert.deepEqual(sent,['capture','stop']);assert.equal(guardian.pending.size,0);
+});
+test('guardian rejects an unavailable pipe promptly without mistaking backpressure for failure',async()=>{
+ const guardian=new Guardian({});guardian.start=async()=>{};guardian.proc={killed:false,stdin:{destroyed:true}};
+ await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_write_failed');assert.equal(guardian.pending.size,0);
+ let writes=0;guardian.proc={killed:false,stdin:{destroyed:false,write(){writes++;return false;}}};
+ await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');assert.equal(writes,2);assert.equal(guardian.pending.size,0);
 });
 test('guardian shutdown waits for actual exit and refuses replacement after unconfirmed cleanup',async()=>{
  let child,starts=0,kills=0;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{kills++;return true;};return child;};

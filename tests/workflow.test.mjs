@@ -222,7 +222,7 @@ test('expired wait during capture preparation restores overlay without starting 
 test('capture preparation timeout reports Stop requested and never starts a screenshot',async()=>{
  let screenshots=0;
  const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(){},async request(){throw Object.assign(Error('timeout'),{code:'guardian_request_timeout'});}},stamp(){return{};},frames:new Map(),driver:{async call(op){if(op==='screenshot')screenshots++;return{result:{snapshot_id:'s',nodes:[]}};}}};
- await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true}),e=>e.code==='capture_preparation_timeout'&&/Stop was requested/.test(e.message));assert.equal(screenshots,0);
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true}),e=>e.code==='capture_preparation_timeout'&&/Stop was attempted but is unconfirmed/.test(e.message));assert.equal(screenshots,0);
 });
 test('wait screenshot gets a bounded driver timeout and restores overlay',async()=>{
  const sent=[];let options,prepareOptions;

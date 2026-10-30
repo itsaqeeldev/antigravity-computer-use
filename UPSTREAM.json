@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "b154192bde63023d1613f906337f44455d0beda4bcb6d16d1d3b654444d9a8b9"
+      "sha256": "f6ac147df1cfcff7a36a49e00f5d3c9adfb23a2b660f6ef01d1473d6ef56d69f"
     },
     {
       "path": "server/mcp.mjs",
@@ -264,7 +264,7 @@
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "775620bdda6db45cca50f39ad836bf367c7adb8939c98fb4cc045b96fec1815a"
+      "sha256": "ba130be0935f9d5bb7dc80989ab98fc382daf289b904b2af15f3074cb206513e"
     },
     {
       "path": "server/native/Guardian.cs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "e56ad5f9b7db70ee218d70936d90db5778d806b052b8d318a9855cc2687d20b7"
+      "sha256": "e069088dc49bc35231e0033dffd1184674a208514be1e86d3561fde8f2ca3a09"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "323c0da1a43871fec929b9889f761347e96c0c1be97bbda9495881d235fb435c"
+      "sha256": "800ac05d3d37393cee9c198c7cee6960294b1800e94155ded48b7ee652f89e2b"
     },
     {
       "path": "HANDOFF.md",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "2156cbe2b5e00d46d83ca3ece65cc1254b1815695a32c1aead63940d300b8f8d"
+      "sha256": "2f2b796654945620bdd80b09540f882fe89a894f62294d786a7cb34e47df70d1"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "9b1570d9f3f1b66fa032e1d11a5782ba64c8d0cc3f61ddef7fdb3e9c5ec18eb7"
+      "sha256": "810d211f086e2c063c8df927ea7593eac0b12d82010ac5acd3322bc57e4190bf"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

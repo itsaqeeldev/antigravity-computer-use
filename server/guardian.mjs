@@ -42,18 +42,24 @@ export class Guardian extends EventEmitter {
     proc.on('error',e=>{if(this.proc!==proc)return;clearTimeout(this.bootTimer);this.bootReject(failure('guardian_spawn_failed',e.message));});
     await boot;
   }
-  send(m){if(this.proc&&!this.proc.killed&&!this.proc.stdin.destroyed)this.proc.stdin.write(JSON.stringify(m)+'\n');}
+  send(m){if(this.proc&&!this.proc.killed&&!this.proc.stdin.destroyed){this.proc.stdin.write(JSON.stringify(m)+'\n');return true;}return false;}
   async request(m,{timeoutMs}={}){
     await this.start();
     const id=++this.seq;
     return new Promise((resolve,reject)=>{
       const defaultTimeout=m.op==='prompt'?95000:10000;
       const timeout=Number.isFinite(timeoutMs)&&timeoutMs>0?Math.min(defaultTimeout,Math.max(100,Math.floor(timeoutMs))):defaultTimeout;
-      const requestStop=()=>{try{this.send({op:'stop'});}catch{}};
-      const timer=setTimeout(()=>{this.pending.delete(id);requestStop();reject(Object.assign(new Error('Local controls did not answer; Stop was requested. Inspect status and do not replay.'),{code:'guardian_request_timeout'}));},timeout);
+      const requestStop=()=>{
+        try{this.send({op:'stop'});}catch{}
+        // Do not leave the JS controller active when a broken pipe or missing
+        // acknowledgement makes native Stop delivery uncertain. The Runtime
+        // invalidates frames and aborts its driver on this stopped event.
+        this.state='stopped';try{this.emit('state','stopped','guardian_unresponsive');}catch{}
+      };
+      const timer=setTimeout(()=>{this.pending.delete(id);requestStop();reject(Object.assign(new Error('Local controls did not answer; Stop was attempted but is unconfirmed. Inspect status and do not replay.'),{code:'guardian_request_timeout'}));},timeout);
       this.pending.set(id,{resolve,reject,timer});
-      try{this.send({...m,id});}
-      catch{clearTimeout(timer);this.pending.delete(id);requestStop();reject(Object.assign(new Error('Delivery to local controls is unconfirmed; Stop was requested. Inspect status and do not replay.'),{code:'guardian_write_failed'}));}
+      try{if(this.send({...m,id})===false)throw Error('guardian pipe unavailable');}
+      catch{clearTimeout(timer);this.pending.delete(id);requestStop();reject(Object.assign(new Error('Delivery to local controls is unconfirmed; Stop was attempted but is unconfirmed. Inspect status and do not replay.'),{code:'guardian_write_failed'}));}
     });
   }
   async prompt(m){return this.request({op:'prompt',...m});}

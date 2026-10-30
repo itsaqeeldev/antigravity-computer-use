@@ -273,7 +273,7 @@ export class Runtime {
     if(args.with_image!==false){
       const prepareBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now())))+1000:null;
       try{await this.guardian.request({op:'capture'},prepareBudget!==null?{timeoutMs:prepareBudget}:undefined);}
-      catch(error){if(error.code==='guardian_request_timeout')fail('capture_preparation_timeout','Capture preparation timed out and Stop was requested. Inspect status and prior effects; do not replay input.');throw error;}
+      catch(error){if(error.code==='guardian_request_timeout')fail('capture_preparation_timeout','Capture preparation timed out; Stop was attempted but is unconfirmed. Inspect status and prior effects; do not replay input.');throw error;}
       try {
         if(args.require_native_budget===true&&Number.isFinite(args.native_snapshot_deadline)&&performance.now()>=args.native_snapshot_deadline)fail('wait_observation_timeout','The wait budget expired before the screenshot could start. Inspect the app; do not replay prior input.');
         const captureBudget=Number.isFinite(args.native_snapshot_deadline)?Math.max(100,Math.min(8000,Math.floor(args.native_snapshot_deadline-performance.now()))):null;

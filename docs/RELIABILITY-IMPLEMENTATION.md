@@ -2,7 +2,11 @@
 
 Guardian requests now clear their pending timer if the pipe write throws and
 attempt Stop without assuming delivery. Timeout rejection also survives a Stop
-write throwing. Simulated broken-pipe tests cover timer cleanup and reporting;
+write throwing. A known unavailable pipe fails promptly; stream backpressure
+is still treated as an accepted write. The local controller invalidates frames
+and aborts its driver when Stop delivery is uncertain; a missing durable latch
+is reported rather than treated as confirmed Stop. Simulated broken-pipe tests
+cover timer cleanup and reporting;
 actual native pipe loss, Stop persistence and physical recovery remain pending.
 
 The timeout-frame candidate initially captured the worker epoch before its

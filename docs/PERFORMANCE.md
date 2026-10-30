@@ -28,8 +28,9 @@ preparation, the overlay is restored and no screenshot starts. Mocked tests
 cover both paths. Startup, grant, guardian capture preparation and real hung
 provider or screenshot behavior remain outside a hard deadline, so issue #25
 remains open. Capture preparation now receives a remaining-budget timeout plus
-one second; the existing guardian timeout sends Stop and requires status/human
-control rather than retry. An inert timeout fixture checks that behavior. A
+one second; the guardian timeout attempts Stop and directs the agent to inspect
+status and prior effects rather than retry. An inert timeout fixture checks the
+attempt, not native Stop delivery. A
 busy real guardian could hit the shorter limit, so this needs real-app timing
 and physical Stop/re-arm qualification before release.
 An isolated Windows test also calls the compiled host's budget policy and
