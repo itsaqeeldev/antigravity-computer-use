@@ -1,11 +1,12 @@
 # Measuring desktop task latency
 
-`wait` replies include `wait_metrics`: elapsed monotonic milliseconds,
+`wait` and `wait_change` replies include `wait_metrics`: elapsed monotonic milliseconds,
 observation count and polling budget. Successful batch steps retain the same
 metrics when a later action supplies the final result. These fields contain no
 screen text or paths. They describe controller-side wait time, not host/model
 decision gaps or native inference. An in-flight observation can still exceed
-the polling budget; issue #25 tracks hard deadlines and cleanup.
+the polling budget; issue #25 tracks hard deadlines and cleanup. Change-wait
+elapsed time includes its initial app-identity check before polling begins.
 
 ## Text-only timeout observation
 

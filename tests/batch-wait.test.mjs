@@ -170,6 +170,7 @@ test('wait_change compares the original view and returns a fresh usable observat
  const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(a){observed=a;frames.set('fresh',{key,workerEpoch:1});return{metadata:{observation_id:'fresh',tree:'new-snapshot "App" hwnd=7\nComplete'}};}};
  const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Inspect view'});
  assert.equal(result.changed,true);assert.equal(result.metadata.observation_id,'fresh');assert(!frames.has('initial'));assert(frames.has('fresh'));
+ assert.equal(result.wait_metrics.observations,1);assert.equal(result.wait_metrics.polling_budget_ms,15000);assert(result.wait_metrics.elapsed_ms>=0);
  assert.equal(observed.query,'Status');assert.equal(observed.max_nodes,250);assert.equal(observed.with_image,false);
  const dispatched=await call({async waitChange(a){return {received:a.observation_id};}},'computer_wait_change',{hwnd:7,observation_id:'fresh',reason:'Observe'});
  assert.equal(dispatched.received,'fresh');
@@ -219,10 +220,10 @@ test('change comparison preserves user text and focus details while ignoring tra
 test('batched wait_change passes the fresh frame forward and stops after timeout',async()=>{
  const seen=[];let changed=true;
  const runtime={async action(op,a){seen.push({op,frame:a.observation_id});return{metadata:{observation_id:'after-click'}};},
-  async waitChange(a){seen.push({op:'wait_change',frame:a.observation_id});return{changed,timed_out:!changed,metadata:{observation_id:'after-change'}};}};
+  async waitChange(a){seen.push({op:'wait_change',frame:a.observation_id});return{changed,timed_out:!changed,wait_metrics:{elapsed_ms:20,observations:1,polling_budget_ms:5000},metadata:{observation_id:'after-change'}};}};
  const plan=args([{kind:'click',name:'Start'},{kind:'wait_change',timeout_ms:5000},{kind:'click',name:'Details'}]);
  const result=await call(runtime,'computer_run',plan);
- assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'wait_change',frame:'after-click'},{op:'click',frame:'after-change'}]);assert.equal(result.batch.completed.length,3);
+ assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'wait_change',frame:'after-click'},{op:'click',frame:'after-change'}]);assert.equal(result.batch.completed.length,3);assert.equal(result.batch.completed[1].wait_metrics.observations,1);
  seen.length=0;changed=false;const timeout=await call(runtime,'computer_run',plan);
  assert.equal(seen.length,2);assert.equal(timeout.ok,false);assert.equal(timeout.verification_error.code,'wait_change_timeout');assert.equal(timeout.batch.skipped,1);assert.equal(timeout.metadata.observation_id,'after-change');
  seen.length=0;await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',timeout_ms:20000},{kind:'wait_change',timeout_ms:20000}])),/Combined batch waits/);assert.equal(seen.length,0);

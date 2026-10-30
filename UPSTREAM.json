@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "95e1bd0ec49a1cc834917a491bf9623819e3ef0575310fa8c085aef332ae907c"
+      "sha256": "8aa720afcd953ef219f0fc71d7a533d8159f4e2e473e37523b268ba252266160"
     },
     {
       "path": "server/mcp.mjs",
@@ -296,7 +296,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "8d0c83a1243318f60d32493b6c26b02788f3aabd0dd19f2ee74ebf3915b48611"
+      "sha256": "cbdf4b503fa6657ede1929c1de72c5dd7e0a7b702562ed8dd8e6c529d35d9912"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "4d7e104bce65238bfb4e63db93687afe6815a2817942c5d162b6fbf293032682"
+      "sha256": "fb55a5f1e97373c0c2beaea15ea0ba47adcdb71de198aff0f4922c8274f597d2"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "4936e13caab39551d08986e9cc5647c9fc749c71574b266d18e9cd1b8cee84f4"
+      "sha256": "66a68a4b249fa87dfddd5446185be9acf902df6f506e75ba90cb15e8a4a7f801"
     },
     {
       "path": "HANDOFF.md",

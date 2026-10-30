@@ -372,6 +372,8 @@ export class Runtime {
     return finish({matched:false,timed_out:true,...final});
   }
   async waitChange(args){
+    const started=performance.now(),budget=Math.min(Math.max(args.timeout_ms||15000,100),30000);let observations=0;
+    const finish=result=>({...result,wait_metrics:{elapsed_ms:Math.round(performance.now()-started),observations,polling_budget_ms:budget}});
     this.check();
     const baseline=requireObservation(this.frames,args.observation_id,args.hwnd);
     if(typeof baseline.viewTree!=='string')fail('stale_observation','The observation cannot be compared. Take a fresh snapshot.');
@@ -379,15 +381,15 @@ export class Runtime {
     const generation=this.generation,w=await this.grant(Number(args.hwnd),args.reason);this.check();
     if(generation!==this.generation)fail('control_changed','Control changed. Take a fresh snapshot.');
     if(baseline.key!==appKey(w))fail('identity_changed','Application identity changed since observation.');
-    const until=performance.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);
+    const until=performance.now()+budget;
     do {
       this.check();
-      const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason});
+      observations++;const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason});
       this.check();if(generation!==this.generation)fail('control_changed','Control changed while waiting. Observe again.');
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
-      if(comparableView(latest.metadata.tree)!==baseline.viewTree)return {changed:true,...latest};
-      if(performance.now()>=until)return {changed:false,timed_out:true,...latest};
+      if(comparableView(latest.metadata.tree)!==baseline.viewTree)return finish({changed:true,...latest});
+      if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
       this.frames.delete(latest.metadata.observation_id);
       await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
