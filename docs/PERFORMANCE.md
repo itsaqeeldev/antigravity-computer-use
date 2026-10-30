@@ -25,7 +25,9 @@ that boundary, including the actual JavaScript Driver with an inert worker that
 withholds its reply. Wait screenshots also receive a remaining-budget driver
 timeout plus one second of grace; if the budget expires during overlay-capture
 preparation, the overlay is restored and no screenshot starts. Mocked tests
-cover both paths. Startup, grant, guardian capture preparation and real hung
+cover both paths; an inert, unresponsive screenshot worker also exercises the
+actual JavaScript Driver, overlay restoration and replacement fence. Startup,
+grant, guardian capture preparation and real hung
 provider or screenshot behavior remain outside a hard deadline, so issue #25
 remains open. Capture preparation now receives a remaining-budget timeout plus
 one second; the guardian timeout attempts Stop and directs the agent to inspect

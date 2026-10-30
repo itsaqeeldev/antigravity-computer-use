@@ -109,6 +109,16 @@ test('wait observation timeout retires the actual Driver before replacement',asy
  const replacement=driver.start();await new Promise(resolve=>setImmediate(resolve));assert.equal(launches,0);assert.equal(driver.retiring,child);
  child.exitCode=1;child.emit('exit',1);assert.deepEqual(await replacement,{pid:456});assert.equal(launches,1);
 });
+test('stalled wait screenshot restores overlay and fences the actual Driver',async()=>{
+ const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.kill=()=>false;const calls=[];let driver;
+ child.stdin={destroy(){},write(payload){const request=JSON.parse(payload);calls.push(request.op);if(request.op==='snapshot')setImmediate(()=>driver._onLine(JSON.stringify({id:request.id,ok:true,result:{snapshot_id:'s',nodes:[]}})));}};
+ driver=new Driver();driver.proc=child;driver.info={};driver.exitTimeoutMs=3000;let launches=0;driver._launch=async()=>{launches++;return{pid:456};};
+ const sent=[];const runtime={driver,frames:new Map(),async grant(){return{hwnd:1,pid:9,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(){}},stamp(){return{};}};
+ await assert.rejects(Runtime.prototype.observe.call(runtime,{hwnd:1,native_snapshot_deadline:performance.now()+1000,require_native_budget:true}),e=>e.code==='op_timeout');
+ assert.deepEqual(calls,['snapshot','screenshot']);assert(sent.includes('capture_end'));
+ const replacement=driver.start();await new Promise(resolve=>setImmediate(resolve));assert.equal(launches,0);assert.equal(driver.retiring,child);
+ child.exitCode=1;child.emit('exit',1);assert.deepEqual(await replacement,{pid:456});assert.equal(launches,1);
+});
 test('partial launch write prevents worker replacement until prior exit',async()=>{
  const child=new EventEmitter();child.pid=123;child.exitCode=null;child.signalCode=null;child.stdin={write(){throw Error('partial write');},destroy(){}};child.kill=()=>false;
  const driver=new Driver();driver.proc=child;driver.info={};driver.exitTimeoutMs=1000;let starts=0;
