@@ -537,3 +537,33 @@ signing key or signed updater release is configured. Actual affected-PC/model,
 native update, physical/hardware and Mac desktop acceptance remain pending.
 Do not install over a live task or publish this as a completed updater release.
 
+# 31 October 2026 — package-backed Windows HUD checkpoint
+
+The current `main` head includes Mac PR #29/#30 integration, the bounded wait
+transport fix, and the Windows package-backed LiquidGlass companion path. The
+latest commits are `406dc17` (bundle helper), `3ebc7fc` (persistent helper
+stdio), `db39b51` (native client), and `6946a24`/`3837c8f` (wait deadline and
+provenance fixes).
+
+`server/liquidglass-host` builds against the published `LiquidGlass` 1.0.0
+package with the local .NET 10 SDK. A self-contained x64 helper rendered a
+surface over persistent stdio. The native Windows host discovers
+`liquidglass/LiquidGlass.Host.exe` relative to its installation and uses the
+compatibility renderer only when that companion is absent. `scripts/bundle.mjs`
+seals the helper executable and `libSkiaSharp.dll` when
+`AGCU_LIQUIDGLASS_HELPER_BUILD` is supplied.
+
+Evidence: native host compilation passed; package helper build and stdio render
+passed; bundle inventory included both helper files; provenance is 175/175;
+serial controller suite is 452 tests, 441 pass, 0 fail, 11 platform skips;
+targeted bundle identity, cursor and risk-policy tests pass. Windows install
+qualification reached the ACL guard and skipped with
+`insecure_storage_ancestor`; no parent permissions were changed.
+
+Still pending: maintainer-key signing and public release transport; installed
+helper-backed Windows task on the affected PC; real Antigravity orchestration
+timing; Intel Mac acceptance against the matching shared runtime; physical
+hardware/re-arm gates; and publishing only after those checks. Emergency Stop
+re-arm remains human-only. Do not claim the release complete from this
+checkpoint alone.
+
