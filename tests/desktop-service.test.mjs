@@ -208,6 +208,14 @@ test('foreign shutdown is refused while any operation is in flight',{timeout:300
  let timer;try{pending=request(session,'apps',{},15000,'host-managed');pending.catch(()=>{});await Promise.race([started,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Discovery fixture did not enter')),8000);})]);clearTimeout(timer);assert.equal((await foreign()).error.code,'version_mismatch');assert.equal(closes,0);release();await pending;pending=null;}
  finally{clearTimeout(timer);if(release)release();if(pending)await Promise.allSettled([pending]);await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('unreadable status refuses foreign shutdown without blocking matching cleanup',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-unreadable-shutdown-'));let closes=0;
+ const runtime={permissionMode:'host-managed',status(){throw Error('status unavailable');},async close(){closes++;}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ const foreign=()=>new Promise((resolve,reject)=>{const socket=net.createConnection(session.pipe);socket.setEncoding('utf8');let data='';socket.on('error',reject);socket.on('data',x=>data+=x);socket.on('end',()=>resolve(JSON.parse(data)));socket.on('connect',()=>socket.write(JSON.stringify({secret:session.secret,command:'shutdown',expected_build_id:'older-build',expected_permission_mode:'host-managed',args:{}})+'\n'));});
+ try{assert.equal((await foreign()).error.code,'version_mismatch');assert.equal(closes,0);assert.equal((await request(session,'shutdown',{},5000,'host-managed')).closed,true);assert.equal(closes,1);}
+ finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('diagnostic persistence does not delay an error reply and shutdown waits for it',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-async-incident-'));let release,started;const gate=new Promise(r=>release=r),entered=new Promise(r=>started=r),original=Incidents.prototype.recordSerialized;
  Incidents.prototype.recordSerialized=async()=>{started();await gate;};

@@ -1145,7 +1145,9 @@ As a partial mitigation for #7, IPC now refuses End from a different build or
 permission policy, and refuses a mismatched client's shutdown while an operation
 is in flight, task state is open or unknown, or control is active or paused.
 Status, Pause and emergency Stop remain available; shutdown
-of a confirmed idle service remains possible. This does not identify two host
+of a confirmed idle service remains possible. If status is unreadable, a
+mismatched shutdown is refused while matching-controller cleanup remains
+available. This does not identify two host
 conversations using the same build and policy. These client-supplied fields are
 not credentials and can be imitated; the check prevents accidental mismatch,
 not deliberate impersonation. Issue #7 remains unresolved.
