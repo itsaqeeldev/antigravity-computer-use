@@ -7,3 +7,6 @@ node_modules/
 .localdata/
 **/.hyperframes/
 **/renders/
+
+server/liquidglass-host/bin/
+server/liquidglass-host/obj/

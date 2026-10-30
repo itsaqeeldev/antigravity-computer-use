@@ -4,6 +4,7 @@ import Carbon
 import CoreGraphics
 import Foundation
 import ScreenCaptureKit
+import Vision
 
 struct MacWindowDisposition: Equatable {
     let minimized: Bool
@@ -149,6 +150,8 @@ func macCheckTargetPoint(_ point: CGPoint, _ args: [String: Any]) throws {
         if guardianAlive && owner == guardian { continue } // only this runtime's native click-through chrome
         let ownerName = candidate[kCGWindowOwnerName as String] as? String ?? ""
         if ownerName == "Dock" || ownerName == "Window Server" { continue }
+        let layer = (candidate[kCGWindowLayer as String] as? NSNumber)?.int32Value ?? 0
+        if owner == pid && layer > 0 { continue } // same-app context menu, popup, or popover layer
         guard (candidate[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 0 > 0,
               let bounds = candidate[kCGWindowBounds as String] as? [String:Any],
               let boundsRect = CGRect(dictionaryRepresentation: bounds as CFDictionary), boundsRect.contains(point) else { continue }
@@ -199,9 +202,13 @@ func macBringToFront(_ args: [String: Any]) throws {
 
 func macRole(_ role: String) -> String {
     return ["AXWindow":"Window", "AXSheet":"Window", "AXDialog":"Window", "AXButton":"Button", "AXTextField":"Edit",
-            "AXTextArea":"Edit", "AXCheckBox":"CheckBox", "AXRadioButton":"RadioButton", "AXPopUpButton":"ComboBox",
-            "AXComboBox":"ComboBox", "AXStaticText":"Text", "AXGroup":"Group", "AXWebArea":"Document",
-            "AXScrollArea":"Pane", "AXMenu":"Menu", "AXMenuItem":"MenuItem", "AXSlider":"Slider"] [role] ?? role
+            "AXTextArea":"Edit", "AXSearchField":"Edit", "AXCheckBox":"CheckBox", "AXRadioButton":"RadioButton",
+            "AXPopUpButton":"ComboBox", "AXComboBox":"ComboBox", "AXStaticText":"Text", "AXGroup":"Group",
+            "AXWebArea":"Document", "AXScrollArea":"Pane", "AXSplitGroup":"Pane", "AXMenu":"Menu",
+            "AXMenuItem":"MenuItem", "AXSlider":"Slider", "AXValueIndicator":"Slider", "AXProgressIndicator":"ProgressBar",
+            "AXLink":"Hyperlink", "AXTabGroup":"Tab", "AXTab":"TabItem", "AXList":"List", "AXOutline":"Tree",
+            "AXRow":"ListItem", "AXCell":"DataItem", "AXTable":"Table", "AXImage":"Image", "AXToolbar":"ToolBar",
+            "AXHeading":"HeaderItem", "AXScrollBar":"ScrollBar"][role] ?? role
 }
 
 func macOpen(_ args: [String: Any]) throws -> [String: Any] {
@@ -287,6 +294,14 @@ func macContractTest() throws {
           stoppedHud.title == "Stopped · Re-arm required", stoppedHud.isEmergency, stoppedHud.minimumContrast >= 8.5,
           latchedHud.resolvedState == "stopped", latchedHud.title == "Stopped · Re-arm required", latchedHud.isEmergency else {
         throw AxonError("contract_test_failed", "Mac HUD state presentation or emergency contrast contract differs.")
+    }
+    guard macRole("AXWebArea") == "Document",
+          macRole("AXLink") == "Hyperlink",
+          macRole("AXTextArea") == "Edit",
+          macPatterns(role: "AXButton", actions: ["AXPress"], hasNameOrId: false).contains("Invoke"),
+          macPatterns(role: "AXTextArea", actions: [], hasNameOrId: true).contains("Value"),
+          !macPatterns(role: "AXGroup", actions: ["AXPress"], hasNameOrId: false).contains("Invoke") else {
+        throw AxonError("contract_test_failed", "macOS web/accessibility role and pattern mapping differs.")
     }
     let latchProbe = MacFence.file + ".latch-probe-" + UUID().uuidString
     defer { try? FileManager.default.removeItem(atPath: latchProbe) }
@@ -538,38 +553,95 @@ func macScroll(_ args: [String:Any]) throws -> [String:Any] {
     return ["method":"wheel","delta":amount]
 }
 
+func macElementInWindow(_ element: AXUIElement, _ window: AXUIElement) -> Bool {
+    if CFEqual(element, window) { return true }
+    if let winAttr = axAttr(element, kAXWindowAttribute as String),
+       CFGetTypeID(winAttr) == AXUIElementGetTypeID(),
+       CFEqual(winAttr, window) {
+        return true
+    }
+    var cursor: AXUIElement? = element
+    for _ in 0..<256 {
+        guard let node = cursor else { break }
+        if CFEqual(node, window) { return true }
+        if let parent = axAttr(node, kAXParentAttribute as String), CFGetTypeID(parent) == AXUIElementGetTypeID() {
+            cursor = (parent as! AXUIElement)
+        } else {
+            break
+        }
+    }
+    return false
+}
+
 func macEnsureTyping(_ args: [String: Any]) throws {
     let (window, pid, _, _) = try resolveWindow(args)
     guard !IsSecureEventInputEnabled(), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
         throw AxonError("focus_changed", "Keyboard input requires the foreground approved app and nonsecure input.")
     }
+    macEnableWebAccessibility(pid)
+    let axApp = AXUIElementCreateApplication(pid)
+    var requestedTarget: AXUIElement? = nil
     if args["index"] != nil {
         let (target, _) = try snapshotElement(args)
+        requestedTarget = target
         try MacFence.dispatched()
         let outcome = AXUIElementSetAttributeValue(target, kAXFocusedAttribute as CFString, true as CFTypeRef)
-        guard outcome == .success else { throw AxonError("input_outcome_unknown", "The accessibility provider did not confirm focus. Observe before continuing.") }
-    }
-    guard let value = axAttr(AXUIElementCreateApplication(pid), kAXFocusedUIElementAttribute as String),
-          CFGetTypeID(value) == AXUIElementGetTypeID() else { throw AxonError("focus_failed", "No actual editable focus was observed.") }
-    let focused = value as! AXUIElement
-    let role = (axString(focused, kAXRoleAttribute as String) ?? "") + (axString(focused, kAXSubroleAttribute as String) ?? "")
-    guard !role.lowercased().contains("secure") else { throw AxonError("protected_app", "Secure fields require a human.") }
-    var cursor: AXUIElement? = focused; var contained = false
-    for _ in 0..<64 {
-        guard let element = cursor else { break }
-        if CFEqual(element, window) { contained = true; break }
-        cursor = axAttr(element, kAXParentAttribute as String) as! AXUIElement?
-    }
-    guard contained else { throw AxonError("focus_failed", "Keyboard focus is outside the approved window.") }
-    if args["index"] != nil {
-        let (target, _) = try snapshotElement(args)
-        var current: AXUIElement? = focused; var matched = false
-        for _ in 0..<64 {
-            guard let element = current else { break }
-            if CFEqual(element, target) { matched = true; break }
-            current = axAttr(element, kAXParentAttribute as String) as! AXUIElement?
+        if outcome != .success || axBool(target, kAXFocusedAttribute as String) != true {
+            Thread.sleep(forTimeInterval: 0.04)
         }
-        guard matched else { throw AxonError("focus_failed", "The requested editor did not acquire focus.") }
+        if outcome != .success && axBool(target, kAXFocusedAttribute as String) != true {
+            if let r = axRect(target), r[2] > 0, r[3] > 0 {
+                let pt = CGPoint(x: Double(r[0] + r[2] / 2), y: Double(r[1] + r[3] / 2))
+                _ = try macMoveCursor(pt, args)
+                try macCheckTargetPoint(pt, args)
+                let src = CGEventSource(stateID: .hidSystemState)
+                try post(CGEvent(mouseEventSource: src, mouseType: .leftMouseDown, mouseCursorPosition: pt, mouseButton: .left))
+                Thread.sleep(forTimeInterval: 0.012)
+                try post(CGEvent(mouseEventSource: src, mouseType: .leftMouseUp, mouseCursorPosition: pt, mouseButton: .left))
+                Thread.sleep(forTimeInterval: 0.06)
+            } else {
+                throw AxonError("input_outcome_unknown", "The accessibility provider did not confirm focus. Observe before continuing.")
+            }
+        }
+    } else if let pixels = pair(args["point"]) {
+        let pt = CGPoint(x: Double(pixels[0]), y: Double(pixels[1]))
+        _ = try macMoveCursor(pt, args)
+        try macCheckTargetPoint(pt, args)
+        let src = CGEventSource(stateID: .hidSystemState)
+        try post(CGEvent(mouseEventSource: src, mouseType: .leftMouseDown, mouseCursorPosition: pt, mouseButton: .left))
+        Thread.sleep(forTimeInterval: 0.012)
+        try post(CGEvent(mouseEventSource: src, mouseType: .leftMouseUp, mouseCursorPosition: pt, mouseButton: .left))
+        Thread.sleep(forTimeInterval: 0.06)
+    }
+    if let value = axAttr(axApp, kAXFocusedUIElementAttribute as String),
+       CFGetTypeID(value) == AXUIElementGetTypeID() {
+        let focused = value as! AXUIElement
+        let role = (axString(focused, kAXRoleAttribute as String) ?? "") + (axString(focused, kAXSubroleAttribute as String) ?? "")
+        guard !role.lowercased().contains("secure") else { throw AxonError("protected_app", "Secure fields require a human.") }
+        let contained = CFEqual(focused, axApp) || macElementInWindow(focused, window)
+        guard contained else { throw AxonError("focus_failed", "Keyboard focus is outside the approved window.") }
+        if let target = requestedTarget {
+            let matched = CFEqual(focused, target) || macElementInWindow(focused, target) || (axBool(target, kAXFocusedAttribute as String) == true)
+            guard matched else { throw AxonError("focus_failed", "The requested editor did not acquire focus.") }
+        }
+    } else {
+        if let target = requestedTarget {
+            let role = (axString(target, kAXRoleAttribute as String) ?? "") + (axString(target, kAXSubroleAttribute as String) ?? "")
+            guard !role.lowercased().contains("secure") else { throw AxonError("protected_app", "Secure fields require a human.") }
+            guard axBool(target, kAXFocusedAttribute as String) == true || macElementInWindow(target, window) else {
+                throw AxonError("focus_failed", "No actual editable focus was observed.")
+            }
+        } else {
+            let isMainOrFocused = (axBool(window, kAXMainAttribute as String) == true)
+                || (axBool(window, kAXFocusedAttribute as String) == true)
+                || {
+                    if let fw = axAttr(axApp, kAXFocusedWindowAttribute as String), CFGetTypeID(fw) == AXUIElementGetTypeID() {
+                        return CFEqual(fw, window)
+                    }
+                    return false
+                }()
+            guard isMainOrFocused else { throw AxonError("focus_failed", "No actual editable focus was observed.") }
+        }
     }
     MacFence.keyboardPID = pid
     MacFence.keyboardWindow = window
@@ -583,6 +655,7 @@ func macChord(_ code: CGKeyCode, _ flags: CGEventFlags = []) throws {
 }
 
 func macPaste(_ args: [String: Any]) throws -> [String: Any] {
+    try macBringToFront(args)
     try macEnsureTyping(args)
     let pasteboard = NSPasteboard.general
     let before = pasteboard.changeCount
@@ -703,8 +776,33 @@ func macCapture(_ args: [String: Any]) throws -> [String: Any] {
     guard axRect(window) == r else { throw AxonError("window_moved", "The window moved during capture. Discard this observation.") }
     let bitmap = NSBitmapImageRep(cgImage: image)
     guard let bytes = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else { throw AxonError("encode_failed", "Screenshot encoding failed.") }
-    return ["mime": "image/jpeg", "width": image.width, "height": image.height, "source": r,
-            "capture": "window", "data": bytes.base64EncodedString()]
+    var out: [String: Any] = ["mime": "image/jpeg", "width": image.width, "height": image.height, "source": r,
+                              "capture": "window", "data": bytes.base64EncodedString()]
+    if bool(args["ocr"], false) {
+        out["screen_text"] = macRecognizeText(image)
+    }
+    return out
+}
+
+func macRecognizeText(_ image: CGImage) -> [[String: Any]] {
+    let req = VNRecognizeTextRequest()
+    req.recognitionLevel = .fast
+    req.usesLanguageCorrection = true
+    let handler = VNImageRequestHandler(cgImage: image, options: [:])
+    do { try handler.perform([req]) } catch { return [] }
+    guard let observations = req.results else { return [] }
+    var items: [[String: Any]] = []
+    let w = Double(image.width), h = Double(image.height)
+    for obs in observations.prefix(80) {
+        guard let candidate = obs.topCandidates(1).first else { continue }
+        let text = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { continue }
+        let b = obs.boundingBox
+        let cx = max(0, min(image.width - 1, Int(((b.minX + b.width / 2.0) * w).rounded())))
+        let cy = max(0, min(image.height - 1, Int(((1.0 - (b.minY + b.height / 2.0)) * h).rounded())))
+        items.append(["text": text, "x": cx, "y": cy])
+    }
+    return items
 }
 
 func macFileDialog(_ args: [String: Any]) throws -> [String: Any] {
