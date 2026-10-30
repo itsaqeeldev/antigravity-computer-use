@@ -240,11 +240,14 @@ export class Runtime {
     // prevent discovery of controls late in a real application's hierarchy.
     const tree=(await this.driver.call('snapshot',{...metadata,max_nodes:Math.min(args.max_nodes||(query?500:160),500)})).result;
     const nodes=queryNodes(tree.nodes,query);
-    const rendered=renderSnapshot(tree,{maxRows:Math.min(args.max_nodes||80,500),textLimit:160,nodes})
+    const rowLimit=Math.min(args.max_nodes||80,500);
+    // This marks known loss, not proof that every visual error is accessible.
+    let treeIncomplete=!!tree.truncated||!!tree.time_budget_ms||nodes.some(n=>n.text_unread);
+    const rendered=renderSnapshot(tree,{maxRows:rowLimit,textLimit:160,nodes,onCoverage:({rowsOmitted})=>{treeIncomplete||=rowsOmitted;}})
       .replaceAll('raise max_nodes or use interactive_only','use query or raise max_nodes up to 500')
       .replace(/\[~\d+ tokens\. Re-read[^\]]+\]/g,'[Use query to return matching controls, or max_nodes up to 500 for more rows.]');
     const capturedMono=performance.now();
-    const response={observation_id:randomUUID(),hwnd:Number(args.hwnd),app:w.path,at:Date.now(),tree:rendered,elements:nodes};
+    const response={observation_id:randomUUID(),hwnd:Number(args.hwnd),app:w.path,at:Date.now(),tree:rendered,tree_incomplete:treeIncomplete,elements:nodes};
     let image;
     if(args.with_image!==false){
       await this.guardian.request({op:'capture'});
@@ -330,7 +333,7 @@ export class Runtime {
   async wait(args){
     const until=performance.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);let latest;
     do {
-      this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query});
+      this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query,...(args.abort_on?.length?{max_nodes:500}:{})});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
       if(failure){
@@ -341,10 +344,11 @@ export class Runtime {
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
         this.frames.delete(latest.metadata.observation_id);
-        const verified=await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image});
+        const verified=await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image,...(args.abort_on?.length?{max_nodes:500}:{})});
         const verifiedTree=verified.metadata.tree.toLowerCase();
         const verifiedFailure=(args.abort_on||[]).find(text=>verifiedTree.includes(text.toLowerCase()));
         if(verifiedFailure)return {matched:false,aborted:true,abort_match:verifiedFailure,...verified};
+        if(args.abort_on?.length&&verified.metadata.tree_incomplete)return {matched:false,incomplete:true,...verified};
         if(verifiedTree.includes(args.until.toLowerCase()))return {matched:true,...verified};
         if(args.with_image===false&&performance.now()>=until)return {matched:false,timed_out:true,...verified};
         this.frames.delete(verified.metadata.observation_id);

@@ -106,6 +106,14 @@ test('filtered failure-aware wait is refused before any batch input',async()=>{
  validate('computer_wait',{hwnd:7,until:'Ready',abort_on:['Failed'],reason:'Wait'});
 });
 
+test('failure-aware wait stops a batch when the verified tree is incomplete',async()=>{
+ let reads=0,inputs=0;const frames=new Map();
+ const runtime={frames,check(){},async action(){inputs++;return{};},async observe(a){assert.equal(a.max_nodes,500);const id='v'+(++reads);frames.set(id,{});return{metadata:{observation_id:id,tree:'Ready',tree_incomplete:reads===2}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',abort_on:['Failed']},{kind:'click',name:'Publish'}]));
+ assert.equal(inputs,1);assert.equal(result.incomplete,true);assert.equal(result.verification_error.code,'wait_observation_incomplete');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v2');
+});
+
 test('wait rechecks the returned frame and aborts a batch if failure replaces a transient success',async()=>{
  let input=0,reads=0;const frames=new Map();
  const runtime={frames,check(){},async action(){input++;return{metadata:{observation_id:'post-action'}};},

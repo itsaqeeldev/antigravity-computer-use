@@ -1,5 +1,13 @@
 # Reliability and updates implementation log
 
+Failure-aware waits now request up to 500 nodes and refuse a matched success
+when the verified view has known native truncation, a row limit, or unread text.
+The batch retains its fresh frame and skips subsequent input. Focused synthetic
+tests cover these cases. This may increase observation cost; real-app latency
+is not measured. The flag does not prove all visual errors are accessible:
+hidden browser chrome, shortened individual text, custom canvases and other
+unreported omissions remain possible. Independently inspect the result.
+
 Failure-aware waits now reject a nonempty query filter, including during whole-batch
 preflight before any input, because filtering could hide the failure label while
 exposing success. This is a deliberate compatibility restriction. Unfiltered

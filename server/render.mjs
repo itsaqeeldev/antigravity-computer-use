@@ -425,7 +425,7 @@ function otherDesktopNote(snap) {
   return 'ON ANOTHER VIRTUAL DESKTOP: only the frame is readable (Windows does not serve the contents of a window on a desktop you are not looking at); its coordinates are not on screen, so do not click by point. Bring that desktop forward first';
 }
 
-export function renderSnapshot(snap, { textLimit = null, withRects = false, lean = false, chrome = false, ms = null, nodes = null, scope = null, maxRows = null, note = '' } = {}) {
+export function renderSnapshot(snap, { textLimit = null, withRects = false, lean = false, chrome = false, ms = null, nodes = null, scope = null, maxRows = null, note = '', onCoverage = null } = {}) {
   const built = buildRows(snap, { textLimit, withRects, chrome, nodes });
   const { url, pruned, hiddenChrome, focus } = built;
   // max_nodes caps what is shown, after browser chrome, layout wrappers and
@@ -433,6 +433,7 @@ export function renderSnapshot(snap, { textLimit = null, withRects = false, lean
   // to cut a page off before its first row (the browser's toolbar comes first).
   const cap = Number(maxRows) > 0 ? Number(maxRows) : 0;
   const rows = cap && built.rows.length > cap ? built.rows.slice(0, cap) : built.rows;
+  if (onCoverage) onCoverage({rowsOmitted: rows.length < built.rows.length});
 
   let count = `${rows.length} shown`;
   if (rows.length < built.rows.length) count += ` of ${built.rows.length} (max_nodes)`;

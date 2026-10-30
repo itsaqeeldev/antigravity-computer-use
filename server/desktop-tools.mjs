@@ -123,7 +123,7 @@ export async function call(r,name,a){
     completed.push({index:i,kind,ok:true});
     if(last.verification_error)return {...last,batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'verification'}};
     if(n==='computer_wait'&&!last.matched){
-     completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
+     completed.pop();return {...last,ok:false,verification_error:{code:last.aborted?'wait_failure_observed':last.incomplete?'wait_observation_incomplete':'wait_condition_timeout',message:last.aborted?'A known failure was observed. Inspect the returned state; do not replay prior steps.':last.incomplete?'The accessible tree was incomplete; inspect the returned state before continuing. Do not replay prior steps.':'Expected observed text was not found. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};
     }
     if(n==='computer_wait_change'&&!last.changed){
      completed.pop();return {...last,ok:false,verification_error:{code:'wait_change_timeout',message:'No accessible tree change was observed. Inspect the returned state; do not replay prior steps.'},batch:{completed,failed_index:i,skipped:plan.length-i-1,phase:'wait'}};

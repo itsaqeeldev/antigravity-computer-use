@@ -186,6 +186,18 @@ test('queries search a bounded larger hierarchy before compacting results',async
  assert.equal(requested,500);assert.match(result.metadata.tree,/Export PNG/);assert(!result.metadata.tree.includes('Toolbar'));
 });
 
+test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{
+ let snapshot={snapshot_id:'s',truncated:true,nodes:[{i:1,name:'Ready',role:'Button'}]};
+ const r={async grant(){return {pid:1,started:'one',path:'app.exe'};},check(){},guardian:{send(){}},stamp(){return {};},frames:new Map(),driver:{async call(){return {result:snapshot};}}};
+ assert.equal((await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false})).metadata.tree_incomplete,true);
+ snapshot={snapshot_id:'s2',nodes:Array.from({length:81},(_,i)=>({i,name:'Control '+i,role:'Button'}))};
+ assert.equal((await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false})).metadata.tree_incomplete,true);
+ snapshot={snapshot_id:'s3',nodes:[{i:1,name:'Ready',role:'Button',text_unread:true}]};
+ assert.equal((await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false})).metadata.tree_incomplete,true);
+ snapshot={snapshot_id:'s4',nodes:[{i:1,name:'Ready',role:'Button'}]};
+ assert.equal((await Runtime.prototype.observe.call(r,{hwnd:1,with_image:false})).metadata.tree_incomplete,false);
+});
+
 test('a section query includes its real child controls without unrelated siblings or invented labels',()=>{
  const nodes=[{i:0,depth:0,role:'Window',name:'App'},{i:1,depth:1,role:'Group',name:'Export format'},{i:2,depth:2,role:'Button',name:'PNG'},{i:3,depth:2,role:'Button',name:'JPEG',offscreen:true},{i:4,depth:1,role:'Group',name:'Security'},{i:5,depth:2,role:'Button',name:'Delete'}];
  const selected=queryNodes(nodes,'FORMAT');assert.deepEqual(selected.map(n=>n.i),[1,2,3]);assert.equal(selected[2],nodes[3]);assert.equal(selected[2].offscreen,true);assert.deepEqual(queryNodes(nodes,'JPEG').map(n=>n.i),[3]);
