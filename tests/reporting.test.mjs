@@ -116,6 +116,18 @@ test('a similar GitHub search result does not reconcile an uncertain submission'
  }finally{f.clean();}
 });
 
+test('a previously submitted legacy code reconciles after export sanitization',async()=>{
+ for(const interrupted of [false,true]){
+  const f=fixture(true);try{
+   const item=f.i.read()[0],records=JSON.parse(fs.readFileSync(f.i.file));records[0].code='legacy_provider_failure';fs.writeFileSync(f.i.file,JSON.stringify(records));
+   if(interrupted)fs.writeFileSync(path.join(f.directory,'reporting-intent.json'),JSON.stringify({id:item.id,count:item.count}));
+   let creates=0;const run=(_exe,args)=>args[1]==='list'?{status:0,stdout:JSON.stringify([{number:12,title:`[automatic incident ${item.id}] ${process.platform}: legacy_provider_failure`}])}:(creates++,{status:0});
+   const result=await diagnostics(f.directory,{submit:true,target:f.target,acquire,run});
+   assert.equal(result.submitted,1);assert.equal(creates,0);assert.equal(f.i.read()[0].pending,false);
+  }finally{f.clean();}
+ }
+});
+
 test('native reporting lease excludes another reporter and recovers after helper death',async t=>{
  const base=testDirectory('tmp'),target=fs.mkdtempSync(path.join(base,'report-native-')),directory=path.join(target,'data'),lockDir=path.join(directory,'reporting-lease');let held;
  try{

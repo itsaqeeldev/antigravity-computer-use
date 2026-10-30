@@ -29,7 +29,11 @@ export async function diagnostics(directory,{submit=false,target=path.dirname(di
   const query=run('gh',['issue','list','--repo','shayann07/antigravity-computer-use','--state','all','--search',`in:title "${item.id}"`,'--json','number,title'],{encoding:'utf8',timeout:15000,windowsHide:true});
   if(query.status!==0)return {submitted,next_action:'github_authentication_or_network_required'};
   let matches;try{matches=JSON.parse(query.stdout);}catch{return {submitted,next_action:'github_lookup_invalid'};}if(!Array.isArray(matches)||matches.some(match=>!Number.isSafeInteger(match?.number)||typeof match?.title!=='string'))return {submitted,next_action:'github_lookup_invalid'};
-  matches=matches.filter(match=>match.title===title);
+  // Older versions may have published a different code in the title. Match
+  // the exact incident marker and platform, not the now-sanitized code, so a
+  // previously submitted issue is not duplicated after the privacy upgrade.
+  const marker=`[automatic incident ${item.id}] ${item.platform}: `;
+  matches=matches.filter(match=>match.title.startsWith(marker)&&/^[a-z][a-z0-9_]{0,63}$/.test(match.title.slice(marker.length)));
   if(intent&&!matches.length)return {submitted,next_action:'github_submission_outcome_unknown',incident_id:item.id};
   if(!matches.length){lease.assertHeld();if(!updateSettings(target).reporting)return {submitted,next_action:'reporting_consent_required'};const label=item.operation==='computer_feedback'?'Agent-reported concern (unverified; no screenshots, task text, paths or arguments)':'Sanitized runtime incident (no screenshots, text, paths or arguments)';const body=label+':\n\n```json\n'+JSON.stringify(item,null,2)+'\n```';
    writeAtomicJSON(intentFile,{id:item.id,count:item.count});intent={id:item.id,count:item.count};
