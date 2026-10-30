@@ -308,7 +308,7 @@
     },
     {
       "path": "tests/desktop-service.test.mjs",
-      "sha256": "032e632b23a6d5338064cc76fa73e27004201d53cea39c43f409f400cf98fff4"
+      "sha256": "c683b4dae3698361f7255a932ad922e1da2cdb838e478b3f5086095073b11ac2"
     },
     {
       "path": "tests/installed-direct-smoke.mjs",
