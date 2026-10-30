@@ -155,17 +155,23 @@ test('wait does not treat a vanished success label as confirmation',async()=>{
  assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.tree,'Loading');
 });
 
-test('wait reports a known failure first appearing in its final timeout observation',async()=>{
+test('wait returns the last frame when the timeout expires before a later failure observation',async()=>{
  let reads=0;const frames=new Map();
  const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});if(reads===1)await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:reads===1?'Loading':'Failed'}};}};
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',abort_on:['Failed'],timeout_ms:100});
- assert.equal(result.matched,false);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.metadata.observation_id,'v2');assert(!frames.has('v1'));
+ assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(!frames.has('v1'));
 });
 test('text-only timeout returns the last observed frame without a second slow capture',async()=>{
  let reads=0;const frames=new Map();
  const runtime={frames,check(){},async observe(){const id='v'+(++reads);frames.set(id,{});await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:'Loading'}};}};
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100,with_image:false});
  assert.equal(result.matched,false);assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert(frames.has('v1'));assert.equal(result.wait_metrics.observations,1);assert.equal(result.wait_metrics.polling_budget_ms,100);assert(result.wait_metrics.elapsed_ms>=100);
+});
+test('image wait returns its last frame when the deadline expires without a final capture',async()=>{
+ let observations=0;
+ const runtime={frames:new Map(),generation:1,driver:{epoch:1},check(){},async observe(){observations++;await new Promise(resolve=>setTimeout(resolve,20));return{metadata:{observation_id:'image-'+observations,tree:'[1] Loading',elements:[]},image:{width:10,height:10,data:'fixture'}};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100});
+ assert.equal(result.timed_out,true);assert.equal(result.metadata.observation_id,'image-1');assert.equal(observations,1);
 });
 test('text-only wait reuses its last frame when the budget expires during sleep',async()=>{
  let reads=0;const frames=new Map();
