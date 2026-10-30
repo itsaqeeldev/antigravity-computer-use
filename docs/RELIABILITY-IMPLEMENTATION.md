@@ -10,6 +10,9 @@ physical re-arm remain unqualified.
 An uncorrelated delayed `stopped` event no longer clears the in-memory
 unconfirmed-delivery state; a simulated stale-event regression covers this.
 No current protocol response proves which Stop a native event acknowledges.
+[Issue #26](https://github.com/shayann07/antigravity-computer-use/issues/26)
+tracks the remaining durable-reason and authenticated recovery gap across
+controller restart. The generic Stop latch alone does not prove native delivery.
 
 On 30 October the local Windows source suite at `c0b95e2` passed 426 tests,
 with 11 explicit skips and no failures (`node --test --test-concurrency=4
