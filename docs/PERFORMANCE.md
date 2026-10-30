@@ -47,6 +47,11 @@ elapsed time includes its initial app-identity check before polling begins.
 
 ## Text-only timeout observation
 
+During the existing 500 ms polling interval, the candidate checks control and
+worker state at intervals of at most 100 ms without taking extra screenshots.
+This should reduce the delay before a waiting request reports Stop; scheduling,
+filesystem-check overhead and physical Stop latency have not been measured.
+
 Windows CI job `123905322677` showed an unexpected extra poll. Early timer
 wakeup before a fractional target is a plausible cause, not directly measured
 in that run. Mac CI jobs `123905322766` and `123905322484` also observed extra

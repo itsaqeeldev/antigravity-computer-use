@@ -10,6 +10,11 @@ test('an early timer wake cannot complete a polling delay before its deadline',a
  let now=0,calls=0;await waitUntil(2,{now:()=>now,sleep:async requested=>{assert(requested>=1);if(++calls>4)throw Error('unbounded timer loop');now+=0.5;}});
  assert.equal(now,2);assert.equal(calls,4);
 });
+test('poll delay checks cancellation without triggering another observation',async()=>{
+ let now=0,sleeps=0,checks=0;
+ await assert.rejects(waitUntil(500,{now:()=>now,sleep:async ms=>{assert(ms<=100);sleeps++;now+=ms;},check:()=>{if(++checks===2)throw Error('stopped');}}),/stopped/);
+ assert.equal(sleeps,2);assert.equal(now,200);
+});
 
 test('a batch waits then uses the freshly verified frame for its next action',async()=>{
  const seen=[];
