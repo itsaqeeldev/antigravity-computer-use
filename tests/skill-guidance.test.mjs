@@ -15,4 +15,7 @@ test('computer-use skill puts weak models on the ready-first path', () => {
   assert.match(skill.slice(fast, fast + 900), /Run exactly one\s+`ready` call/);
   assert.match(skill.slice(fast, fast + 900), /Do \*\*not\*\* open a terminal/);
   assert.match(skill.slice(fast, fast + 900), /runtime's authority/);
+  assert.match(skill, /at most one bounded input attempt/);
+  assert.match(skill, /stop issuing controller calls and wait for the human/);
+  assert.match(skill, /Do not poll,\s*repeat `run`, retry a drag/);
 });

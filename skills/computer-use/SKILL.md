@@ -31,6 +31,16 @@ runtime's authority.
 This short path is mandatory for Flash, low-effort and other models that may
 otherwise turn a desktop task into repository analysis.
 
+## Physical handoff boundary
+
+For a task that asks a human to press Esc, take over, or re-arm, perform at
+most one bounded input attempt that reaches the requested handoff state. Then
+stop issuing controller calls and wait for the human's report. Do not poll,
+repeat `run`, retry a drag, or start another batch while waiting. A completed
+drag is not evidence that the human pressed Esc; a `control_stopped` reply is
+not evidence of who stopped it. Resume only after the human explicitly reports
+the physical action, and take a fresh observation before any next input.
+
 Run `ready` once. Follow `next_action`:
 
 If `update_notice` is returned, mention its short message once. Do not dump update
