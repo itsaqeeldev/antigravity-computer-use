@@ -76,7 +76,13 @@ test('known failure wins over success, returns a fresh frame and prevents subseq
  runtime.wait=Runtime.prototype.wait.bind(runtime);
  const result=await call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Completed',abort_on:['Failed','Cancelled']},{kind:'click',name:'Publish'}]));
  assert.equal(inputs,1);assert.equal(result.aborted,true);assert.equal(result.abort_match,'Failed');assert.equal(result.matched,false);
- assert.equal(result.verification_error.code,'wait_failure_observed');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'frame2');assert(!runtime.frames.has('frame1'));
+ assert.equal(result.verification_error.code,'wait_failure_observed');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'frame1');assert.equal(observations,1);assert(runtime.frames.has('frame1'));
+});
+test('an image-requested failure wait still takes its final image observation',async()=>{
+ let observations=0;const frames=new Map();
+ const runtime={frames,check(){},async observe(args){const id='frame'+(++observations);frames.set(id,{});return{metadata:{observation_id:id,tree:'Failed'},...(args.with_image?{image:{data:'fixture'}}:{})};}};
+ const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',abort_on:['Failed'],with_image:true});
+ assert.equal(result.aborted,true);assert.equal(observations,2);assert.equal(result.metadata.observation_id,'frame2');assert.equal(result.image.data,'fixture');assert(!frames.has('frame1'));
 });
 
 test('wait abort labels are bounded and success remains compatible',async()=>{

@@ -6,8 +6,9 @@ When a text-only wait exhausts its polling budget without a match, it now
 returns the last observed frame instead of starting another capture. An inert
 probe with a 100 ms budget and a 250 ms observation went from 525 ms with two
 observations to 259 ms with one. This is a single synthetic failure-path probe,
-not an Antigravity task benchmark. Image-requested waits and success/failure
-verification retain their capture behavior. An in-flight observation can still
+not an Antigravity task benchmark. Image-requested waits and success
+verification retain their capture behavior. A text-only wait that observes a
+failure also returns that same frame immediately and stops the batch. An in-flight observation can still
 overrun the budget; the hard-deadline work in issue #25 remains open.
 If a success label disappears during the verification capture after the budget
 expires, a text-only batch returns that verified frame as a timeout and skips

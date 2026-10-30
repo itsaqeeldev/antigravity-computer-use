@@ -333,7 +333,10 @@ export class Runtime {
       this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query});
       const tree=latest.metadata.tree.toLowerCase();
       const failure=(args.abort_on||[]).find(text=>tree.includes(text.toLowerCase()));
-      if(failure){this.frames.delete(latest.metadata.observation_id);return {matched:false,aborted:true,abort_match:failure,...await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image})};}
+      if(failure){
+        if(args.with_image===false)return {matched:false,aborted:true,abort_match:failure,...latest};
+        this.frames.delete(latest.metadata.observation_id);return {matched:false,aborted:true,abort_match:failure,...await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image})};
+      }
       if(tree.includes(args.until.toLowerCase())){
         // Do not authorize the next batch step based on a transient match in
         // an older frame. Confirm both success and failure on the returned view.
