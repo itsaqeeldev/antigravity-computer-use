@@ -51,6 +51,31 @@ test('early guardian exit rejects startup promptly and permits one explicit retr
  let child;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>child.emit('close',1);return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});const first=g.start();child.emit('close',3);await assert.rejects(first,e=>e.code==='guardian_exited');const next=g.start();child.stdout.write('{"ev":"ready","pid":123}\n');await next;child.emit('close',0);
 });
+test('asynchronous guardian pipe failure stops runtime and rejects pending work without replay',async()=>{
+ let child,aborts=0;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>true;return child;};
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'guardian-async-pipe-')),latch=path.join(dir,'stop');
+ const guardian=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500});
+ const runtime=new Runtime({guardian,driver:{async abort(){aborts++;}},sessions:{register(){}},latchFile:latch});
+ try{
+  const boot=guardian.start();child.stdout.write('{"ev":"ready","pid":123}\n');await boot;
+  runtime.state='active';runtime.frames.set('old',{});runtime.grants.set('app',{});
+  const pending=guardian.request({op:'capture'},{timeoutMs:1000});await Promise.resolve();
+  child.stdin.emit('error',Error('broken pipe'));
+  await assert.rejects(pending,e=>e.code==='guardian_write_failed'&&/do not replay/i.test(e.message));
+  assert.equal(runtime.state,'stopped');assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');assert.equal(runtime.frames.size,0);assert.equal(runtime.grants.size,0);assert.equal(aborts,1);assert.equal(fs.readFileSync(latch,'utf8'),'stopped');assert.equal(guardian.pending.size,0);
+  child.stdout.write('{"ev":"state","state":"active"}\n{"ev":"human_resume","state":"idle"}\n');assert.equal(guardian.state,'stopped');assert.equal(runtime.state,'stopped');
+  await assert.rejects(guardian.start(),e=>e.code==='guardian_cleanup_unconfirmed');
+  child.emit('close',1);assert.equal(runtime.lastControlReason,'guardian_stop_unconfirmed');
+ }finally{fs.unlinkSync(runtime.guardFile);fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('guardian pipe failure during startup rejects promptly and ignores a late ready',async()=>{
+ let child,kills=0;const spawnProcess=()=>{child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{kills++;return true;};return child;};
+ const guardian=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:1000});
+ const pending=guardian.start();child.stdin.emit('error',Error('broken pipe'));
+ await assert.rejects(pending,e=>e.code==='guardian_start_failed');assert.equal(kills,1);
+ child.stdout.write('{"ev":"ready","pid":123}\n');assert.equal(guardian.initialized,false);assert.equal(guardian.state,'stopped');
+ await assert.rejects(guardian.start(),e=>e.code==='guardian_cleanup_unconfirmed');child.emit('close',1);
+});
 test('guardian readiness timeout terminates the failed helper and clears startup state',async()=>{
  let killed=0;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{killed++;child.emit('close',null,'SIGTERM');};return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:5});await assert.rejects(g.start(),e=>e.code==='guardian_start_timeout');assert.equal(killed,1);assert.equal(g.starting,null);assert.equal(g.proc,null);

@@ -1419,6 +1419,19 @@ open, close and clipboard operations. Input cleanup still runs independently.
 An effectful pipe write that throws also retires the native worker even for
 operations such as launch that do not hold physical inputs, preventing a
 possibly partially delivered command from continuing on a reused worker.
+
+Release-candidate follow-up: an asynchronous guardian stdin error after a write
+was accepted now immediately reports unconfirmed Stop, invalidates runtime
+control, attempts input cleanup, rejects pending requests without replay, and
+refuses another guardian start until the old process exits. A simulated pipe
+error exercises this path. It does not establish native Stop acknowledgement,
+durable uncertainty across restart, or physical held-input cleanup; issue #26
+remains open and the candidate remains unqualified for release.
+On Windows, the focused regression passed (36/36). The first full run failed
+one parallel native compile with CS1583 (invalid compiler-generated Win32
+resource); the second full run passed 431, failed 0, skipped 11. The failure
+cause is not established and the rerun does not prove it cannot recur. Five
+skips reflect the project-local ACL boundary; no skipped check is a pass.
 Driver fixture and IPC/batch regression coverage does not establish physical
 Stop behavior or real-app delivery; those acceptance checks remain pending.
 If cleanup itself fails after a submitted action, the response now retains both
