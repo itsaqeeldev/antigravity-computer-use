@@ -1,4 +1,11 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {testDirectory} from './paths.mjs';import {macToolProbe,publishMacBundle} from '../server/macos-build.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {testDirectory} from './paths.mjs';import {macToolProbe,publishMacBundle,checkMacStorageBuild} from '../server/macos-build.mjs';
+
+test('Mac storage compiler reports timeout, spawn failure and silent exit distinctly',()=>{
+ checkMacStorageBuild({status:0});
+ assert.throws(()=>checkMacStorageBuild({status:null,error:{code:'ETIMEDOUT'}}),e=>e.code==='macos_storage_build_timeout');
+ assert.throws(()=>checkMacStorageBuild({status:null,error:{code:'ENOENT'}}),e=>e.code==='macos_storage_build_spawn_failed');
+ assert.throws(()=>checkMacStorageBuild({status:null,signal:'SIGKILL'}),e=>e.code==='macos_storage_build_failed'&&/SIGKILL.*no compiler output/.test(e.message));
+});
 import {spawn,spawnSync} from 'node:child_process';
 test('Mac tool lookup distinguishes a timeout from unavailable tools',()=>{
  assert.equal(macToolProbe({status:0,stdout:' /usr/bin/swiftc\n'},'compiler'),'/usr/bin/swiftc');

@@ -552,7 +552,7 @@
     },
     {
       "path": "server/macos-build.mjs",
-      "sha256": "6cf0faf96c046743874a29fa31aa2a7cfca14b1bae2a298a84473ae1bee752a3"
+      "sha256": "963ce75e3df84f88ce93832b50fdad425ca9d0aabbee318d2bac8a0b9bc60f88"
     },
     {
       "path": "tests/platform-contract.test.mjs",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "f7ce5f39cffa80e226bb92c881e525cd5c6392041bbdca277d768613e136a121"
+      "sha256": "4787c2578fa856a52c9b828ba6461803f851c52f5ac0e3acde21638f57e5aba1"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
@@ -676,7 +676,7 @@
     },
     {
       "path": "tests/macos-tool-probe.test.mjs",
-      "sha256": "eaacf79bf4cdabb57f0bee65b888e6ab711c70f7c62e77e94587a50e16fd61e5"
+      "sha256": "df6beb65abeb654b188210bf5259a1fd4467f7e5a38b9fca26d584658be71752"
     },
     {
       "path": "scripts/setup-release-signing.ps1",

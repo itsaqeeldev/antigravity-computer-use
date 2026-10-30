@@ -18,6 +18,11 @@ export function macToolProbe(result,label){
   if(result.status!==0||typeof result.stdout!=='string'||!result.stdout.trim())throw Object.assign(Error(`macOS ${label} lookup failed. Check the Xcode Command Line Tools and selected SDK.`),{code:'macos_toolchain_unavailable'});
   return result.stdout.trim();
 }
+export function checkMacStorageBuild(result){
+  if(result.error?.code==='ETIMEDOUT')throw Object.assign(Error('macOS storage compilation timed out after 120 seconds; inspect the runner and compiler before retrying.'),{code:'macos_storage_build_timeout'});
+  if(result.error)throw Object.assign(Error(`macOS storage compiler could not run (${result.error.code||'unknown'}).`),{code:'macos_storage_build_spawn_failed'});
+  if(result.status!==0)throw Object.assign(Error(`macOS storage compilation failed (exit ${result.status??'unknown'}, signal ${result.signal||'none'}): ${result.stderr||result.stdout||'no compiler output'}`),{code:'macos_storage_build_failed'});
+}
 export function buildMacStorage({force=false}={}) {
   if(process.platform!=='darwin')throw Object.assign(Error('The macOS storage adapter must be built on macOS.'),{code:'unsupported_platform'});
   const prebuilt=path.join(root,'bin','StorageGuard');
@@ -32,7 +37,7 @@ export function buildMacStorage({force=false}={}) {
   const output=path.join(dir,'StorageGuard-'+digest.digest('hex').slice(0,16));
   if(!force&&fs.existsSync(output))return output;
   fs.mkdirSync(dir,{recursive:true,mode:0o700});const temporary=output+'-'+randomUUID();
-  const build=spawnSync(compiler,['-O','-parse-as-library','-sdk',sdk,'-target',target,'-o',temporary,...sources],{encoding:'utf8',timeout:60000});
-  if(build.status!==0)throw Error('macOS storage compilation failed: '+(build.stderr||build.stdout));
+  const build=spawnSync(compiler,['-O','-parse-as-library','-sdk',sdk,'-target',target,'-o',temporary,...sources],{encoding:'utf8',timeout:120000});
+  checkMacStorageBuild(build);
   fs.chmodSync(temporary,0o755);fs.renameSync(temporary,output);return output;
 }

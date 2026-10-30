@@ -1,5 +1,13 @@
 # Reliability and updates implementation log
 
+Intel CI job `123898938830` at `f9aa5c2` failed compiling the Mac storage
+helper with no compiler output. The prior 60-second spawn result discarded its
+error and signal, so the log cannot establish whether the compiler timed out,
+was killed, or failed silently. The candidate uses the same 120-second bound
+as the Mac host build and reports timeout, spawn failure, exit and signal
+separately. Synthetic tests cover error classification; a new Intel CI run is
+needed and a longer bound does not prove the original cause or fix.
+
 Failure-aware waits now request up to 500 nodes and refuse a matched success
 when the verified view has known native truncation, a row limit, or unread text.
 The batch retains its fresh frame and skips subsequent input. Focused synthetic
