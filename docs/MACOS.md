@@ -46,7 +46,7 @@ These CI artifacts are temporary development downloads, not release assets.
    and the project's own Sidecar, preserving existing configuration and a rollback
    backup. The default target is
    `~/Library/Application Support/AntigravityComputerUse`.
-3. Run **Setup Mac Permissions.command** yourself. Approve the OS-requested
+3. Run **Setup.Mac.Permissions.command** yourself. Approve the OS-requested
    permissions in System Settings. The agent must not complete those prompts.
 4. Use `/computer-use` in Antigravity. The tool vocabulary is the same; `launch`
    accepts `.app` bundles and key chords accept `cmd` and `option`.

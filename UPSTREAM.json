@@ -360,7 +360,7 @@
     },
     {
       "path": "scripts/bundle.mjs",
-      "sha256": "6c8ed4399c53b73868bcb06f6811afff936d8e56c19de9e642769cb72f37e18b"
+      "sha256": "cd5301ad143857cfd0eba9e8c0e115cef75fe9d217881378fa54f5ab2bf84e97"
     },
     {
       "path": "tests/install.test.mjs",
@@ -604,15 +604,15 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "204bf96b24a73e9d5d2d326730a2a17f3359916aa55e4d1424fc7390bc2626a4"
+      "sha256": "8e348bac0e356dd9ffd09fcc7743e329d88b5f1c765910e60eb1908a24ce2998"
     },
     {
       "path": "docs/MACOS.md",
-      "sha256": "401398ab81bfcd38abfb9ed197a5803c994485c5ccd6a3d59de369a5537893e2"
+      "sha256": "246566ad83ab6e55abf99a6882eb683f5cf6e40f363a02f89c4134a45a1ec9ac"
     },
     {
       "path": "server/update-core.mjs",
-      "sha256": "519148265d2932f87c8c12f5cd3c4eb453125bae85fe767e74157face91586cb"
+      "sha256": "1f90101780536b20683c10dfc4570c9867bcd288b0d33183b0f1d54cd4310d0f"
     },
     {
       "path": "server/auto-update.mjs",
@@ -640,7 +640,7 @@
     },
     {
       "path": "tests/update-transaction.test.mjs",
-      "sha256": "d43bc44f47a92aeaaa2f59673f5b3106bccd50b34df337947794e4108ad34511"
+      "sha256": "9c2ad7b83126892a2c76fc29a5f8f376c22a1a43345b7fd03e06bb14f940a883"
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",

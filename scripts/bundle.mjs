@@ -36,7 +36,7 @@ if(process.platform==='win32')fs.writeFileSync(path.join(out,'install.cmd'),'@ec
 else {
  for(const [name,body]of [
   ['install.command','#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec ./node ./scripts/install.mjs --integration direct --sidecar "$@"\n'],
-  ['Setup Mac Permissions.command','#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec /usr/bin/open ./bin/AxonHost.app --args --setup\n']
+  ['Setup.Mac.Permissions.command','#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec /usr/bin/open ./bin/AxonHost.app --args --setup\n']
  ]){fs.writeFileSync(path.join(out,name),body,{mode:0o755});}
  fs.chmodSync(path.join(out,platform.node),0o755);fs.chmodSync(path.join(out,'bin',platform.storage),0o755);
 }
