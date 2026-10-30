@@ -37,6 +37,19 @@ test('a text-only wait confirms the final tree without capturing a screenshot',a
  const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',with_image:false});
  assert.equal(result.matched,true);assert.deepEqual(flags,[false,false]);assert(!frames.has('s1'));assert(frames.has('s2'));
 });
+test('wait timeout stays bounded when the wall clock moves backwards',async()=>{
+ const frames=new Map();let reads=0,clock=100000;const original=Date.now;
+ const runtime={frames,check(){},async observe(){if(++reads>6)throw Error('unbounded wait');const id='s'+reads;frames.set(id,{});return{metadata:{observation_id:id,tree:'Loading'}};}};
+ try{Date.now=()=>clock-=10000;const result=await Runtime.prototype.wait.call(runtime,{hwnd:7,until:'Ready',timeout_ms:100});assert.equal(result.timed_out,true);assert(reads<=6);}
+ finally{Date.now=original;}
+});
+test('change-wait timeout stays bounded when the wall clock moves backwards',async()=>{
+ const app={hwnd:7,pid:9,started:'one',path:'example.exe'},key=appKey(app),original=Date.now;
+ const frames=new Map([['initial',{at:original(),hwnd:7,key,workerEpoch:1,viewTree:'"App" hwnd=7\nLoading'}]]);let reads=0,clock=original();
+ const runtime={frames,generation:1,driver:{epoch:1},check(){},async grant(){return app;},async observe(){if(++reads>6)throw Error('unbounded wait');const id='s'+reads;frames.set(id,{key,workerEpoch:1});return {metadata:{observation_id:id,tree:id+' "App" hwnd=7\nLoading'}};}};
+ try{Date.now=()=>clock-=10000;const result=await Runtime.prototype.waitChange.call(runtime,{hwnd:7,observation_id:'initial',reason:'Wait',timeout_ms:100});assert.equal(result.timed_out,true);assert(reads<=6);}
+ finally{Date.now=original;}
+});
 
 test('an unmet wait retains completed actions and never sends following input',async()=>{
  let inputs=0;

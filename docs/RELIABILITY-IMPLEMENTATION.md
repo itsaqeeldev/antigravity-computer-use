@@ -1179,6 +1179,12 @@ native failure or complete native batch qualification. An IPC regression also
 checks that a failure without an error object receives explicit no-replay
 guidance when the step reports completed input.
 
+Issue #16 tracks polling waits that used wall-clock deadlines. `wait` and
+`wait_change` now use a monotonic deadline; isolated tests simulate a clock
+moving backwards. This bounds polling decisions, not a native observation
+already in flight, which has its own timeout. Real-host qualification remains
+pending.
+
 Issue #13 records that the listener's idle timer could clear an open task's
 grants and frames or shut down a paused task during a long decision gap. The
 timer now defers both policies for open or paused tasks. Isolated IPC tests

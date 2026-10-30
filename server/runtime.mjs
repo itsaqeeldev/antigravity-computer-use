@@ -321,7 +321,7 @@ export class Runtime {
     catch(error){return {result,input_completed:true,verification_required:true,observe_before_continuing:true,verification_error:{code:error.code||'observation_failed',message:error.message,...(error.hint?{hint:error.hint}:{})}};}
   }
   async wait(args){
-    const until=Date.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);let latest;
+    const until=performance.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);let latest;
     do {
       this.check();latest=await this.observe({hwnd:args.hwnd,with_image:false,query:args.query});
       const tree=latest.metadata.tree.toLowerCase();
@@ -337,12 +337,12 @@ export class Runtime {
         if(verifiedFailure)return {matched:false,aborted:true,abort_match:verifiedFailure,...verified};
         if(verifiedTree.includes(args.until.toLowerCase()))return {matched:true,...verified};
         this.frames.delete(verified.metadata.observation_id);
-        if(Date.now()>=until)break;
+        if(performance.now()>=until)break;
       } else {
         this.frames.delete(latest.metadata.observation_id);
-        if(Date.now()>=until)break;
+        if(performance.now()>=until)break;
       }
-      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
+      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
     const final=await this.observe({hwnd:args.hwnd,query:args.query,with_image:args.with_image});
     const finalTree=final.metadata.tree.toLowerCase();
@@ -358,7 +358,7 @@ export class Runtime {
     const generation=this.generation,w=await this.grant(Number(args.hwnd),args.reason);this.check();
     if(generation!==this.generation)fail('control_changed','Control changed. Take a fresh snapshot.');
     if(baseline.key!==appKey(w))fail('identity_changed','Application identity changed since observation.');
-    const until=Date.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);
+    const until=performance.now()+Math.min(Math.max(args.timeout_ms||15000,100),30000);
     do {
       this.check();
       const latest=await this.observe({hwnd:args.hwnd,with_image:false,query:baseline.viewQuery,max_nodes:baseline.viewMaxNodes,reason:args.reason});
@@ -366,9 +366,9 @@ export class Runtime {
       const current=this.frames.get(latest.metadata.observation_id);
       if(!current||current.key!==baseline.key||current.workerEpoch!==baseline.workerEpoch){this.frames.delete(latest.metadata.observation_id);fail('identity_changed','Application identity or native worker changed while waiting. Take a fresh snapshot.');}
       if(comparableView(latest.metadata.tree)!==baseline.viewTree)return {changed:true,...latest};
-      if(Date.now()>=until)return {changed:false,timed_out:true,...latest};
+      if(performance.now()>=until)return {changed:false,timed_out:true,...latest};
       this.frames.delete(latest.metadata.observation_id);
-      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-Date.now()))));
+      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
     }while(true);
   }
   async finish({preserveTask=false}={}){this.generation++;this.frames.clear();this.grants.clear();this.guardian.send({op:'end'});if(!['stopped','paused'].includes(this.state)){this.state='idle';this.lastControlReason='completed';}this.token='';await this.driver.abort?.();
