@@ -115,6 +115,19 @@ architecture. This is a signed candidate only. It is not a published release,
 does not establish Gatekeeper/notarization, and has not replaced the user's
 installed Windows build.
 
+## Windows physical Stop qualification — 30 October 2026
+
+Antigravity qualified the installed Stop-marker build
+`b8d1ad546cdedcb77555efef3e22093dc8d6bc406ef715d561c97e0d6a913f31` through a
+real Notepad held-drag task. The operator physically pressed Esc while the
+mouse button was held. Receipt `5944.101` and the private record
+`.localdata/physical-stop-qualified-20261030.json` establish `state: stopped`,
+`control_reason: escape`, a persisted `emergency.stop` marker, a clean native
+held-input ledger, three skipped queued actions, a refused post-Stop snapshot,
+and `human_resume_required` with `replay_allowed: false`. This clears the
+physical Stop/cleanup boundary for that installed build. Human Re-arm and the
+second complete task without restarting Antigravity are still pending.
+
 ## Historical checkpoints
 
 ## 28 October stable Upscaly demo and remaining problems

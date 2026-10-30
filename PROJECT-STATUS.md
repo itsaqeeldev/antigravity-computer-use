@@ -19,6 +19,12 @@ project-ancestor ACL limitation and both Mac native signed-bundle checks passed.
 The candidate is retained privately and has not been published or installed
 over the user's current Windows build.
 
+Windows physical Stop qualification now passes on the installed `b8d1ad5…`
+build. Antigravity recorded a real held Notepad drag interrupted by physical
+Esc, persisted Stop, cleaned the held-input ledger, skipped queued actions,
+refused a post-Stop snapshot and rejected software resume. Human Re-arm and a
+second complete task without restarting Antigravity remain open.
+
 ## Candidate installation and Antigravity smoke — 30 October 2026
 
 Candidate source `89b355e` is installed at `D:\AntigravityComputerUse-ed035f9812`
