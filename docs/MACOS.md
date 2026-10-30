@@ -57,7 +57,10 @@ From a terminal in the extracted folder, installation is also one command:
 ./install.command
 ```
 
-Only an operator should opt into host-managed permissions:
+Sidecar installations use host-managed permissions by default so Antigravity's
+host/Turbo policy can authorize ordinary actions without repeated native
+approval modals. For a manual direct installation, only an operator should opt
+into host-managed permissions:
 
 ```sh
 ./install.command --permission-mode host-managed

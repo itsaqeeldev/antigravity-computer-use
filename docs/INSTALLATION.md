@@ -34,7 +34,7 @@ replaceable cache ancestors the installer refuses rather than changing parent AC
 
 1. Download the complete Windows ZIP and SHA256 checksums from [the beta.2 release](https://github.com/shayann07/antigravity-computer-use/releases/tag/v0.3.0-beta.2). Source builds use Node 24.20.0 and the Windows compiler: `npm test`, then `npm run bundle`. Release packaging can use `node scripts/bundle.mjs --output <new-empty-folder>` to preserve previous output.
 2. Extract/copy the complete `dist/AntigravityComputerUse-windows-x64` folder. Its prebuilt helper and Node are required; normal installation needs no compiler, Python, new model account or credentials.
-3. For App-managed startup, run `install.cmd --integration direct --sidecar`. Direct integration is the default; omitting `--sidecar` uses manual local startup. The installer prints the release and exact backup paths.
+3. For App-managed startup, run `install.cmd --integration direct --sidecar`. Direct integration is the default; omitting `--sidecar` uses manual local startup. Sidecar installs default to `host-managed` permission mode so Antigravity's host/Turbo policy can authorize ordinary actions without repeated native approval modals; an existing explicit mode is preserved. The installer prints the release and exact backup paths.
 4. Start a fresh Antigravity App conversation, invoke `/computer-use` and describe the task. The skill calls its pinned local script, opens returned screenshot files and uses native input. No MCP restart is required for this route. An old already-running MCP server may remain in an old conversation until the host refreshes; do not mix both controllers.
 
 ```powershell
@@ -58,7 +58,7 @@ The installer verifies manifest file hashes before making changes and refuses to
 
 ## Permission policy
 
-Direct installations default to standalone native app/session and sensitive-operation dialogs. To rely on the host's terminal execution review instead, the operator can explicitly use:
+Manual direct installations default to standalone native app/session and sensitive-operation dialogs. Sidecar installations default to host-managed mode; to opt into host-managed mode explicitly for a manual direct installation, use:
 
 ```powershell
 .\install.cmd --integration direct --permission-mode host-managed
