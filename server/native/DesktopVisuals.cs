@@ -105,15 +105,40 @@ namespace Axon {
         internal static void Hud(Graphics g,string state,int hover,float phase,string activity=null) {
             g.SmoothingMode=SmoothingMode.AntiAlias;g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             RectangleF panel=new RectangleF(1,1,HudWidth-2,HudHeight-2);Color accent=StateColor(state);
+            // The palette follows LiquidGlass's measured dark-chrome/clear-bar
+            // contract while keeping this safety-critical overlay dependency-free:
+            // the published WinForms adapter targets modern .NET/Skia and only
+            // captures controls owned by its host. This layered HUD must never
+            // capture foreign desktop pixels or require a second runtime.
             using(GraphicsPath shape=Overlay.RoundRect(panel,21)) {
-                using(LinearGradientBrush bg=new LinearGradientBrush(panel,Color.FromArgb(34,37,42),Color.FromArgb(25,28,32),90f))g.FillPath(bg,shape);
-                using(Pen edge=new Pen(Color.FromArgb(65,164,178,191),1))g.DrawPath(edge,shape);
+                using(LinearGradientBrush bg=new LinearGradientBrush(panel,Color.FromArgb(224,51,61,76),Color.FromArgb(182,12,17,27),90f)) {
+                    bg.InterpolationColors=new ColorBlend {
+                        Colors=new[]{Color.FromArgb(226,59,70,88),Color.FromArgb(208,31,39,54),Color.FromArgb(178,10,14,23)},
+                        Positions=new[]{0f,.42f,1f}
+                    };
+                    g.FillPath(bg,shape);
+                }
+                using(GraphicsPath sheen=new GraphicsPath()) {
+                    sheen.AddEllipse(-42,-58,220,108);
+                    using(PathGradientBrush light=new PathGradientBrush(sheen)) {
+                        light.CenterColor=Color.FromArgb(38,238,248,255);light.SurroundColors=new[]{Color.Transparent};
+                        g.SetClip(shape);g.FillPath(light,sheen);g.ResetClip();
+                    }
+                }
+                using(Pen outer=new Pen(Color.FromArgb(104,213,231,246),1f))g.DrawPath(outer,shape);
+                using(Pen inner=new Pen(Color.FromArgb(28,255,255,255),1f))g.DrawPath(inner,Overlay.RoundRect(new RectangleF(2,2,HudWidth-4,HudHeight-4),20));
+            }
+            using(GraphicsPath dotShape=new GraphicsPath()) {
+                dotShape.AddEllipse(10,13,18,18);
+                using(PathGradientBrush dotGlow=new PathGradientBrush(dotShape)) {
+                    int alpha=state=="active"?(int)(BreathLevel*112):54;dotGlow.CenterColor=Color.FromArgb(alpha,accent);dotGlow.SurroundColors=new[]{Color.Transparent};g.FillPath(dotGlow,dotShape);
+                }
             }
             using(SolidBrush dot=new SolidBrush(Color.FromArgb(state=="active"?(int)(BreathLevel*255):220,accent)))g.FillEllipse(dot,16,19,6,6);
             string detail=state=="active"?(String.IsNullOrEmpty(activity)?"Antigravity is working":activity+" with Antigravity"):state=="paused"?"Paused · you have control":state=="stopped"?"Stopped · re-arm to begin":"Antigravity is ready";
             Label(g,detail,9,FontStyle.Regular,Color.FromArgb(234,237,239),new RectangleF(32,5,178,34));
             Rectangle hot=hover==1?ToggleRect:hover==2?StopRect:ModeRect;
-            if(hover!=0)using(GraphicsPath r=Overlay.RoundRect(hot,16))using(SolidBrush b=new SolidBrush(hover==2?Color.FromArgb(68,43,48):Color.FromArgb(53,59,65)))g.FillPath(b,r);
+            if(hover!=0)using(GraphicsPath r=Overlay.RoundRect(hot,16))using(LinearGradientBrush b=new LinearGradientBrush(hot,hover==2?Color.FromArgb(114,107,52,65):Color.FromArgb(86,90,113,137),hover==2?Color.FromArgb(72,59,31,42):Color.FromArgb(54,45,61,78),90f))g.FillPath(b,r);
             using(SolidBrush dots=new SolidBrush(Color.FromArgb(166,175,183)))for(int i=0;i<3;i++)g.FillEllipse(dots,223+i*5,21,2,2);
             using(Pen icon=new Pen(Color.FromArgb(220,227,232),1.6f)) {
                 icon.StartCap=icon.EndCap=LineCap.Round;
