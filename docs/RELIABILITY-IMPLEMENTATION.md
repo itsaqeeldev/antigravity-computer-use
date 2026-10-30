@@ -1122,6 +1122,12 @@ These checks send no desktop input. Event-dispatch interleavings and physical Ma
 input cleanup and Stop remain pending; the lock does not prove that a posted
 release reached macOS.
 
+The native Mac journal now refuses to proceed when it cannot flush the saved
+file before input dispatch. This is a file-flush check, not proof of directory
+metadata durability or power-loss survival: Apple's [fsync documentation](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fsync.2.html)
+describes additional drive-level limitations. Mac CI and physical crash/power
+qualification remain required for this change.
+
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
 therefore cannot distinguish our synthetic event from physical user input or

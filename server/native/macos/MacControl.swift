@@ -274,6 +274,16 @@ enum MacInputLedger {
     static func save(_ value: [String: Any]) throws {
         try JSONSerialization.data(withJSONObject: value).write(to: URL(fileURLWithPath: path), options: [.atomic])
         guard chmod(path, 0o600) == 0 else { throw AxonError("input_cleanup_failed", "Cannot protect the input journal.") }
+        // A held input is recorded before it is posted. Do not proceed if the
+        // journal bytes cannot be flushed to the file the process just wrote.
+        let fd = open(path, O_RDWR | O_NOFOLLOW)
+        guard fd >= 0 else { throw AxonError("input_cleanup_failed", "Cannot open the input journal for flushing.") }
+        defer { close(fd) }
+        var written = stat()
+        guard fstat(fd, &written) == 0, written.st_uid == getuid(), written.st_mode & S_IFMT == S_IFREG,
+              written.st_mode & 0o077 == 0, written.st_nlink == 1, fsync(fd) == 0 else {
+            throw AxonError("input_cleanup_failed", "Cannot confirm input journal file flush.")
+        }
     }
     static func record(_ event: CGEvent, before: Bool) throws {
         var value = try read()
