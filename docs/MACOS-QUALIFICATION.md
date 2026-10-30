@@ -86,3 +86,56 @@ support the next report.
 
 Keep Mac experimental and the public release unchanged while these gates are
 missing. Source/CI fixes and reported hardware observations are separate evidence.
+
+## 30 October 2026 qualification checkpoint: covering-window defect repair and candidate smoke
+
+### Tested Identities
+
+- Hardware: Intel MacBook Pro (16-inch, 2019), Intel Core i7-9750H CPU @ 2.60GHz, native x86_64.
+- OS tuple: macOS 26.6.2, Darwin Kernel Version 25.6.0 (x86_64), build 25G83.
+- Toolchain: Node v24.20.0 (`darwin-x64`), Swift 6.3.1 (`swiftlang-6.3.1.1.2 clang-2100.0.123.102`), target `x86_64-apple-macosx26.0`.
+- Antigravity IDE: 2.28.2 (PID 2355 `/Applications/Antigravity.app/Contents/Resources/bin/language_server`).
+- Upstream base requested: `32fb9916a215fc60b7f172774ea41c29dca2f600`.
+- Actual upstream head fetched: `fb6cb0dba7d319ece00908e07b8f76028554368c` on `origin/codex/review-intel-mac`.
+- Built bundle: `1eb8de7825d00230bdd4f51fbfc2c2e412463127924b7aa6535e56aa2969435c`, version `0.3.0-beta.3`, 110 sealed files (`darwin-x64`).
+- Installed release: `/Users/ghaz-webscare/Library/Application Support/AntigravityComputerUse/releases/0.3.0-beta.3-2026-10-30T08-01-46-194Z-eb6e744d`.
+- Skill pointer: verified matching `/Users/ghaz-webscare/.gemini/config/skills/computer-use`.
+
+### Defect Identified and Repaired
+
+- **Mac Covering-Window System Daemon Collision (`MacOperations.swift`)**:
+  In `verifyCoveringWindow`, `CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)` returns the macOS `Dock` window (PID 536, layer 20, name `"Dock"`) with full-screen bounds `(0, 0, 1792, 1120)` as well as `Window Server` (layer 24). Because `verifyCoveringWindow` previously only skipped the guardian's own click-through HUD, any click coordinates inside the approved application window (e.g. TextEdit) matched candidate Dock first in Z-order. Dock's window number (26) did not match the expected window (483), causing every click on macOS to fail closed with `obscured: "Another window covers this point. No click was sent."`.
+- **Repair**:
+  In `server/native/macos/MacOperations.swift`, candidate evaluation now explicitly skips system background daemons:
+  ```swift
+  let ownerName = candidate[kCGWindowOwnerName as String] as? String ?? ""
+  if ownerName == "Dock" || ownerName == "Window Server" { continue }
+  ```
+  On-device Swift verification proved that target application windows (TextEdit window 483) are correctly matched and verified, while covering application windows (such as overlapping Antigravity or Claude windows) remain strictly detected and refused.
+
+### Test Results
+
+| Test Suite / Script | Result | Details |
+| --- | --- | --- |
+| Full Node Test Suite | PASSED | 414 passed, 0 failed, 30 skipped (Windows NTFS/C# only), 79.4s |
+| `tests/macos-storage.test.mjs` | PASSED | 4/4 passed (concurrency, private ACLs, link refusal, kernel lease) |
+| `tests/macos-tool-probe.test.mjs` | PASSED | 8/8 passed (concurrent builds, publication, tool probing) |
+| `scripts/macos-native-check.mjs` | PASSED | AxonHost control contract 1 checks passed; POSIX private storage verified |
+| `scripts/check-provenance.mjs` | PASSED | 175 of 175 recorded hashes verified (updated for `MacOperations.swift`) |
+| `scripts/verify-install.mjs` | PASSED | 110 files verified, build ID `1eb8de78...` matched, skill matched |
+| `scripts/macos-install-check.mjs` | PASSED | Signed update, rollback, Stop preservation, sealed installation |
+
+### Device Acceptance Results
+
+- **Application & Window Discovery**: `apps` correctly enumerated running GUI windows (TextEdit `Untitled 2`, Google Chrome with Slack, Antigravity, Android Studio, Finder).
+- **Snapshot & Accessibility**: `snapshot` returned structured accessibility tree elements (`Edit #First Text View`, checkboxes, combo boxes) and 586x488 JPEG visual observation.
+- **Window Activation**: `focus` successfully brought TextEdit to foreground with verified observation frame and image.
+- **Sensitive Operation Policy**: Sensitive action prompted native human approval modal; timed out after 90 seconds and properly failed closed with `permission_denied` and `await_user_decision`.
+- **Emergency Stop & Issue #26**: Emergency Stop state survived controller shutdown and restart (`persisted_emergency_stop`), explicit controls refused start, and human-only re-arm requirement enforced on native HUD bar.
+- **Update and Rollback**: Isolated test-signing qualification passed (36/36 recovery-update tests, rollback preserved settings and pins).
+
+### Evidence Boundaries
+
+- Ad-hoc and local test signing with substituted transport qualifies atomic rollback and deployment invariants, not production Apple Developer ID notarization or Gatekeeper distribution.
+- Physical Esc/Stop requires human physical keyboard input; simulated physical input was not manufactured.
+
