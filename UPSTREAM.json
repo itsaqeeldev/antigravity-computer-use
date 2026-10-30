@@ -348,7 +348,7 @@
     },
     {
       "path": "scripts/install.mjs",
-      "sha256": "7770bd0d40cb9babd222d9a893a64eb0c1a3839daf070b79f0b4a0184f651aec"
+      "sha256": "ee7e190ccf71acf39dca1a5653398934d5b5a77389a4af75bcbb935d84fec578"
     },
     {
       "path": "scripts/rollback.mjs",
@@ -764,7 +764,7 @@
     },
     {
       "path": "docs/MACOS-QUALIFICATION.md",
-      "sha256": "20abca12c236e5d2de7cc109731931f3cf57cafa299b6240017cfb72ba38faf2"
+      "sha256": "1b3f35e18a24736bca96075d4c00fcc947ce3d74f5a1d0614f0e012e0c82382c"
     },
     {
       "path": "tests/MacStorageMarkerWriter.swift",
