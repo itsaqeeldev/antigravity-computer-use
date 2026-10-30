@@ -100,7 +100,11 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
         if(!closing)try{ownership.assertHeld();}catch{ownershipLost=true;}
         if(ownershipLost&&!['computer_status','computer_stop','computer_end','computer_shutdown'].includes(name))throw Object.assign(Error('Controller ownership was lost. Control is stopped; do not send or replay input.'),{code:'service_ownership_lost',hint:'End/shutdown for cleanup, then restart the App sidecar. A latched Stop still needs local human re-arm. Do not repeat the interrupted action.'});
         if(closing&&!['computer_status','computer_stop','computer_shutdown'].includes(name))throw Error('Desktop service is shutting down; no more actions are accepted.');
-        const foreignShutdown=name==='computer_shutdown'&&(busy||runtime.status().task_open!==false);
+        let foreignShutdown=false;
+        if(name==='computer_shutdown'){
+          const state=runtime.status();
+          foreignShutdown=busy||state?.task_open!==false||!['idle','stopped'].includes(state?.state);
+        }
         if(request.expected_build_id!==BUILD_ID&&(!['computer_status','computer_stop','computer_pause','computer_shutdown'].includes(name)||foreignShutdown))
           throw Object.assign(Error('This command belongs to a different build. Use the running release; do not silently mix runtime versions.'),{code:'version_mismatch'});
         if(['standalone','host-managed'].includes(runtime.permissionMode)&&request.expected_permission_mode!==runtime.permissionMode&&(!['computer_status','computer_stop','computer_pause','computer_shutdown'].includes(name)||foreignShutdown))

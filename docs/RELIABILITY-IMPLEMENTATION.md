@@ -1143,7 +1143,8 @@ ownership is not identified. A regression checks those limits; issues #7 and
 #10 remain open and this wording change does not implement task isolation.
 As a partial mitigation for #7, IPC now refuses End from a different build or
 permission policy, and refuses a mismatched client's shutdown while an operation
-is in flight or task state is open or unknown. Status, Pause and emergency Stop remain available; shutdown
+is in flight, task state is open or unknown, or control is active or paused.
+Status, Pause and emergency Stop remain available; shutdown
 of a confirmed idle service remains possible. This does not identify two host
 conversations using the same build and policy. These client-supplied fields are
 not credentials and can be imitated; the check prevents accidental mismatch,

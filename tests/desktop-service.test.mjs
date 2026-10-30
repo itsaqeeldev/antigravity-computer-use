@@ -184,8 +184,8 @@ test('status exposes a different client build and mismatched actions are refused
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('foreign build or policy cannot end or shut down an open task, but can stop',async()=>{
- const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-foreign-end-'));let ends=0,stops=0,closes=0,open=true;
- const runtime={permissionMode:'host-managed',status:()=>({state:'active',task_open:open,permission_mode:'host-managed'}),async finish(){ends++;return {ended:true};},async stop(){stops++;return {stopped:true};},async close(){closes++;}};
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-foreign-end-'));let ends=0,stops=0,closes=0,open=true,state='active';
+ const runtime={permissionMode:'host-managed',status:()=>({state,task_open:open,permission_mode:'host-managed'}),async finish(){ends++;return {ended:true};},async stop(){stops++;return {stopped:true};},async close(){closes++;}};
  const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
  const send=(command,build,mode)=>new Promise((resolve,reject)=>{const socket=net.createConnection(session.pipe);socket.setEncoding('utf8');let data='';socket.on('error',reject);socket.on('data',x=>data+=x);socket.on('end',()=>resolve(JSON.parse(data)));socket.on('connect',()=>socket.write(JSON.stringify({secret:session.secret,command,expected_build_id:build,expected_permission_mode:mode,args:{}})+'\n'));});
  try{
@@ -195,7 +195,8 @@ test('foreign build or policy cannot end or shut down an open task, but can stop
   }
   assert.equal(ends,0);assert.equal(closes,0);assert.equal(stops,2);assert(fs.existsSync(service.file));
   open=undefined;assert.equal((await send('shutdown','older-build','host-managed')).error.code,'version_mismatch');assert.equal(closes,0);
-  open=false;assert.equal((await send('shutdown','older-build','standalone')).closed,true);
+  open=false;for(state of ['active','paused','unknown']){assert.equal((await send('shutdown','older-build','host-managed')).error.code,'version_mismatch');assert.equal(closes,0);}
+  state='idle';assert.equal((await send('shutdown','older-build','standalone')).closed,true);
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('foreign shutdown is refused while any operation is in flight',{timeout:30000},async()=>{
