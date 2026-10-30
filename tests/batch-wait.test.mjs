@@ -125,6 +125,13 @@ test('a text-only timeout in a real batch never sends the next action',async()=>
  const result=await call(runtime,'computer_run',args([{kind:'wait',until:'Ready',timeout_ms:100,with_image:false},{kind:'click',name:'Publish'}]));
  assert.equal(result.verification_error.code,'wait_condition_timeout');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v1');assert.equal(reads,1);assert.equal(inputs,0);
 });
+test('expired text-only verification returns its last frame and stops the batch',async()=>{
+ let reads=0,inputs=0;const frames=new Map();
+ const runtime={frames,check(){},async action(){inputs++;return {};},async observe(){const id='v'+(++reads);frames.set(id,{});if(reads===2)await new Promise(r=>setTimeout(r,120));return{metadata:{observation_id:id,tree:reads===1?'Ready':'Loading'}};}};
+ runtime.wait=Runtime.prototype.wait.bind(runtime);
+ const result=await call(runtime,'computer_run',args([{kind:'wait',until:'Ready',timeout_ms:100,with_image:false},{kind:'click',name:'Publish'}]));
+ assert.equal(result.verification_error.code,'wait_condition_timeout');assert.equal(result.batch.skipped,1);assert.equal(result.metadata.observation_id,'v2');assert.equal(reads,2);assert.equal(inputs,0);assert(!frames.has('v1'));assert(frames.has('v2'));
+});
 
 test('wait_change compares the original view and returns a fresh usable observation',async()=>{
  const app={hwnd:7,pid:9,started:'one',path:'example.exe'};const key=appKey(app);

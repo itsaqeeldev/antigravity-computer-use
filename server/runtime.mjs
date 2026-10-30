@@ -343,6 +343,7 @@ export class Runtime {
         const verifiedFailure=(args.abort_on||[]).find(text=>verifiedTree.includes(text.toLowerCase()));
         if(verifiedFailure)return {matched:false,aborted:true,abort_match:verifiedFailure,...verified};
         if(verifiedTree.includes(args.until.toLowerCase()))return {matched:true,...verified};
+        if(args.with_image===false&&performance.now()>=until)return {matched:false,timed_out:true,...verified};
         this.frames.delete(verified.metadata.observation_id);
         if(performance.now()>=until)break;
       } else {

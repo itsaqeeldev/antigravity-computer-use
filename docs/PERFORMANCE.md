@@ -9,6 +9,9 @@ observations to 259 ms with one. This is a single synthetic failure-path probe,
 not an Antigravity task benchmark. Image-requested waits and success/failure
 verification retain their capture behavior. An in-flight observation can still
 overrun the budget; the hard-deadline work in issue #25 remains open.
+If a success label disappears during the verification capture after the budget
+expires, a text-only batch returns that verified frame as a timeout and skips
+later actions rather than starting a third capture.
 
 ## 30 October 2026: post-action settle investigation
 
