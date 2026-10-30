@@ -296,7 +296,7 @@
     },
     {
       "path": "server/desktop-tools.mjs",
-      "sha256": "5afa80f42fcddb8ada54ce8b4de2fbb42fc7add184c25607e856b86464fddaea"
+      "sha256": "bc3119facb33a752a5aa3be01a38bc12d41bc7f939cacb52d7425720b2ed22f1"
     },
     {
       "path": "scripts/desktop.mjs",
@@ -472,7 +472,7 @@
     },
     {
       "path": "tests/batch-wait.test.mjs",
-      "sha256": "1721c4e43e7b3c749e7b7e1811cdf786af1b025a73b47e5a713c82f7bf764150"
+      "sha256": "23ac0a8e65c1b9e3928a3a7d8421f120c455d6815788d63bbf00c61a52d07994"
     },
     {
       "path": "skills/computer-use/references/recovery.md",
@@ -604,7 +604,7 @@
     },
     {
       "path": "skills/computer-use/SKILL.md",
-      "sha256": "5fefc5055cbe49cb9570d97ac61e7093d4a4601c1debb30663cb57e72966b39e"
+      "sha256": "2e0a606233960ae05c913a9e569f8b3289130942a04a696a71d7fbfb13d9ae0b"
     },
     {
       "path": "docs/MACOS.md",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "e19ba3b7ff0fbac73024529098a5b48a94634a974f6f0394a36b95541aeb61ef"
+      "sha256": "ef53d1e3267298c0b592c04daa2122ee5c2e1fbefb224e8e5473e80e58d88b9d"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",

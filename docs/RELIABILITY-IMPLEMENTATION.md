@@ -1,5 +1,12 @@
 # Reliability and updates implementation log
 
+Failure-aware waits now reject a nonempty query filter, including during whole-batch
+preflight before any input, because filtering could hide the failure label while
+exposing success. This is a deliberate compatibility restriction. Unfiltered
+accessibility trees can still omit offscreen, truncated or inaccessible errors;
+the result needs independent verification. A focused inert regression covers
+direct validation and the no-input batch boundary; real-app qualification is pending.
+
 The active goal is the complete “Reliable computer use, automatic updates and
 shared Mac support” plan. This log records implementation and evidence separately.
 Review branch: `codex/review-intel-mac`. All private test output stays

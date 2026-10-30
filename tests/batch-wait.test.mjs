@@ -96,6 +96,16 @@ test('wait abort labels are bounded and success remains compatible',async()=>{
  assert.equal(result.matched,true);assert.equal(result.metadata.observation_id,'s2');assert(!runtime.frames.has('s1'));
 });
 
+test('filtered failure-aware wait is refused before any batch input',async()=>{
+ let inputs=0;
+ const runtime={async action(){inputs++;return{};},async wait(){throw Error('unexpected wait');}};
+ await assert.rejects(call(runtime,'computer_run',args([{kind:'click',name:'Start'},{kind:'wait',until:'Ready',abort_on:['Failed'],query:'Ready'}])),/query can hide failure labels/);
+ assert.equal(inputs,0);
+ assert.throws(()=>validate('computer_wait',{hwnd:7,until:'Ready',abort_on:['Failed'],query:'Ready',reason:'Wait'}),/query can hide failure labels/);
+ validate('computer_wait',{hwnd:7,until:'Ready',query:'Ready',reason:'Wait'});
+ validate('computer_wait',{hwnd:7,until:'Ready',abort_on:['Failed'],reason:'Wait'});
+});
+
 test('wait rechecks the returned frame and aborts a batch if failure replaces a transient success',async()=>{
  let input=0,reads=0;const frames=new Map();
  const runtime={frames,check(){},async action(){input++;return{metadata:{observation_id:'post-action'}};},
