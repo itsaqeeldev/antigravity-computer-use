@@ -102,6 +102,18 @@ source head. Preserve human-only checks and use
 device run. Keep the goal open until the remaining acceptance and release gates
 are verified.
 
+## Signed candidate checkpoint — 30 October 2026
+
+Maintainer-only workflow [41031566735](https://github.com/shayann07/antigravity-computer-use/actions/runs/41031566735)
+ran on exact head `00e9cbc` with sequence `41030254030`. Windows x64, macOS
+ARM64 and macOS Intel signed payloads were generated and independently verified;
+the Windows job recorded the project-ancestor ACL limitation, while both Mac
+native signed-bundle checks passed. Downloaded artifacts were checked against
+the public trust root: 108 Windows payloads and 111 payloads per Mac
+architecture. This is a signed candidate only. It is not a published release,
+does not establish Gatekeeper/notarization, and has not replaced the user's
+installed Windows build.
+
 ## Historical checkpoints
 
 ## 28 October stable Upscaly demo and remaining problems

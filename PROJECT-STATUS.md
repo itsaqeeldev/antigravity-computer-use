@@ -12,6 +12,13 @@ this exact head. The device report is useful evidence, but physical held-input
 Esc/re-arm, a second complete on-device task, production signing and
 Gatekeeper/update transport remain release gates.
 
+The maintainer-only signed candidate workflow [41031566735](https://github.com/shayann07/antigravity-computer-use/actions/runs/41031566735)
+also passed on this exact head. It produced verified Windows x64, macOS ARM64
+and macOS Intel payloads using sequence `41030254030`; Windows recorded the
+project-ancestor ACL limitation and both Mac native signed-bundle checks passed.
+The candidate is retained privately and has not been published or installed
+over the user's current Windows build.
+
 ## Candidate installation and Antigravity smoke — 30 October 2026
 
 Candidate source `89b355e` is installed at `D:\AntigravityComputerUse-ed035f9812`
