@@ -1245,6 +1245,9 @@ The Mac termination wait now uses the same sleep-inclusive clock, refuses an
 unavailable clock, and remains bounded after wake. The watchdog also fails
 closed if that clock cannot be read; these changes await native CI and device
 sleep/wake verification.
+The Mac input-ledger lock wait now uses that same continuous clock and preserves
+the original lock error before reading the clock. The existing headless
+contention check applies; real sleep/wake remains unqualified.
 
 Issue #19 tracks Windows control previously remaining active when its crash
 watchdog failed to arm. The candidate now stops when monitoring is unavailable,

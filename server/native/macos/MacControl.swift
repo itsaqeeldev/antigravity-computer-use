@@ -308,10 +308,12 @@ enum MacInputLedger {
               held.st_mode & 0o077 == 0, held.st_dev == pinned.0, held.st_ino == pinned.1 else {
             throw AxonError("input_cleanup_failed", "The input lock is not private.")
         }
-        let deadline = ProcessInfo.processInfo.systemUptime + 1.0
+        let started = MacDeadline.now
+        guard started > 0 else { throw AxonError("input_cleanup_failed", "The input-lock clock is unavailable.") }
         while flock(fd, LOCK_EX | LOCK_NB) != 0 {
-            guard errno == EWOULDBLOCK || errno == EAGAIN || errno == EINTR,
-                  ProcessInfo.processInfo.systemUptime < deadline else {
+            let lockError = errno, now = MacDeadline.now
+            guard lockError == EWOULDBLOCK || lockError == EAGAIN || lockError == EINTR,
+                  now > 0, now >= started, now - started < 1000 else {
                 throw AxonError("input_cleanup_failed", "Input dispatch did not release its lock; cleanup is unconfirmed.")
             }
             Thread.sleep(forTimeInterval: 0.005)

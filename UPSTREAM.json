@@ -568,7 +568,7 @@
     },
     {
       "path": "server/native/macos/MacControl.swift",
-      "sha256": "d4bfaa170fe929d14dd14ee56b982b244b915a336e974513737061f7baeb2a4e"
+      "sha256": "9bf3b99c0c0b499b7a5bae1176f7e2057196ceb26dbb1304415c021257b13974"
     },
     {
       "path": "server/native/macos/MacGuardian.swift",
@@ -644,7 +644,7 @@
     },
     {
       "path": "docs/RELIABILITY-IMPLEMENTATION.md",
-      "sha256": "3ba2c0842fea3e28d14e599e44a08f21dbdaf2b41faa0d812e2432c716d2dca9"
+      "sha256": "c6773142827ffe227a6e2c5ee70f7d5526b07cdd238cc44bd9459517ad1b44ef"
     },
     {
       "path": "docs/MAC-QUALIFICATION-PROMPT.md",
