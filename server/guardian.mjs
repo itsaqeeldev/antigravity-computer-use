@@ -43,11 +43,13 @@ export class Guardian extends EventEmitter {
     await boot;
   }
   send(m){if(this.proc&&!this.proc.killed&&!this.proc.stdin.destroyed)this.proc.stdin.write(JSON.stringify(m)+'\n');}
-  async request(m){
+  async request(m,{timeoutMs}={}){
     await this.start();
     const id=++this.seq;
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{this.pending.delete(id);this.send({op:'stop'});reject(Object.assign(new Error('Local controls did not answer; inspect diagnostics.'),{code:'guardian_request_timeout'}));},m.op==='prompt'?95000:10000);
+      const defaultTimeout=m.op==='prompt'?95000:10000;
+      const timeout=Number.isFinite(timeoutMs)&&timeoutMs>0?Math.min(defaultTimeout,Math.max(100,Math.floor(timeoutMs))):defaultTimeout;
+      const timer=setTimeout(()=>{this.pending.delete(id);this.send({op:'stop'});reject(Object.assign(new Error('Local controls did not answer; inspect diagnostics.'),{code:'guardian_request_timeout'}));},timeout);
       this.pending.set(id,{resolve,reject,timer});this.send({...m,id});
     });
   }

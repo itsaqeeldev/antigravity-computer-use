@@ -51,6 +51,11 @@ test('guardian readiness timeout terminates the failed helper and clears startup
  let killed=0;const spawnProcess=()=>{const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{killed++;child.emit('close',null,'SIGTERM');};return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:5});await assert.rejects(g.start(),e=>e.code==='guardian_start_timeout');assert.equal(killed,1);assert.equal(g.starting,null);assert.equal(g.proc,null);
 });
+test('bounded guardian capture timeout sends Stop and discards its pending request',async()=>{
+ const sent=[];const guardian=new Guardian({});guardian.start=async()=>{};guardian.send=m=>sent.push(m);
+ await assert.rejects(guardian.request({op:'capture'},{timeoutMs:100}),e=>e.code==='guardian_request_timeout');
+ assert.equal(sent[0].op,'capture');assert.equal(sent[1].op,'stop');assert.equal(guardian.pending.size,0);
+});
 test('guardian shutdown waits for actual exit and refuses replacement after unconfirmed cleanup',async()=>{
  let child,starts=0,kills=0;const spawnProcess=()=>{starts++;child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();child.kill=()=>{kills++;return true;};return child;};
  const g=new Guardian({}, {spawnProcess,host:()=>({exe:'fixture'}),bootTimeout:500,shutdownGrace:5,killTimeout:15});

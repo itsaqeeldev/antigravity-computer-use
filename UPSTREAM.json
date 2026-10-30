@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "6a0e4b042f317822bdf6c769b0d3747a7df1712d90d7589fe9e6716f74d654b0"
+      "sha256": "b154192bde63023d1613f906337f44455d0beda4bcb6d16d1d3b654444d9a8b9"
     },
     {
       "path": "server/mcp.mjs",
@@ -264,7 +264,7 @@
     },
     {
       "path": "server/guardian.mjs",
-      "sha256": "f7135de94762cfd260fcdc374c63bedb259e8d8a0399abaa98f0e54216d78445"
+      "sha256": "843e5f51989f4b742b36da0da48ae7028910d127a9456ce9d7296415469106cf"
     },
     {
       "path": "server/native/Guardian.cs",
@@ -372,7 +372,7 @@
     },
     {
       "path": "tests/workflow.test.mjs",
-      "sha256": "77c7f7855545dd393b78c8a0d18db6d1baebee0126af4af0e83195fbae41b171"
+      "sha256": "e56ad5f9b7db70ee218d70936d90db5778d806b052b8d318a9855cc2687d20b7"
     },
     {
       "path": "tests/ProviderFailureTarget.cs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "c616ad009557a34509fef06a227cdedb6b4b0a16fa1efe43b811958d239ad765"
+      "sha256": "323c0da1a43871fec929b9889f761347e96c0c1be97bbda9495881d235fb435c"
     },
     {
       "path": "HANDOFF.md",
@@ -620,7 +620,7 @@
     },
     {
       "path": "server/incidents.mjs",
-      "sha256": "7e03d0fcb6b056be5b1f031fec976e1a5c0c06369408e8d23174ffea5dc4f904"
+      "sha256": "3fb0d67d5e8679218261db45449504e9af0a1457882b0be657867cb1a7c7b844"
     },
     {
       "path": "scripts/update.mjs",
@@ -636,7 +636,7 @@
     },
     {
       "path": "tests/recovery-update.test.mjs",
-      "sha256": "74d96e91a60065cd6353316b17e951a99c6d500fed2b02261952083b44879299"
+      "sha256": "bb0cf238c27c0a30a69ea880342a95eca0536f0429cb973763d81963851c8f30"
     },
     {
       "path": "tests/update-transaction.test.mjs",
@@ -712,7 +712,7 @@
     },
     {
       "path": "server/recovery.mjs",
-      "sha256": "196bf8dcc57337716e7b5842e13d7b49173db3d5d15ee9116883d69b5d18d15d"
+      "sha256": "410b3d7ff69d32c053661558d76b643e1bf6e485066a26932de74014cbb7eec4"
     },
     {
       "path": "scripts/qualify-guardian-desktop.mjs",

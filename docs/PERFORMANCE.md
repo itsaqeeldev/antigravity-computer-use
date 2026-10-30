@@ -27,7 +27,11 @@ timeout plus one second of grace; if the budget expires during overlay-capture
 preparation, the overlay is restored and no screenshot starts. Mocked tests
 cover both paths. Startup, grant, guardian capture preparation and real hung
 provider or screenshot behavior remain outside a hard deadline, so issue #25
-remains open.
+remains open. Capture preparation now receives a remaining-budget timeout plus
+one second; the existing guardian timeout sends Stop and requires status/human
+control rather than retry. An inert timeout fixture checks that behavior. A
+busy real guardian could hit the shorter limit, so this needs real-app timing
+and physical Stop/re-arm qualification before release.
 An isolated Windows test also calls the compiled host's budget policy and
 checks that a requested limit cannot widen the configured limit; it does not
 walk a real accessibility tree or prove provider cancellation.

@@ -219,11 +219,16 @@ test('expired wait during capture preparation restores overlay without starting 
  await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+100,require_native_budget:true}),e=>e.code==='wait_observation_timeout');
  assert.equal(screenshots,0);assert(sent.includes('capture_end'));
 });
+test('capture preparation timeout reports Stop requested and never starts a screenshot',async()=>{
+ let screenshots=0;
+ const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(){},async request(){throw Object.assign(Error('timeout'),{code:'guardian_request_timeout'});}},stamp(){return{};},frames:new Map(),driver:{async call(op){if(op==='screenshot')screenshots++;return{result:{snapshot_id:'s',nodes:[]}};}}};
+ await assert.rejects(Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true}),e=>e.code==='capture_preparation_timeout'&&/Stop was requested/.test(e.message));assert.equal(screenshots,0);
+});
 test('wait screenshot gets a bounded driver timeout and restores overlay',async()=>{
- const sent=[];let options;
- const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(){}},stamp(){return{};},frames:new Map(),driver:{async call(op,args,opts){if(op==='snapshot')return{result:{snapshot_id:'s',nodes:[]}};options=opts;return{result:{capture:'window',data:'fixture',source:[0,0,800,600]}};}}};
+ const sent=[];let options,prepareOptions;
+ const r={async grant(){return{pid:1,started:'one',path:'app.exe',rect:[0,0,800,600]};},check(){},guardian:{send(m){sent.push(m.op);},async request(_m,opts){prepareOptions=opts;}},stamp(){return{};},frames:new Map(),driver:{async call(op,args,opts){if(op==='snapshot')return{result:{snapshot_id:'s',nodes:[]}};options=opts;return{result:{capture:'window',data:'fixture',source:[0,0,800,600]}};}}};
  await Runtime.prototype.observe.call(r,{hwnd:1,native_snapshot_deadline:performance.now()+5000,require_native_budget:true});
- assert(options.timeoutMs>=1100&&options.timeoutMs<=6000);assert(sent.includes('capture_end'));
+ assert(options.timeoutMs>=1100&&options.timeoutMs<=6000);assert(prepareOptions.timeoutMs>=1100&&prepareOptions.timeoutMs<=6000);assert(sent.includes('capture_end'));
 });
 
 test('observation flags native and rendered tree truncation without claiming accessibility completeness',async()=>{
