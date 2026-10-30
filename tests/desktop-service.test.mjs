@@ -296,6 +296,17 @@ test('direct IPC batches use a fresh change-wait frame without replaying prior a
   assert.deepEqual(seen,[{op:'click',frame:'initial'},{op:'click',frame:'changed'}]);assert(!runtime.frames.has('post-action'));
  }finally{await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('a disconnected app-discovery client does not stop an active task',async()=>{
+ const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-apps-disconnect-'));let release,entered,stops=0;
+ const started=new Promise(resolve=>entered=resolve),gate=new Promise(resolve=>release=resolve);
+ const runtime={guardian:{pid:2},driver:{info:{pid:3},async call(op){assert.equal(op,'list_apps');entered();await gate;return {result:{windows:[]}};}},status:()=>({state:'active',task_open:true}),async stop(){stops++;},async close(){}};
+ const service=await serveDesktop({directory:dir,runtime});const session=JSON.parse(fs.readFileSync(service.file));
+ try{
+  const pending=request(session,'apps',{},100);const rejected=assert.rejects(pending,e=>e.code==='request_timeout');await started;await rejected;
+  await new Promise(resolve=>setTimeout(resolve,20));assert.equal(stops,0);
+  release();await new Promise(resolve=>setImmediate(resolve));assert.equal((await request(session,'status')).state,'active');assert.equal(stops,0);
+ }finally{release();await service.shutdown();fs.rmSync(dir,{recursive:true,force:true});}
+});
 test('a returned batch failure gets explicit no-replay guidance over IPC',async()=>{
  const dir=fs.mkdtempSync(path.join(testDirectory('tmp'),'agcu-batch-failure-'));let calls=0;
  const runtime={status:()=>({state:'active'}),async action(){calls++;return {ok:false,input_completed:true};},async close(){}};

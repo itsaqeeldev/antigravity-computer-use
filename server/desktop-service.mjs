@@ -79,10 +79,10 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
   };
   const server=net.createServer(socket=>{
     socket.setEncoding('utf8');
-    sockets.add(socket);let buffer='',received=false,executing=false,finished=false,ticket;
+    sockets.add(socket);let buffer='',received=false,executing=false,finished=false,stopOnDisconnect=true,ticket;
     socket.setTimeout(105000,()=>socket.destroy());
     socket.on('error',()=>{});
-    socket.on('close',()=>{sockets.delete(socket);if(executing&&!finished)runtime.stop().catch(()=>{});});
+    socket.on('close',()=>{sockets.delete(socket);if(executing&&!finished&&stopOnDisconnect)runtime.stop().catch(()=>{});});
     socket.on('data',chunk=>{
       if(received)return;buffer+=chunk;
       if(Buffer.byteLength(buffer)>1024*1024){received=true;socket.destroy();return;}
@@ -93,6 +93,10 @@ export async function serveDesktop({directory=dataDir(),runtime,idlePolicy='shut
         if(given.length!==expected.length||!timingSafeEqual(given,expected))throw Error('Unauthorized local client');
         lastCall=Date.now();idleReleased=false;
         const name=request.command?.startsWith('computer_')?request.command:'computer_'+request.command;
+        // Discovery sends no desktop input and changes no grants. Losing its
+        // client must not latch emergency Stop on an otherwise active task.
+        // Observations can open permission dialogs, so they still cancel.
+        stopOnDisconnect=name!=='computer_apps';
         // A replacement starts passively under the updater's installation lock.
         // No task may acquire control until health verification and unlock.
         if(fs.existsSync(path.join(path.dirname(directory),'update-switching.json'))&&!['computer_status','computer_stop','computer_shutdown','computer_prepare_update'].includes(name))throw Object.assign(Error('Installation update is in progress; no desktop input was accepted.'),{code:'update_in_progress'});

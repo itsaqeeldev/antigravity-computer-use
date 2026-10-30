@@ -1370,3 +1370,10 @@ Post-launch window discovery now measures its eight-second polling limit with
 the monotonic clock, so a backwards wall-clock adjustment does not extend the
 wait or invite a duplicate launch. The test uses an inert driver and simulated
 clock change; it does not qualify suspend/resume or live app launch behavior.
+
+A disconnected `apps` discovery request no longer triggers emergency Stop:
+discovery sends no input and does not grant an app. The in-flight discovery
+still finishes or times out, and the normal one-operation limit remains in
+force. An IPC test disconnects a discovery client during an active fixture
+task and confirms Stop is not called; the existing action-timeout test still
+confirms cancellation. This is not a diagnosis of the user's live pauses.
