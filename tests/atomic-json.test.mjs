@@ -16,6 +16,10 @@ test('task state refuses linked files rather than treating them as idle',()=>{
   assert.throws(()=>readTaskRecord(file,{io:changedAfterInspection}),e=>e.code==='task_state_invalid');assert.equal(closed,true);
   let inspections=0;const replacedDuringRead={...fs,lstatSync(p){const stat=fs.lstatSync(p);if(++inspections===2)stat.ino=-1;return stat;}};
   assert.throws(()=>readTaskRecord(file,{io:replacedDuringRead}),e=>e.code==='task_state_invalid');
+  let bytesRead=0;const growingFile={...fs,readSync(fd,buffer,offset,length){buffer.fill(0x20,offset,offset+length);bytesRead+=length;return length;}};
+  assert.throws(()=>readTaskRecord(file,{io:growingFile}),e=>e.code==='task_state_invalid');assert.equal(bytesRead,1025);
+  let stats=0;const modifiedDuringRead={...fs,fstatSync(fd){const stat=fs.fstatSync(fd);if(++stats===2)stat.mtimeMs+=1;return stat;}};
+  assert.throws(()=>readTaskRecord(file,{io:modifiedDuringRead}),e=>e.code==='task_state_invalid');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('metadata is flushed before replacement and exclusive creation cannot overwrite a journal',()=>{

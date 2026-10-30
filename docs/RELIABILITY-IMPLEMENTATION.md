@@ -1148,6 +1148,9 @@ now checks a single-link regular file, opens it without following links where
 supported, compares file identity, and fails closed if it disappears after
 inspection. Local updater, installation and recovery regressions pass; Mac
 link tests and real installation/update acceptance remain outstanding.
+The reader also caps the actual read at 1,025 bytes, even if a file grows
+after its size was checked, and refuses changes detected during the read;
+simulated growing and changing files are rejected locally.
 
 Apple documents `CGEventPost` as returning no delivery result and describes
 Quartz event-source state tables as combined states. A released state alone
