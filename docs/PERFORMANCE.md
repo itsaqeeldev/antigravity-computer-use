@@ -30,6 +30,13 @@ elapsed time includes its initial app-identity check before polling begins.
 
 ## Text-only timeout observation
 
+Windows CI job `123905322677` showed an unexpected extra poll. Early timer
+wakeup before a fractional target is a plausible cause, not directly measured
+in that run. The candidate now waits until the
+monotonic target is reached before polling again. This addresses the observed
+early-wakeup path; focused reruns and fresh CI are needed before treating the
+failure as resolved.
+
 If the polling budget expires during a delay, the candidate now returns the
 last valid text-only observation instead of issuing a further capture. A
 control or worker change during that delay invalidates the frame. Failure text

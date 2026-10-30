@@ -21,6 +21,11 @@ import {writeAtomicJSON,readTaskRecord} from './atomic-json.mjs';
 
 const input=new Set(['move','click','type','set_value','key','scroll','drag','focus','fit_window','close_window','paste','paste_files','clipboard','open','file_dialog']);
 const fail=(code,message)=>{throw new HostError(code,message,null);};
+async function waitUntil(target){
+  // Node timers may wake before a fractional deadline. Do not start another
+  // expensive poll until the intended delay has actually elapsed.
+  while(true){const remaining=target-performance.now();if(remaining<=0)return;await new Promise(resolve=>setTimeout(resolve,Math.max(1,Math.ceil(remaining))));}
+}
 function waitFailure(observation,labels){
   if(!labels?.length)return undefined;
   const tree=String(observation.metadata.tree||'').toLowerCase();
@@ -381,7 +386,7 @@ export class Runtime {
         if(args.with_image===false&&performance.now()>=until)return finish({matched:false,timed_out:true,...latest});
         if(performance.now()>=until){this.frames.delete(latest.metadata.observation_id);break;}
       }
-      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
+      await waitUntil(Math.min(until,performance.now()+500));
       this.check();if(this.generation!==generation||this.driver?.epoch!==workerEpoch)fail('control_changed','Control or native worker changed while waiting. Observe again.');
       if(performance.now()>=until){
         if(args.with_image===false)return finish({matched:false,timed_out:true,...latest});
@@ -415,7 +420,7 @@ export class Runtime {
       if(latest.metadata.tree_incomplete)return finish({changed:false,incomplete:true,...latest});
       if(comparableView(latest.metadata.tree)!==baseline.viewTree)return finish({changed:true,...latest});
       if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
-      await new Promise(resolve=>setTimeout(resolve,Math.min(500,Math.max(0,until-performance.now()))));
+      await waitUntil(Math.min(until,performance.now()+500));
       this.check();if(generation!==this.generation||this.driver.epoch!==baseline.workerEpoch)fail('control_changed','Control or native worker changed while waiting. Observe again.');
       if(performance.now()>=until)return finish({changed:false,timed_out:true,...latest});
       this.frames.delete(latest.metadata.observation_id);

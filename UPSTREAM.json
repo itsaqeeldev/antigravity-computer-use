@@ -256,7 +256,7 @@
     },
     {
       "path": "server/runtime.mjs",
-      "sha256": "cf58fcc4ea8b0ac05bbb27b66af0f7623bf57b14cb3d0bb28a6aacb30a3b766a"
+      "sha256": "510422a9b05d7d48a0a880cf255657d1d4368a4f78dcd7c01d6de77bc1296aba"
     },
     {
       "path": "server/mcp.mjs",
@@ -488,7 +488,7 @@
     },
     {
       "path": "docs/PERFORMANCE.md",
-      "sha256": "64d570a7f9bd60ab3086149da4232b82dfabc69cd92508aeceac1c9c403e3393"
+      "sha256": "44d6cdb0a9abd26768cc74715999c10f3cd9ee00a178cea9e8167531ed400e2d"
     },
     {
       "path": "HANDOFF.md",
