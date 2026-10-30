@@ -55,7 +55,8 @@ the signed updater.
 
 Updated **30 October 2026**, Asia/Karachi. Published track: **v0.3.0-beta.2**,
 Windows x64 prerelease. Development work is on `codex/review-intel-mac`;
-the current reviewed head is `b804420` (Mac covering-window repair from PR #27).
+the current reviewed head is `793da95` (Mac covering-window repair from PR #27
+plus signed-candidate documentation).
 Check its current commit and CI before using any checkpoint below.
 
 ## Current reliability and Mac qualification handoff
@@ -90,8 +91,8 @@ later matched Notepad trials passed the Unicode comparison but did not qualify
 the full Upscaly workflow. See `docs/PERFORMANCE.md` for both results.
 
 An Intel Mac device report and the covering-window repair were submitted in
-PR #27 and integrated at `b804420`; its Windows source, macOS ARM and macOS
-Intel CI jobs pass. The on-device report records discovery, AX snapshots,
+PR #27 and integrated at `b804420`; current head `793da95` passes Windows
+source, macOS ARM and macOS Intel CI. The on-device report records discovery, AX snapshots,
 activation, sensitive timeout and Stop persistence on the candidate. Its
 physical held-input Esc/re-arm, second complete task, production signing and
 Gatekeeper/update transport limits remain explicit in
