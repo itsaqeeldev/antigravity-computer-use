@@ -522,7 +522,8 @@ func macFileDialog(_ args: [String: Any]) throws -> [String: Any] {
     let sheets = axChildren(owner).filter { axString($0, kAXRoleAttribute as String) == "AXSheet" }
     let ownRole = axString(owner, kAXRoleAttribute as String) ?? ""
     let ownSubrole = axString(owner, kAXSubroleAttribute as String) ?? ""
-    let candidates = sheets + ((ownRole == "AXSheet" || ownSubrole == "AXDialog") ? [owner] : [])
+    let ownId = axString(owner, kAXIdentifierAttribute as String) ?? ""
+    let candidates = sheets + ((ownRole == "AXSheet" || ownSubrole == "AXDialog" || ownId == "open-panel" || ownId == "save-panel") ? [owner] : [])
     guard candidates.count == 1, NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
         throw AxonError("file_dialog_not_found", "Observe an already-open native file picker attached to this owner.")
     }
@@ -538,7 +539,15 @@ func macFileDialog(_ args: [String: Any]) throws -> [String: Any] {
         while !pending.isEmpty && result.count < 500 { let el = pending.removeLast(); result.append(el); pending.append(contentsOf: axChildren(el)) }
         return result
     }
-    let fields = descendants(dialog).filter { (axString($0, kAXRoleAttribute as String) == "AXTextField" || axString($0, kAXRoleAttribute as String) == "AXComboBox") && axBool($0, kAXFocusedAttribute as String) == true }
+    let started = MacDeadline.now
+    var fields: [AXUIElement] = []
+    while true {
+        fields = descendants(dialog).filter { (axString($0, kAXRoleAttribute as String) == "AXTextField" || axString($0, kAXRoleAttribute as String) == "AXComboBox") && axBool($0, kAXFocusedAttribute as String) == true }
+        if fields.count == 1 { break }
+        let now = MacDeadline.now
+        if now == 0 || now < started || now - started >= 2000 { break }
+        Thread.sleep(forTimeInterval: 0.05)
+    }
     guard fields.count == 1 else { throw AxonError("file_dialog_field_not_found", "The Go to Folder field was not unambiguously observed. No filename was submitted.") }
     try MacFence.dispatched()
     guard AXUIElementSetAttributeValue(fields[0], kAXValueAttribute as CFString, path as CFTypeRef) == .success,

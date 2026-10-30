@@ -576,7 +576,7 @@
     },
     {
       "path": "server/native/macos/MacOperations.swift",
-      "sha256": "2568b11cbb57507afe0206f6c559f2e77ee60b965350496b8b7548f665950c84"
+      "sha256": "aa975f6b4e9e56e6ee09edc083500de153445ddc22370384ba0a0267a9823135"
     },
     {
       "path": "server/native/macos/MacVisuals.swift",
