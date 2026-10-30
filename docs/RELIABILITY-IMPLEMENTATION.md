@@ -1,5 +1,10 @@
 # Reliability and updates implementation log
 
+On 30 October the local Windows source suite at `c0b95e2` passed 426 tests,
+with 11 explicit skips and no failures (`node --test --test-concurrency=4
+tests/*.test.mjs`). The skips are not native qualification. This does not prove
+physical Stop, the real Antigravity workflow, Mac hardware or published updates.
+
 Guardian requests now clear their pending timer if the pipe write throws and
 attempt Stop without assuming delivery. Timeout rejection also survives a Stop
 write throwing. A known unavailable pipe fails promptly; stream backpressure
