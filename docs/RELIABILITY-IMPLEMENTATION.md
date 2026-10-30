@@ -1184,6 +1184,10 @@ Issue #16 tracks polling waits that used wall-clock deadlines. `wait` and
 moving backwards. This bounds polling decisions, not a native observation
 already in flight, which has its own timeout. Real-host qualification remains
 pending.
+The independent native session expiry still uses wall-clock timestamps. A
+backwards clock change can extend that nominal limit; issue #18 tracks a
+cross-process monotonic design and physical qualification. The polling fix
+must not be described as fixing native session expiry.
 
 Issue #17 tracks action budget consumed before input-fence acquisition. The
 candidate rechecks the deadline and budget inside the fence and counts only an
